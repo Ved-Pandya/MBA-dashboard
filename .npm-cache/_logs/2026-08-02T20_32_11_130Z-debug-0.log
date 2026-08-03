@@ -1,0 +1,20 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.6.2
+2 info using node@v24.13.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\vedsp\Desktop\MBA dashboard\node_modules\re2\.npmrc
+5 silly config load:file:C:\Users\vedsp\.npmrc
+6 silly config load:file:C:\Users\vedsp\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm run rebuild
+8 verbose argv "run" "rebuild"
+9 verbose logfile logs-max:10 dir:C:\Users\vedsp\Desktop\MBA dashboard\.npm-cache\_logs\2026-08-02T20_32_11_130Z-
+10 verbose logfile C:\Users\vedsp\Desktop\MBA dashboard\.npm-cache\_logs\2026-08-02T20_32_11_130Z-debug-0.log
+11 warn using --force Recommended protections disabled.
+12 silly logfile start cleaning logs, removing 1 files
+13 silly logfile done cleaning log files
+14 verbose cwd C:\Users\vedsp\Desktop\MBA dashboard\node_modules\re2
+15 verbose os Windows_NT 10.0.26200
+16 verbose node v24.13.0
+17 verbose npm  v11.6.2
+18 verbose exit 1
+19 verbose code 1

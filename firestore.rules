@@ -1,0 +1,139 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function me() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function active() {
+      return signedIn() && me().status == "active";
+    }
+
+    function admin() {
+      return active() && me().roles.systemAdmin == true;
+    }
+
+    function cr() {
+      return active() && me().roles.cr == true;
+    }
+
+    function managesTask(data) {
+      return active() && (
+        (data.target.kind == "wing" && me().scopes.wingPocWings[data.target.wingId] == true) ||
+        (data.target.kind == "subject_offering" && me().scopes.subjectPocOfferings[data.target.subjectOfferingId] == true)
+      );
+    }
+
+    function managesAssignment(data) {
+      return active() && (
+        (data.wingId != null && me().scopes.wingPocWings[data.wingId] == true) ||
+        (data.subjectOfferingId != null && me().scopes.subjectPocOfferings[data.subjectOfferingId] == true)
+      );
+    }
+
+    function hasAssignment(taskId) {
+      return exists(/databases/$(database)/documents/taskAssignments/$(taskId + "_" + request.auth.uid));
+    }
+
+    match /appConfig/{document=**} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /academicTerms/{id} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /sections/{id} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /wings/{id} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /subjectOfferings/{id} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /users/{uid} {
+      allow get: if active() && (request.auth.uid == uid || admin());
+      allow list: if admin();
+      allow write: if false;
+
+      match /notifications/{notificationId} {
+        allow read: if active() && request.auth.uid == uid;
+        allow write: if false;
+      }
+    }
+
+    match /tasks/{taskId} {
+      allow get: if active() && (
+        admin() || cr() || resource.data.ownerUid == request.auth.uid ||
+        managesTask(resource.data) || hasAssignment(taskId)
+      );
+      allow list: if active() && (
+        admin() || cr() || resource.data.ownerUid == request.auth.uid ||
+        managesTask(resource.data)
+      );
+      allow write: if false;
+    }
+
+    match /taskAssignments/{assignmentId} {
+      allow get: if active() && (
+        admin() || cr() || resource.data.uid == request.auth.uid || managesAssignment(resource.data)
+      );
+      allow list: if active() && (
+        admin() || cr() || resource.data.uid == request.auth.uid || managesAssignment(resource.data)
+      );
+      allow write: if false;
+    }
+
+    match /taskStats/{taskId} {
+      allow read: if active() && (
+        admin() || cr() ||
+        get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerUid == request.auth.uid ||
+        managesTask(get(/databases/$(database)/documents/tasks/$(taskId)).data)
+      );
+      allow write: if false;
+    }
+
+    match /auditEvents/{eventId} {
+      allow read: if admin() || cr();
+      allow write: if false;
+    }
+
+    match /operations/{id} {
+      allow read: if admin() || (active() && resource.data.actorUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /reminderJobs/{id} {
+      allow read: if admin();
+      allow write: if false;
+    }
+
+    match /reminderDeliveries/{id} {
+      allow read: if admin();
+      allow write: if false;
+    }
+
+    match /systemHealth/{id} {
+      allow read: if admin();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,1248 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.6.2
+2 info using node@v24.13.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\vedsp\Desktop\MBA dashboard\.npmrc
+5 silly config load:file:C:\Users\vedsp\.npmrc
+6 silly config load:file:C:\Users\vedsp\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install
+8 verbose argv "install" "--force" "--cache" ".npm-cache" "--loglevel" "warn"
+9 verbose logfile logs-max:10 dir:C:\Users\vedsp\Desktop\MBA dashboard\.npm-cache\_logs\2026-08-02T20_31_56_531Z-
+10 verbose logfile C:\Users\vedsp\Desktop\MBA dashboard\.npm-cache\_logs\2026-08-02T20_31_56_531Z-debug-0.log
+11 warn using --force Recommended protections disabled.
+12 silly logfile start cleaning logs, removing 1 files
+13 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+14 silly logfile done cleaning log files
+15 silly Conflicting override sets <ref *1> OverrideSet {
+15 silly Conflicting override sets   parent: undefined,
+15 silly Conflicting override sets   children: Map(3) {
+15 silly Conflicting override sets     'next' => OverrideSet {
+15 silly Conflicting override sets       parent: [Circular *1],
+15 silly Conflicting override sets       children: [Map],
+15 silly Conflicting override sets       name: 'next',
+15 silly Conflicting override sets       key: 'next',
+15 silly Conflicting override sets       keySpec: '*',
+15 silly Conflicting override sets       value: '*'
+15 silly Conflicting override sets     },
+15 silly Conflicting override sets     '@google-cloud/storage' => OverrideSet {
+15 silly Conflicting override sets       parent: [Circular *1],
+15 silly Conflicting override sets       children: [Map],
+15 silly Conflicting override sets       name: '@google-cloud/storage',
+15 silly Conflicting override sets       key: '@google-cloud/storage',
+15 silly Conflicting override sets       keySpec: '*',
+15 silly Conflicting override sets       value: '*'
+15 silly Conflicting override sets     },
+15 silly Conflicting override sets     'gaxios' => OverrideSet {
+15 silly Conflicting override sets       parent: [Circular *1],
+15 silly Conflicting override sets       children: [Map],
+15 silly Conflicting override sets       name: 'gaxios',
+15 silly Conflicting override sets       key: 'gaxios',
+15 silly Conflicting override sets       keySpec: '*',
+15 silly Conflicting override sets       value: '*'
+15 silly Conflicting override sets     }
+15 silly Conflicting override sets   }
+15 silly Conflicting override sets } undefined
+16 silly Conflicting override sets <ref *1> OverrideSet {
+16 silly Conflicting override sets   parent: undefined,
+16 silly Conflicting override sets   children: Map(3) {
+16 silly Conflicting override sets     'next' => OverrideSet {
+16 silly Conflicting override sets       parent: [Circular *1],
+16 silly Conflicting override sets       children: [Map],
+16 silly Conflicting override sets       name: 'next',
+16 silly Conflicting override sets       key: 'next',
+16 silly Conflicting override sets       keySpec: '*',
+16 silly Conflicting override sets       value: '*'
+16 silly Conflicting override sets     },
+16 silly Conflicting override sets     '@google-cloud/storage' => OverrideSet {
+16 silly Conflicting override sets       parent: [Circular *1],
+16 silly Conflicting override sets       children: [Map],
+16 silly Conflicting override sets       name: '@google-cloud/storage',
+16 silly Conflicting override sets       key: '@google-cloud/storage',
+16 silly Conflicting override sets       keySpec: '*',
+16 silly Conflicting override sets       value: '*'
+16 silly Conflicting override sets     },
+16 silly Conflicting override sets     'gaxios' => OverrideSet {
+16 silly Conflicting override sets       parent: [Circular *1],
+16 silly Conflicting override sets       children: [Map],
+16 silly Conflicting override sets       name: 'gaxios',
+16 silly Conflicting override sets       key: 'gaxios',
+16 silly Conflicting override sets       keySpec: '*',
+16 silly Conflicting override sets       value: '*'
+16 silly Conflicting override sets     }
+16 silly Conflicting override sets   }
+16 silly Conflicting override sets } undefined
+17 silly Conflicting override sets <ref *1> OverrideSet {
+17 silly Conflicting override sets   parent: undefined,
+17 silly Conflicting override sets   children: Map(3) {
+17 silly Conflicting override sets     'next' => OverrideSet {
+17 silly Conflicting override sets       parent: [Circular *1],
+17 silly Conflicting override sets       children: [Map],
+17 silly Conflicting override sets       name: 'next',
+17 silly Conflicting override sets       key: 'next',
+17 silly Conflicting override sets       keySpec: '*',
+17 silly Conflicting override sets       value: '*'
+17 silly Conflicting override sets     },
+17 silly Conflicting override sets     '@google-cloud/storage' => OverrideSet {
+17 silly Conflicting override sets       parent: [Circular *1],
+17 silly Conflicting override sets       children: [Map],
+17 silly Conflicting override sets       name: '@google-cloud/storage',
+17 silly Conflicting override sets       key: '@google-cloud/storage',
+17 silly Conflicting override sets       keySpec: '*',
+17 silly Conflicting override sets       value: '*'
+17 silly Conflicting override sets     },
+17 silly Conflicting override sets     'gaxios' => OverrideSet {
+17 silly Conflicting override sets       parent: [Circular *1],
+17 silly Conflicting override sets       children: [Map],
+17 silly Conflicting override sets       name: 'gaxios',
+17 silly Conflicting override sets       key: 'gaxios',
+17 silly Conflicting override sets       keySpec: '*',
+17 silly Conflicting override sets       value: '*'
+17 silly Conflicting override sets     }
+17 silly Conflicting override sets   }
+17 silly Conflicting override sets } undefined
+18 silly idealTree buildDeps
+19 silly fetch manifest google-auth-library@^10.6.2
+20 silly packumentCache full:https://registry.npmjs.org/google-auth-library cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/google-auth-library 73ms (cache revalidated)
+22 silly packumentCache full:https://registry.npmjs.org/google-auth-library set size:737867 disposed:false
+23 silly placeDep ROOT google-auth-library@10.9.1 KEEP for: @google-cloud/cloud-sql-connector@1.11.3 want: ^10.6.2
+24 silly fetch manifest google-auth-library@^10.5.0
+25 silly packumentCache full:https://registry.npmjs.org/google-auth-library cache-hit
+26 silly placeDep ROOT google-auth-library@10.9.1 KEEP for: @google-cloud/pubsub@5.3.1 want: ^10.5.0
+27 silly Conflicting override sets <ref *1> OverrideSet {
+27 silly Conflicting override sets   parent: undefined,
+27 silly Conflicting override sets   children: Map(3) {
+27 silly Conflicting override sets     'next' => OverrideSet {
+27 silly Conflicting override sets       parent: [Circular *1],
+27 silly Conflicting override sets       children: [Map],
+27 silly Conflicting override sets       name: 'next',
+27 silly Conflicting override sets       key: 'next',
+27 silly Conflicting override sets       keySpec: '*',
+27 silly Conflicting override sets       value: '*'
+27 silly Conflicting override sets     },
+27 silly Conflicting override sets     '@google-cloud/storage' => OverrideSet {
+27 silly Conflicting override sets       parent: [Circular *1],
+27 silly Conflicting override sets       children: [Map],
+27 silly Conflicting override sets       name: '@google-cloud/storage',
+27 silly Conflicting override sets       key: '@google-cloud/storage',
+27 silly Conflicting override sets       keySpec: '*',
+27 silly Conflicting override sets       value: '*'
+27 silly Conflicting override sets     },
+27 silly Conflicting override sets     'gaxios' => OverrideSet {
+27 silly Conflicting override sets       parent: [Circular *1],
+27 silly Conflicting override sets       children: [Map],
+27 silly Conflicting override sets       name: 'gaxios',
+27 silly Conflicting override sets       key: 'gaxios',
+27 silly Conflicting override sets       keySpec: '*',
+27 silly Conflicting override sets       value: '*'
+27 silly Conflicting override sets     }
+27 silly Conflicting override sets   }
+27 silly Conflicting override sets } undefined
+28 silly fetch manifest express@^5.2.1
+29 silly packumentCache full:https://registry.npmjs.org/express cache-miss
+30 http cache https://registry.npmjs.org/express 9ms (cache hit)
+31 silly packumentCache full:https://registry.npmjs.org/express set size:804956 disposed:false
+32 silly placeDep ROOT express@5.2.1 KEEP for: @modelcontextprotocol/sdk@1.30.0 want: ^5.2.1
+33 silly fetch manifest express@>= 4.11
+34 silly packumentCache full:https://registry.npmjs.org/express cache-hit
+35 silly placeDep ROOT express@5.2.1 KEEP for: express-rate-limit@8.6.1 want: >= 4.11
+36 warn ERESOLVE overriding peer dependency {
+36 warn ERESOLVE   code: 'ERESOLVE',
+36 warn ERESOLVE   edge: {
+36 warn ERESOLVE     type: 'peer',
+36 warn ERESOLVE     name: 'express',
+36 warn ERESOLVE     spec: '>= 4.11',
+36 warn ERESOLVE     error: 'INVALID',
+36 warn ERESOLVE     from: {
+36 warn ERESOLVE       name: 'express-rate-limit',
+36 warn ERESOLVE       version: '8.6.1',
+36 warn ERESOLVE       location: 'node_modules/express-rate-limit',
+36 warn ERESOLVE       isWorkspace: false,
+36 warn ERESOLVE       dependents: [Array]
+36 warn ERESOLVE     }
+36 warn ERESOLVE   },
+36 warn ERESOLVE   dep: {
+36 warn ERESOLVE     name: 'express',
+36 warn ERESOLVE     version: '5.2.1',
+36 warn ERESOLVE     whileInstalling: {
+36 warn ERESOLVE       name: 'express-rate-limit',
+36 warn ERESOLVE       version: '8.6.1',
+36 warn ERESOLVE       path: 'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\express-rate-limit'
+36 warn ERESOLVE     },
+36 warn ERESOLVE     location: 'node_modules/express',
+36 warn ERESOLVE     isWorkspace: false,
+36 warn ERESOLVE     dependents: [ [Object] ]
+36 warn ERESOLVE   },
+36 warn ERESOLVE   force: true,
+36 warn ERESOLVE   isMine: false,
+36 warn ERESOLVE   strictPeerDeps: false,
+36 warn ERESOLVE   current: {
+36 warn ERESOLVE     name: 'express',
+36 warn ERESOLVE     version: '5.2.1',
+36 warn ERESOLVE     location: 'node_modules/express',
+36 warn ERESOLVE     isWorkspace: false,
+36 warn ERESOLVE     dependents: [ [Object] ]
+36 warn ERESOLVE   }
+36 warn ERESOLVE }
+37 silly fetch manifest uuid@11.1.1
+38 silly packumentCache full:https://registry.npmjs.org/uuid cache-miss
+39 http fetch GET 200 https://registry.npmjs.org/uuid 21ms (cache revalidated)
+40 silly packumentCache full:https://registry.npmjs.org/uuid set size:256419 disposed:false
+41 silly placeDep node_modules/gaxios uuid@11.1.1 OK for: gaxios@6.7.1 want: 11.1.1
+42 silly fetch manifest picomatch@^4.0.4
+43 silly packumentCache full:https://registry.npmjs.org/picomatch cache-miss
+44 http cache https://registry.npmjs.org/picomatch 5ms (cache hit)
+45 silly packumentCache full:https://registry.npmjs.org/picomatch set size:128942 disposed:false
+46 silly placeDep node_modules/tinyglobby picomatch@4.0.5 OK for: tinyglobby@0.2.17 want: ^4.0.4
+47 silly fetch manifest uuid@^14.0.0
+48 silly packumentCache full:https://registry.npmjs.org/uuid cache-hit
+49 silly placeDep node_modules/universal-analytics uuid@14.0.1 REPLACE for: universal-analytics@0.5.4 want: ^14.0.0
+50 silly reify mark retired [
+50 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\uuid',
+50 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\.bin\\uuid',
+50 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\.bin\\uuid.cmd',
+50 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\.bin\\uuid.ps1'
+50 silly reify ]
+51 silly reify moves {
+51 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\uuid': 'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\.uuid-FLGJZCh9',
+51 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\.bin\\uuid': 'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\.bin\\.uuid-XVwRN6IM',
+51 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\.bin\\uuid.cmd': 'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\.bin\\.uuid.cmd-oPPKVIjH',
+51 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\.bin\\uuid.ps1': 'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\universal-analytics\\node_modules\\.bin\\.uuid.ps1-NXfRPBNj'
+51 silly reify }
+52 silly audit bulk request {
+52 silly audit   '@mba/web': [ '1.0.0' ],
+52 silly audit   '@mba/functions': [ '1.0.0' ],
+52 silly audit   '@apidevtools/json-schema-ref-parser': [ '9.1.2' ],
+52 silly audit   '@apphosting/common': [ '0.0.8' ],
+52 silly audit   '@colors/colors': [ '1.5.0', '1.6.0' ],
+52 silly audit   '@dabh/diagnostics': [ '2.0.8' ],
+52 silly audit   '@electric-sql/pglite': [ '0.3.16', '0.2.17' ],
+52 silly audit   '@electric-sql/pglite-tools': [ '0.2.21' ],
+52 silly audit   '@emnapi/runtime': [ '1.11.3' ],
+52 silly audit   '@esbuild/aix-ppc64': [ '0.21.5' ],
+52 silly audit   '@esbuild/android-arm': [ '0.21.5' ],
+52 silly audit   '@esbuild/android-arm64': [ '0.21.5' ],
+52 silly audit   '@esbuild/android-x64': [ '0.21.5' ],
+52 silly audit   '@esbuild/darwin-arm64': [ '0.21.5' ],
+52 silly audit   '@esbuild/darwin-x64': [ '0.21.5' ],
+52 silly audit   '@esbuild/freebsd-arm64': [ '0.21.5' ],
+52 silly audit   '@esbuild/freebsd-x64': [ '0.21.5' ],
+52 silly audit   '@esbuild/linux-arm': [ '0.21.5' ],
+52 silly audit   '@esbuild/linux-arm64': [ '0.21.5' ],
+52 silly audit   '@esbuild/linux-ia32': [ '0.21.5' ],
+52 silly audit   '@esbuild/linux-loong64': [ '0.21.5' ],
+52 silly audit   '@esbuild/linux-mips64el': [ '0.21.5' ],
+52 silly audit   '@esbuild/linux-ppc64': [ '0.21.5' ],
+52 silly audit   '@esbuild/linux-riscv64': [ '0.21.5' ],
+52 silly audit   '@esbuild/linux-s390x': [ '0.21.5' ],
+52 silly audit   '@esbuild/linux-x64': [ '0.21.5' ],
+52 silly audit   '@esbuild/netbsd-x64': [ '0.21.5' ],
+52 silly audit   '@esbuild/openbsd-x64': [ '0.21.5' ],
+52 silly audit   '@esbuild/sunos-x64': [ '0.21.5' ],
+52 silly audit   '@esbuild/win32-arm64': [ '0.21.5' ],
+52 silly audit   '@esbuild/win32-ia32': [ '0.21.5' ],
+52 silly audit   '@esbuild/win32-x64': [ '0.21.5' ],
+52 silly audit   '@fastify/busboy': [ '3.2.0' ],
+52 silly audit   '@firebase/ai': [ '2.14.0' ],
+52 silly audit   '@firebase/analytics': [ '0.10.23' ],
+52 silly audit   '@firebase/analytics-compat': [ '0.2.29' ],
+52 silly audit   '@firebase/analytics-types': [ '0.8.4' ],
+52 silly audit   '@firebase/app': [ '0.16.0' ],
+52 silly audit   '@firebase/app-check': [ '0.13.0' ],
+52 silly audit   '@firebase/app-check-compat': [ '0.4.6' ],
+52 silly audit   '@firebase/app-check-interop-types': [ '0.3.4' ],
+52 silly audit   '@firebase/app-check-types': [ '0.5.4' ],
+52 silly audit   '@firebase/app-compat': [ '0.5.16' ],
+52 silly audit   '@firebase/app-types': [ '0.9.5' ],
+52 silly audit   '@firebase/auth': [ '1.13.4' ],
+52 silly audit   '@firebase/auth-compat': [ '0.6.9' ],
+52 silly audit   '@firebase/auth-interop-types': [ '0.2.5' ],
+52 silly audit   '@firebase/auth-types': [ '0.13.1' ],
+52 silly audit   '@firebase/component': [ '0.7.4' ],
+52 silly audit   '@firebase/data-connect': [ '0.7.2' ],
+52 silly audit   '@firebase/database': [ '1.1.4' ],
+52 silly audit   '@firebase/database-compat': [ '2.1.5' ],
+52 silly audit   '@firebase/database-types': [ '1.0.21' ],
+52 silly audit   '@firebase/firestore': [ '4.17.0' ],
+52 silly audit   '@firebase/firestore-compat': [ '0.4.12' ],
+52 silly audit   '@firebase/firestore-types': [ '3.0.4' ],
+52 silly audit   '@grpc/grpc-js': [ '1.9.16', '1.14.4' ],
+52 silly audit   '@firebase/functions': [ '0.13.6' ],
+52 silly audit   '@firebase/functions-compat': [ '0.4.6' ],
+52 silly audit   '@firebase/functions-types': [ '0.6.4' ],
+52 silly audit   '@firebase/installations': [ '0.6.23' ],
+52 silly audit   '@firebase/installations-compat': [ '0.2.23' ],
+52 silly audit   '@firebase/installations-types': [ '0.5.4' ],
+52 silly audit   '@firebase/logger': [ '0.5.1' ],
+52 silly audit   '@firebase/messaging': [ '0.13.1' ],
+52 silly audit   '@firebase/messaging-compat': [ '0.2.28' ],
+52 silly audit   '@firebase/messaging-interop-types': [ '0.2.5' ],
+52 silly audit   '@firebase/performance': [ '0.7.13' ],
+52 silly audit   '@firebase/performance-compat': [ '0.2.26' ],
+52 silly audit   '@firebase/performance-types': [ '0.2.4' ],
+52 silly audit   '@firebase/remote-config': [ '0.9.1' ],
+52 silly audit   '@firebase/remote-config-compat': [ '0.2.28' ],
+52 silly audit   '@firebase/remote-config-types': [ '0.5.1' ],
+52 silly audit   '@firebase/rules-unit-testing': [ '5.0.1' ],
+52 silly audit   '@firebase/storage': [ '0.14.4' ],
+52 silly audit   '@firebase/storage-compat': [ '0.4.4' ],
+52 silly audit   '@firebase/storage-types': [ '0.8.4' ],
+52 silly audit   '@firebase/util': [ '1.15.2' ],
+52 silly audit   '@firebase/webchannel-wrapper': [ '1.0.6' ],
+52 silly audit   '@google-cloud/cloud-sql-connector': [ '1.11.3' ],
+52 silly audit   gaxios: [ '7.3.0', '6.7.1', '7.1.3' ],
+52 silly audit   'node-fetch': [ '3.3.2', '2.7.0' ],
+52 silly audit   '@google-cloud/firestore': [ '8.7.0' ],
+52 silly audit   '@google-cloud/paginator': [ '5.0.2', '6.1.0' ],
+52 silly audit   '@google-cloud/precise-date': [ '5.2.0' ],
+52 silly audit   '@google-cloud/projectify': [ '4.0.0', '5.2.0' ],
+52 silly audit   '@google-cloud/promisify': [ '4.0.0', '5.1.0' ],
+52 silly audit   '@google-cloud/pubsub': [ '5.3.1' ],
+52 silly audit   '@google-cloud/storage': [ '7.21.0' ],
+52 silly audit   'gcp-metadata': [ '6.1.1', '8.1.2' ],
+52 silly audit   'google-auth-library': [ '9.15.1', '10.9.1', '10.5.0' ],
+52 silly audit   'google-logging-utils': [ '0.0.2', '1.1.3' ],
+52 silly audit   '@googleapis/sqladmin': [ '37.0.0' ],
+52 silly audit   '@grpc/proto-loader': [ '0.8.1', '0.7.15' ],
+52 silly audit   '@hono/node-server': [ '2.0.12' ],
+52 silly audit   '@img/colour': [ '1.1.0' ],
+52 silly audit   '@img/sharp-darwin-arm64': [ '0.34.5' ],
+52 silly audit   '@img/sharp-darwin-x64': [ '0.34.5' ],
+52 silly audit   '@img/sharp-libvips-darwin-arm64': [ '1.2.4' ],
+52 silly audit   '@img/sharp-libvips-darwin-x64': [ '1.2.4' ],
+52 silly audit   '@img/sharp-libvips-linux-arm': [ '1.2.4' ],
+52 silly audit   '@img/sharp-libvips-linux-arm64': [ '1.2.4' ],
+52 silly audit   '@img/sharp-libvips-linux-ppc64': [ '1.2.4' ],
+52 silly audit   '@img/sharp-libvips-linux-riscv64': [ '1.2.4' ],
+52 silly audit   '@img/sharp-libvips-linux-s390x': [ '1.2.4' ],
+52 silly audit   '@img/sharp-libvips-linux-x64': [ '1.2.4' ],
+52 silly audit   '@img/sharp-libvips-linuxmusl-arm64': [ '1.2.4' ],
+52 silly audit   '@img/sharp-libvips-linuxmusl-x64': [ '1.2.4' ],
+52 silly audit   '@img/sharp-linux-arm': [ '0.34.5' ],
+52 silly audit   '@img/sharp-linux-arm64': [ '0.34.5' ],
+52 silly audit   '@img/sharp-linux-ppc64': [ '0.34.5' ],
+52 silly audit   '@img/sharp-linux-riscv64': [ '0.34.5' ],
+52 silly audit   '@img/sharp-linux-s390x': [ '0.34.5' ],
+52 silly audit   '@img/sharp-linux-x64': [ '0.34.5' ],
+52 silly audit   '@img/sharp-linuxmusl-arm64': [ '0.34.5' ],
+52 silly audit   '@img/sharp-linuxmusl-x64': [ '0.34.5' ],
+52 silly audit   '@img/sharp-wasm32': [ '0.34.5' ],
+52 silly audit   '@img/sharp-win32-arm64': [ '0.34.5' ],
+52 silly audit   '@img/sharp-win32-ia32': [ '0.34.5' ],
+52 silly audit   '@img/sharp-win32-x64': [ '0.34.5' ],
+52 silly audit   '@inquirer/ansi': [ '1.0.2' ],
+52 silly audit   '@inquirer/checkbox': [ '4.3.2' ],
+52 silly audit   '@inquirer/confirm': [ '5.1.21' ],
+52 silly audit   '@inquirer/core': [ '10.3.2' ],
+52 silly audit   'wrap-ansi': [ '6.2.0', '8.1.0', '7.0.0' ],
+52 silly audit   '@inquirer/editor': [ '4.2.23' ],
+52 silly audit   '@inquirer/expand': [ '4.0.23' ],
+52 silly audit   '@inquirer/external-editor': [ '1.0.3' ],
+52 silly audit   '@inquirer/figures': [ '1.0.15' ],
+52 silly audit   '@inquirer/input': [ '4.3.1' ],
+52 silly audit   '@inquirer/number': [ '3.0.23' ],
+52 silly audit   '@inquirer/password': [ '4.0.23' ],
+52 silly audit   '@inquirer/prompts': [ '7.10.1' ],
+52 silly audit   '@inquirer/rawlist': [ '4.1.11' ],
+52 silly audit   '@inquirer/search': [ '3.2.2' ],
+52 silly audit   '@inquirer/select': [ '4.4.2' ],
+52 silly audit   '@inquirer/type': [ '3.0.10' ],
+52 silly audit   '@isaacs/cliui': [ '8.0.2' ],
+52 silly audit   'ansi-regex': [ '6.2.2', '5.0.1' ],
+52 silly audit   'ansi-styles': [ '6.2.3', '4.3.0' ],
+52 silly audit   'emoji-regex': [ '9.2.2', '8.0.0' ],
+52 silly audit   'string-width': [ '5.1.2', '4.2.3' ],
+52 silly audit   'strip-ansi': [ '7.2.0', '6.0.1' ],
+52 silly audit   '@isaacs/fs-minipass': [ '4.0.1' ],
+52 silly audit   '@jridgewell/sourcemap-codec': [ '1.5.5' ],
+52 silly audit   '@js-sdsl/ordered-map': [ '4.4.2' ],
+52 silly audit   '@jsdevtools/ono': [ '7.1.3' ],
+52 silly audit   '@modelcontextprotocol/sdk': [ '1.30.0' ],
+52 silly audit   '@napi-rs/lzma-linux-x64-gnu': [ '1.5.1' ],
+52 silly audit   '@next/env': [ '16.2.12' ],
+52 silly audit   '@next/swc-darwin-arm64': [ '16.2.12' ],
+52 silly audit   '@next/swc-darwin-x64': [ '16.2.12' ],
+52 silly audit   '@next/swc-linux-arm64-gnu': [ '16.2.12' ],
+52 silly audit   '@next/swc-linux-arm64-musl': [ '16.2.12' ],
+52 silly audit   '@next/swc-linux-x64-gnu': [ '16.2.12' ],
+52 silly audit   '@next/swc-linux-x64-musl': [ '16.2.12' ],
+52 silly audit   '@next/swc-win32-arm64-msvc': [ '16.2.12' ],
+52 silly audit   '@next/swc-win32-x64-msvc': [ '16.2.12' ],
+52 silly audit   '@nodable/entities': [ '3.0.0' ],
+52 silly audit   '@opentelemetry/api': [ '1.9.1' ],
+52 silly audit   '@opentelemetry/core': [ '1.30.1' ],
+52 silly audit   '@opentelemetry/semantic-conventions': [ '1.28.0', '1.39.0' ],
+52 silly audit   '@pkgjs/parseargs': [ '0.11.0' ],
+52 silly audit   '@pnpm/config.env-replace': [ '1.1.0' ],
+52 silly audit   '@pnpm/network.ca-file': [ '1.0.2' ],
+52 silly audit   'graceful-fs': [ '4.2.10', '4.2.11' ],
+52 silly audit   '@pnpm/npm-conf': [ '3.0.3' ],
+52 silly audit   '@protobufjs/aspromise': [ '1.1.2' ],
+52 silly audit   '@protobufjs/base64': [ '1.1.2' ],
+52 silly audit   '@protobufjs/codegen': [ '2.0.5' ],
+52 silly audit   '@protobufjs/eventemitter': [ '1.1.1' ],
+52 silly audit   '@protobufjs/fetch': [ '1.1.1' ],
+52 silly audit   '@protobufjs/float': [ '1.0.2' ],
+52 silly audit   '@protobufjs/path': [ '1.1.2' ],
+52 silly audit   '@protobufjs/pool': [ '1.1.0' ],
+52 silly audit   '@protobufjs/utf8': [ '1.1.2' ],
+52 silly audit   '@rollup/rollup-android-arm-eabi': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-android-arm64': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-darwin-arm64': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-darwin-x64': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-freebsd-arm64': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-freebsd-x64': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-arm-gnueabihf': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-arm-musleabihf': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-arm64-gnu': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-arm64-musl': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-loong64-gnu': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-loong64-musl': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-ppc64-gnu': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-ppc64-musl': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-riscv64-gnu': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-riscv64-musl': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-s390x-gnu': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-x64-gnu': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-linux-x64-musl': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-openbsd-x64': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-openharmony-arm64': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-win32-arm64-msvc': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-win32-ia32-msvc': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-win32-x64-gnu': [ '4.62.4' ],
+52 silly audit   '@rollup/rollup-win32-x64-msvc': [ '4.62.4' ],
+52 silly audit   '@sindresorhus/is': [ '4.6.0' ],
+52 silly audit   '@so-ric/colorspace': [ '1.1.6' ],
+52 silly audit   '@swc/helpers': [ '0.5.15' ],
+52 silly audit   '@tootallnate/once': [ '2.0.1' ],
+52 silly audit   '@tootallnate/quickjs-emscripten': [ '0.23.0' ],
+52 silly audit   '@types/body-parser': [ '1.19.6' ],
+52 silly audit   '@types/caseless': [ '0.12.5' ],
+52 silly audit   '@types/connect': [ '3.4.38' ],
+52 silly audit   '@types/cors': [ '2.8.19' ],
+52 silly audit   '@types/estree': [ '1.0.9' ],
+52 silly audit   '@types/express': [ '5.0.6' ],
+52 silly audit   '@types/express-serve-static-core': [ '5.1.3' ],
+52 silly audit   '@types/http-errors': [ '2.0.5' ],
+52 silly audit   '@types/json-schema': [ '7.0.15' ],
+52 silly audit   '@types/jsonwebtoken': [ '9.0.10' ],
+52 silly audit   '@types/ms': [ '2.1.0' ],
+52 silly audit   '@types/node': [ '22.20.1' ],
+52 silly audit   '@types/qs': [ '6.15.1' ],
+52 silly audit   '@types/range-parser': [ '1.2.7' ],
+52 silly audit   '@types/react': [ '19.2.18' ],
+52 silly audit   '@types/react-dom': [ '19.2.4' ],
+52 silly audit   '@types/request': [ '2.48.13' ],
+52 silly audit   '@types/send': [ '1.2.1' ],
+52 silly audit   '@types/serve-static': [ '2.2.0' ],
+52 silly audit   '@types/tough-cookie': [ '4.0.5' ],
+52 silly audit   '@types/triple-beam': [ '1.3.5' ],
+52 silly audit   '@vitest/expect': [ '2.1.9' ],
+52 silly audit   '@vitest/mocker': [ '2.1.9' ],
+52 silly audit   '@vitest/pretty-format': [ '2.1.9' ],
+52 silly audit   '@vitest/runner': [ '2.1.9' ],
+52 silly audit   '@vitest/snapshot': [ '2.1.9' ],
+52 silly audit   '@vitest/spy': [ '2.1.9' ],
+52 silly audit   '@vitest/utils': [ '2.1.9' ],
+52 silly audit   abbrev: [ '4.0.0' ],
+52 silly audit   'abort-controller': [ '3.0.0' ],
+52 silly audit   accepts: [ '2.0.0', '1.3.8' ],
+52 silly audit   'mime-db': [ '1.54.0', '1.52.0' ],
+52 silly audit   'mime-types': [ '3.0.2', '2.1.35' ],
+52 silly audit   'agent-base': [ '7.1.4', '6.0.2' ],
+52 silly audit   ajv: [ '8.20.0' ],
+52 silly audit   'ajv-formats': [ '3.0.1', '2.1.1' ],
+52 silly audit   'ansi-align': [ '3.0.1' ],
+52 silly audit   'ansi-escapes': [ '7.3.0' ],
+52 silly audit   'any-promise': [ '1.3.0' ],
+52 silly audit   anymatch: [ '3.1.3' ],
+52 silly audit   anynum: [ '1.0.1' ],
+52 silly audit   archiver: [ '7.0.1' ],
+52 silly audit   'archiver-utils': [ '5.0.2' ],
+52 silly audit   buffer: [ '6.0.3', '5.7.1' ],
+52 silly audit   'readable-stream': [ '4.7.0', '2.3.8', '3.6.2' ],
+52 silly audit   argparse: [ '2.0.1' ],
+52 silly audit   'array-flatten': [ '1.1.1' ],
+52 silly audit   arrify: [ '2.0.1' ],
+52 silly audit   'as-array': [ '2.0.0' ],
+52 silly audit   'assertion-error': [ '2.0.1' ],
+52 silly audit   'ast-types': [ '0.13.4' ],
+52 silly audit   async: [ '3.2.6' ],
+52 silly audit   'async-lock': [ '1.4.1' ],
+52 silly audit   'async-retry': [ '1.3.3' ],
+52 silly audit   asynckit: [ '0.4.0' ],
+52 silly audit   b4a: [ '1.8.1' ],
+52 silly audit   'balanced-match': [ '1.0.2' ],
+52 silly audit   'bare-events': [ '2.9.1' ],
+52 silly audit   'bare-fs': [ '4.7.4' ],
+52 silly audit   'bare-path': [ '3.1.1' ],
+52 silly audit   'bare-stream': [ '2.13.3' ],
+52 silly audit   'bare-url': [ '2.4.6' ],
+52 silly audit   'base64-js': [ '1.5.1' ],
+52 silly audit   'baseline-browser-mapping': [ '2.11.11' ],
+52 silly audit   'basic-auth': [ '2.0.1' ],
+52 silly audit   'basic-auth-connect': [ '1.1.0' ],
+52 silly audit   'safe-buffer': [ '5.1.2', '5.2.1' ],
+52 silly audit   'basic-ftp': [ '5.3.1' ],
+52 silly audit   'bignumber.js': [ '9.3.1' ],
+52 silly audit   'binary-extensions': [ '2.3.0' ],
+52 silly audit   bl: [ '4.1.0' ],
+52 silly audit   'body-parser': [ '2.3.0', '1.20.6' ],
+52 silly audit   'content-type': [ '2.0.0', '1.0.5' ],
+52 silly audit   boxen: [ '5.1.2' ],
+52 silly audit   chalk: [ '4.1.2', '5.6.2' ],
+52 silly audit   'brace-expansion': [ '2.1.4', '1.1.18' ],
+52 silly audit   braces: [ '3.0.3' ],
+52 silly audit   'buffer-crc32': [ '1.0.0' ],
+52 silly audit   'buffer-equal-constant-time': [ '1.0.1' ],
+52 silly audit   bytes: [ '3.1.2' ],
+52 silly audit   cac: [ '6.7.14' ],
+52 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+52 silly audit   'call-bound': [ '1.0.4' ],
+52 silly audit   'call-me-maybe': [ '1.0.2' ],
+52 silly audit   camelcase: [ '6.3.0' ],
+52 silly audit   'caniuse-lite': [ '1.0.30001806' ],
+52 silly audit   chai: [ '5.3.3' ],
+52 silly audit   'char-regex': [ '1.0.2' ],
+52 silly audit   chardet: [ '2.2.0' ],
+52 silly audit   'check-error': [ '2.1.3' ],
+52 silly audit   chokidar: [ '3.6.0' ],
+52 silly audit   chownr: [ '3.0.0' ],
+52 silly audit   'ci-info': [ '2.0.0' ],
+52 silly audit   cjson: [ '0.3.3' ],
+52 silly audit   'cli-boxes': [ '2.2.1' ],
+52 silly audit   'cli-cursor': [ '3.1.0' ],
+52 silly audit   'cli-highlight': [ '2.1.11' ],
+52 silly audit   cliui: [ '7.0.4', '8.0.1' ],
+52 silly audit   yargs: [ '16.2.2', '17.7.3' ],
+52 silly audit   'yargs-parser': [ '20.2.9', '21.1.1' ],
+52 silly audit   'cli-spinners': [ '2.9.2' ],
+52 silly audit   'cli-table3': [ '0.6.5' ],
+52 silly audit   'cli-width': [ '4.1.0' ],
+52 silly audit   'client-only': [ '0.0.1' ],
+52 silly audit   clone: [ '1.0.4' ],
+52 silly audit   color: [ '5.0.3' ],
+52 silly audit   'color-convert': [ '2.0.1', '3.1.3' ],
+52 silly audit   'color-name': [ '1.1.4', '2.1.1' ],
+52 silly audit   'color-string': [ '2.1.4' ],
+52 silly audit   colorette: [ '2.0.20' ],
+52 silly audit   'combined-stream': [ '1.0.8' ],
+52 silly audit   commander: [ '5.1.0', '2.20.3', '10.0.1' ],
+52 silly audit   'compress-commons': [ '6.0.2' ],
+52 silly audit   compressible: [ '2.0.18' ],
+52 silly audit   compression: [ '1.8.1' ],
+52 silly audit   debug: [ '2.6.9', '4.4.3', '4.3.1' ],
+52 silly audit   ms: [ '2.0.0', '2.1.3', '2.1.2' ],
+52 silly audit   negotiator: [ '0.6.4', '0.6.3', '1.0.0' ],
+52 silly audit   'concat-map': [ '0.0.1' ],
+52 silly audit   'config-chain': [ '1.1.13' ],
+52 silly audit   ini: [ '1.3.8', '2.0.0' ],
+52 silly audit   configstore: [ '5.0.1' ],
+52 silly audit   connect: [ '3.7.0' ],
+52 silly audit   encodeurl: [ '1.0.2', '2.0.0' ],
+52 silly audit   finalhandler: [ '1.1.2', '2.1.1', '1.3.2' ],
+52 silly audit   'on-finished': [ '2.3.0', '2.4.1' ],
+52 silly audit   statuses: [ '1.5.0', '2.0.2' ],
+52 silly audit   'content-disposition': [ '1.1.0', '0.5.4' ],
+52 silly audit   cookie: [ '0.7.2' ],
+52 silly audit   'cookie-signature': [ '1.2.2', '1.0.7' ],
+52 silly audit   'core-util-is': [ '1.0.3' ],
+52 silly audit   cors: [ '2.8.6' ],
+52 silly audit   'crc-32': [ '1.2.2' ],
+52 silly audit   'crc32-stream': [ '6.0.0' ],
+52 silly audit   'cross-env': [ '7.0.3' ],
+52 silly audit   'cross-spawn': [ '7.0.6' ],
+52 silly audit   'crypto-random-string': [ '2.0.0' ],
+52 silly audit   csstype: [ '3.2.3' ],
+52 silly audit   'csv-parse': [ '5.6.0' ],
+52 silly audit   'data-uri-to-buffer': [ '4.0.1', '6.0.2' ],
+52 silly audit   'deep-eql': [ '5.0.2' ],
+52 silly audit   'deep-extend': [ '0.6.0' ],
+52 silly audit   'deep-freeze': [ '0.0.1' ],
+52 silly audit   'deep-is': [ '0.1.4' ],
+52 silly audit   defaults: [ '1.0.4' ],
+52 silly audit   degenerator: [ '5.0.1' ],
+52 silly audit   'delayed-stream': [ '1.0.0' ],
+52 silly audit   depd: [ '2.0.0' ],
+52 silly audit   destroy: [ '1.2.0' ],
+52 silly audit   'detect-libc': [ '2.1.2' ],
+52 silly audit   'discontinuous-range': [ '1.0.0' ],
+52 silly audit   'dot-prop': [ '5.3.0' ],
+52 silly audit   'dunder-proto': [ '1.0.1' ],
+52 silly audit   duplexify: [ '4.1.3' ],
+52 silly audit   eastasianwidth: [ '0.2.0' ],
+52 silly audit   'ecdsa-sig-formatter': [ '1.0.11' ],
+52 silly audit   'ee-first': [ '1.1.1' ],
+52 silly audit   emojilib: [ '2.4.0' ],
+52 silly audit   enabled: [ '2.0.0' ],
+52 silly audit   'end-of-stream': [ '1.4.5' ],
+52 silly audit   'env-paths': [ '2.2.1' ],
+52 silly audit   environment: [ '1.1.0' ],
+52 silly audit   'es-define-property': [ '1.0.1' ],
+52 silly audit   'es-errors': [ '1.3.0' ],
+52 silly audit   'es-module-lexer': [ '1.7.0' ],
+52 silly audit   'es-object-atoms': [ '1.1.2' ],
+52 silly audit   'es-set-tostringtag': [ '2.1.0' ],
+52 silly audit   esbuild: [ '0.21.5' ],
+52 silly audit   escalade: [ '3.2.0' ],
+52 silly audit   'escape-goat': [ '2.1.1' ],
+52 silly audit   'escape-html': [ '1.0.3' ],
+52 silly audit   escodegen: [ '2.1.0' ],
+52 silly audit   esprima: [ '4.0.1' ],
+52 silly audit   estraverse: [ '5.3.0' ],
+52 silly audit   'estree-walker': [ '3.0.3' ],
+52 silly audit   esutils: [ '2.0.3' ],
+52 silly audit   etag: [ '1.8.1' ],
+52 silly audit   'event-target-shim': [ '5.0.1' ],
+52 silly audit   events: [ '3.3.0' ],
+52 silly audit   'events-listener': [ '1.1.0' ],
+52 silly audit   'events-universal': [ '1.0.1' ],
+52 silly audit   eventsource: [ '3.0.7' ],
+52 silly audit   'eventsource-parser': [ '3.1.0' ],
+52 silly audit   exegesis: [ '4.3.0' ],
+52 silly audit   'exegesis-express': [ '4.0.0' ],
+52 silly audit   'iconv-lite': [ '0.4.24', '0.7.3' ],
+52 silly audit   'media-typer': [ '0.3.0', '1.1.1' ],
+52 silly audit   'raw-body': [ '2.5.3', '3.0.2' ],
+52 silly audit   'type-is': [ '1.6.18', '2.1.0' ],
+52 silly audit   'expect-type': [ '1.4.0' ],
+52 silly audit   'exponential-backoff': [ '3.1.3' ],
+52 silly audit   express: [ '5.2.1', '4.22.2' ],
+52 silly audit   'express-rate-limit': [ '8.6.1' ],
+52 silly audit   extend: [ '3.0.2' ],
+52 silly audit   'fast-deep-equal': [ '3.1.3' ],
+52 silly audit   'fast-fifo': [ '1.3.2' ],
+52 silly audit   'fast-uri': [ '3.1.5' ],
+52 silly audit   'fast-xml-builder': [ '1.3.0' ],
+52 silly audit   'fast-xml-parser': [ '5.10.1' ],
+52 silly audit   'faye-websocket': [ '0.11.4' ],
+52 silly audit   fecha: [ '4.2.3' ],
+52 silly audit   'fetch-blob': [ '3.2.0' ],
+52 silly audit   'fill-range': [ '7.1.1' ],
+52 silly audit   firebase: [ '12.17.0' ],
+52 silly audit   'firebase-admin': [ '14.2.0' ],
+52 silly audit   'firebase-functions': [ '7.3.2' ],
+52 silly audit   'firebase-tools': [ '15.25.1' ],
+52 silly audit   'form-data': [ '4.0.6', '2.5.6' ],
+52 silly audit   fresh: [ '0.5.2', '2.0.0' ],
+52 silly audit   'merge-descriptors': [ '1.0.3', '2.0.0' ],
+52 silly audit   mime: [ '2.6.0', '1.6.0', '3.0.0' ],
+52 silly audit   minimatch: [ '3.1.5', '9.0.9', '5.1.9', '6.2.3' ],
+52 silly audit   'path-to-regexp': [ '0.1.13', '8.4.2', '1.9.0' ],
+52 silly audit   'range-parser': [ '1.2.1', '1.3.0' ],
+52 silly audit   send: [ '0.19.2', '1.2.1' ],
+52 silly audit   'serve-static': [ '1.16.3', '2.2.1' ],
+52 silly audit   zod: [ '4.4.3', '3.25.76' ],
+52 silly audit   'fn.name': [ '1.1.0' ],
+52 silly audit   'foreground-child': [ '3.3.1' ],
+52 silly audit   'formdata-polyfill': [ '4.0.10' ],
+52 silly audit   forwarded: [ '0.2.0' ],
+52 silly audit   'fs-extra': [ '10.1.0' ],
+52 silly audit   fsevents: [ '2.3.3' ],
+52 silly audit   'function-bind': [ '1.1.2' ],
+52 silly audit   'functional-red-black-tree': [ '1.0.1' ],
+52 silly audit   fuzzy: [ '0.1.3' ],
+52 silly audit   'get-caller-file': [ '2.0.5' ],
+52 silly audit   'get-intrinsic': [ '1.3.0' ],
+52 silly audit   'get-proto': [ '1.0.1' ],
+52 silly audit   'get-uri': [ '6.0.5' ],
+52 silly audit   glob: [ '10.5.0' ],
+52 silly audit   'glob-parent': [ '5.1.2' ],
+52 silly audit   'glob-slash': [ '1.0.0' ],
+52 silly audit   'glob-slasher': [ '1.0.1' ],
+52 silly audit   'global-dirs': [ '3.0.1' ],
+52 silly audit   'google-gax': [ '5.0.8' ],
+52 silly audit   gtoken: [ '8.0.0', '7.1.0' ],
+52 silly audit   'http-proxy-agent': [ '7.0.2', '5.0.0' ],
+52 silly audit   'retry-request': [ '8.0.4', '7.0.2' ],
+52 silly audit   'teeny-request': [ '10.1.4', '9.0.0' ],
+52 silly audit   'googleapis-common': [ '8.0.3' ],
+52 silly audit   gopd: [ '1.2.0' ],
+52 silly audit   'has-flag': [ '4.0.0' ],
+52 silly audit   'has-symbols': [ '1.1.0' ],
+52 silly audit   'has-tostringtag': [ '1.0.2' ],
+52 silly audit   'has-yarn': [ '2.1.0' ],
+52 silly audit   hasown: [ '2.0.4' ],
+52 silly audit   'heap-js': [ '2.7.1' ],
+52 silly audit   'highlight.js': [ '10.7.3' ],
+52 silly audit   hono: [ '4.12.33' ],
+52 silly audit   'html-entities': [ '2.6.0' ],
+52 silly audit   'http-errors': [ '2.0.1' ],
+52 silly audit   'http-parser-js': [ '0.5.10' ],
+52 silly audit   'https-proxy-agent': [ '7.0.6', '5.0.1' ],
+52 silly audit   idb: [ '7.1.1' ],
+52 silly audit   ieee754: [ '1.2.1' ],
+52 silly audit   ignore: [ '7.0.6' ],
+52 silly audit   'import-lazy': [ '2.1.0' ],
+52 silly audit   imurmurhash: [ '0.1.4' ],
+52 silly audit   inherits: [ '2.0.4' ],
+52 silly audit   'install-artifact-from-github': [ '1.7.0' ],
+52 silly audit   'ip-address': [ '10.4.0' ],
+52 silly audit   'ip-regex': [ '2.1.0' ],
+52 silly audit   'ipaddr.js': [ '1.9.1' ],
+52 silly audit   'is-binary-path': [ '2.1.0' ],
+52 silly audit   'is-ci': [ '2.0.0' ],
+52 silly audit   'is-extglob': [ '2.1.1' ],
+52 silly audit   'is-fullwidth-code-point': [ '3.0.0' ],
+52 silly audit   'is-glob': [ '4.0.3' ],
+52 silly audit   'is-installed-globally': [ '0.4.0' ],
+52 silly audit   'is-interactive': [ '1.0.0' ],
+52 silly audit   'is-npm': [ '5.0.0' ],
+52 silly audit   'is-number': [ '7.0.0' ],
+52 silly audit   'is-obj': [ '2.0.0' ],
+52 silly audit   'is-path-inside': [ '3.0.3' ],
+52 silly audit   'is-promise': [ '4.0.0' ],
+52 silly audit   'is-stream': [ '2.0.1' ],
+52 silly audit   'is-stream-ended': [ '0.1.4' ],
+52 silly audit   'is-typedarray': [ '1.0.0' ],
+52 silly audit   'is-unicode-supported': [ '0.1.0' ],
+52 silly audit   'is-unsafe': [ '2.0.0' ],
+52 silly audit   'is-url': [ '1.2.4' ],
+52 silly audit   'is-wsl': [ '1.1.0' ],
+52 silly audit   'is-yarn-global': [ '0.3.0' ],
+52 silly audit   is2: [ '2.0.1' ],
+52 silly audit   isarray: [ '1.0.0', '0.0.1' ],
+52 silly audit   isexe: [ '2.0.0', '4.0.0' ],
+52 silly audit   'isomorphic-fetch': [ '3.0.0' ],
+52 silly audit   jackspeak: [ '3.4.3' ],
+52 silly audit   jju: [ '1.4.0' ],
+52 silly audit   'join-path': [ '1.1.1' ],
+52 silly audit   jose: [ '6.2.7' ],
+52 silly audit   'js-yaml': [ '4.3.1' ],
+52 silly audit   'json-bigint': [ '1.0.0' ],
+52 silly audit   'json-parse-helpfulerror': [ '1.0.3' ],
+52 silly audit   'json-ptr': [ '3.1.1' ],
+52 silly audit   'json-schema-traverse': [ '1.0.0' ],
+52 silly audit   'json-schema-typed': [ '8.0.2' ],
+52 silly audit   jsonfile: [ '6.2.1' ],
+52 silly audit   jsonwebtoken: [ '9.0.3' ],
+52 silly audit   jwa: [ '2.0.1' ],
+52 silly audit   'jwks-rsa': [ '4.1.0' ],
+52 silly audit   jws: [ '4.0.1' ],
+52 silly audit   kuler: [ '2.0.0' ],
+52 silly audit   lazystream: [ '1.0.1' ],
+52 silly audit   string_decoder: [ '1.1.1', '1.3.0' ],
+52 silly audit   libsodium: [ '0.7.16' ],
+52 silly audit   'libsodium-wrappers': [ '0.7.16' ],
+52 silly audit   limiter: [ '1.1.5' ],
+52 silly audit   lodash: [ '4.18.1' ],
+52 silly audit   'lodash._objecttypes': [ '2.4.1' ],
+52 silly audit   'lodash.camelcase': [ '4.3.0' ],
+52 silly audit   'lodash.clonedeep': [ '4.5.0' ],
+52 silly audit   'lodash.includes': [ '4.3.0' ],
+52 silly audit   'lodash.isboolean': [ '3.0.3' ],
+52 silly audit   'lodash.isinteger': [ '4.0.4' ],
+52 silly audit   'lodash.isnumber': [ '3.0.3' ],
+52 silly audit   'lodash.isobject': [ '2.4.1' ],
+52 silly audit   'lodash.isplainobject': [ '4.0.6' ],
+52 silly audit   'lodash.isstring': [ '4.0.1' ],
+52 silly audit   'lodash.once': [ '4.1.1' ],
+52 silly audit   'lodash.snakecase': [ '4.1.1' ],
+52 silly audit   'log-symbols': [ '4.1.0' ],
+52 silly audit   logform: [ '2.7.0' ],
+52 silly audit   long: [ '5.3.2' ],
+52 silly audit   loupe: [ '3.2.1' ],
+52 silly audit   'lru-cache': [ '11.5.2', '10.4.3', '7.18.3' ],
+52 silly audit   'lru-memoizer': [ '3.0.0' ],
+52 silly audit   lsofi: [ '2.0.0' ],
+52 silly audit   'magic-string': [ '0.30.21' ],
+52 silly audit   'make-dir': [ '3.1.0' ],
+52 silly audit   semver: [ '6.3.1', '7.8.5' ],
+52 silly audit   marked: [ '13.0.3' ],
+52 silly audit   'marked-terminal': [ '7.3.0' ],
+52 silly audit   'math-intrinsics': [ '1.1.0' ],
+52 silly audit   methods: [ '1.1.2' ],
+52 silly audit   'mimic-fn': [ '2.1.0' ],
+52 silly audit   minimist: [ '1.2.8' ],
+52 silly audit   minipass: [ '7.1.3' ],
+52 silly audit   minizlib: [ '3.1.0' ],
+52 silly audit   moo: [ '0.5.3' ],
+52 silly audit   morgan: [ '1.11.0' ],
+52 silly audit   'mute-stream': [ '2.0.0' ],
+52 silly audit   mz: [ '2.7.0' ],
+52 silly audit   nan: [ '2.28.0' ],
+52 silly audit   nanoid: [ '3.3.16' ],
+52 silly audit   nearley: [ '2.20.1' ],
+52 silly audit   netmask: [ '2.1.1' ],
+52 silly audit   next: [ '16.2.12' ],
+52 silly audit   'node-domexception': [ '1.0.0' ],
+52 silly audit   'node-emoji': [ '2.2.0' ],
+52 silly audit   'node-gyp': [ '12.4.0' ],
+52 silly audit   which: [ '6.0.1', '2.0.2' ],
+52 silly audit   nopt: [ '9.0.0' ],
+52 silly audit   'normalize-path': [ '3.0.0' ],
+52 silly audit   'object-assign': [ '4.1.1' ],
+52 silly audit   'object-hash': [ '3.0.0' ],
+52 silly audit   'object-inspect': [ '1.13.4' ],
+52 silly audit   'on-headers': [ '1.1.0' ],
+52 silly audit   once: [ '1.4.0' ],
+52 silly audit   'one-time': [ '1.0.0' ],
+52 silly audit   onetime: [ '5.1.2' ],
+52 silly audit   open: [ '6.4.0' ],
+52 silly audit   'openapi3-ts': [ '3.2.0' ],
+52 silly audit   ora: [ '5.4.1' ],
+52 silly audit   'p-defer': [ '3.0.0' ],
+52 silly audit   'p-limit': [ '3.1.0' ],
+52 silly audit   'p-throttle': [ '8.1.0' ],
+52 silly audit   'pac-proxy-agent': [ '7.2.0' ],
+52 silly audit   'pac-resolver': [ '7.0.1' ],
+52 silly audit   'package-json-from-dist': [ '1.0.1' ],
+52 silly audit   parse5: [ '5.1.1', '6.0.1' ],
+52 silly audit   'parse5-htmlparser2-tree-adapter': [ '6.0.1' ],
+52 silly audit   parseurl: [ '1.3.3' ],
+52 silly audit   'path-expression-matcher': [ '1.6.2' ],
+52 silly audit   'path-key': [ '3.1.1' ],
+52 silly audit   'path-scurry': [ '1.11.1' ],
+52 silly audit   pathe: [ '1.1.2' ],
+52 silly audit   pathval: [ '2.0.1' ],
+52 silly audit   pg: [ '8.22.0' ],
+52 silly audit   'pg-cloudflare': [ '1.4.0' ],
+52 silly audit   'pg-connection-string': [ '2.14.0' ],
+52 silly audit   'pg-gateway': [ '0.3.0-beta.4' ],
+52 silly audit   'pg-int8': [ '1.0.1' ],
+52 silly audit   'pg-pool': [ '3.14.0' ],
+52 silly audit   'pg-protocol': [ '1.15.0' ],
+52 silly audit   'pg-types': [ '2.2.0' ],
+52 silly audit   pgpass: [ '1.0.5' ],
+52 silly audit   picocolors: [ '1.1.1' ],
+52 silly audit   picomatch: [ '2.3.2' ],
+52 silly audit   'pkce-challenge': [ '5.0.1' ],
+52 silly audit   portfinder: [ '1.0.38' ],
+52 silly audit   postcss: [ '8.4.31', '8.5.25' ],
+52 silly audit   'postgres-array': [ '2.0.0' ],
+52 silly audit   'postgres-bytea': [ '1.0.1' ],
+52 silly audit   'postgres-date': [ '1.0.7' ],
+52 silly audit   'postgres-interval': [ '1.2.0' ],
+52 silly audit   'proc-log': [ '6.1.0' ],
+52 silly audit   process: [ '0.11.10' ],
+52 silly audit   'process-nextick-args': [ '2.0.1' ],
+52 silly audit   progress: [ '2.0.3' ],
+52 silly audit   'promise-breaker': [ '6.0.0' ],
+52 silly audit   'proto-list': [ '1.2.4' ],
+52 silly audit   'proto3-json-serializer': [ '3.0.4' ],
+52 silly audit   protobufjs: [ '7.6.5' ],
+52 silly audit   'proxy-addr': [ '2.0.7' ],
+52 silly audit   'proxy-agent': [ '6.5.0' ],
+52 silly audit   'proxy-from-env': [ '1.1.0' ],
+52 silly audit   pupa: [ '2.1.1' ],
+52 silly audit   qs: [ '6.15.3' ],
+52 silly audit   'railroad-diagrams': [ '1.0.0' ],
+52 silly audit   randexp: [ '0.4.6' ],
+52 silly audit   rc: [ '1.2.8' ],
+52 silly audit   re2: [ '1.24.1' ],
+52 silly audit   re2js: [ '2.8.6' ],
+52 silly audit   react: [ '19.2.8' ],
+52 silly audit   'react-dom': [ '19.2.8' ],
+52 silly audit   'readdir-glob': [ '1.1.3' ],
+52 silly audit   readdirp: [ '3.6.0' ],
+52 silly audit   'registry-auth-token': [ '5.1.1' ],
+52 silly audit   'registry-url': [ '5.1.0' ],
+52 silly audit   'require-directory': [ '2.1.1' ],
+52 silly audit   'require-from-string': [ '2.0.2' ],
+52 silly audit   'restore-cursor': [ '3.1.0' ],
+52 silly audit   'signal-exit': [ '3.0.7', '4.1.0' ],
+52 silly audit   ret: [ '0.1.15' ],
+52 silly audit   retry: [ '0.13.1' ],
+52 silly audit   rimraf: [ '5.0.10' ],
+52 silly audit   rollup: [ '4.62.4' ],
+52 silly audit   router: [ '2.2.0' ],
+52 silly audit   'safe-stable-stringify': [ '2.5.0' ],
+52 silly audit   'safer-buffer': [ '2.1.2' ],
+52 silly audit   scheduler: [ '0.27.0' ],
+52 silly audit   'semver-diff': [ '3.1.1' ],
+52 silly audit   setprototypeof: [ '1.2.0' ],
+52 silly audit   sharp: [ '0.34.5' ],
+52 silly audit   'shebang-command': [ '2.0.0' ],
+52 silly audit   'shebang-regex': [ '3.0.0' ],
+52 silly audit   'side-channel': [ '1.1.1' ],
+52 silly audit   'side-channel-list': [ '1.0.1' ],
+52 silly audit   'side-channel-map': [ '1.0.1' ],
+52 silly audit   'side-channel-weakmap': [ '1.0.2' ],
+52 silly audit   siginfo: [ '2.0.0' ],
+52 silly audit   'skin-tone': [ '2.0.0' ],
+52 silly audit   'smart-buffer': [ '4.2.0' ],
+52 silly audit   socks: [ '2.8.9' ],
+52 silly audit   'socks-proxy-agent': [ '8.0.5' ],
+52 silly audit   'source-map': [ '0.6.1' ],
+52 silly audit   'source-map-js': [ '1.2.1' ],
+52 silly audit   split2: [ '4.2.0' ],
+52 silly audit   'sql-formatter': [ '15.8.2' ],
+52 silly audit   'stack-trace': [ '0.0.10' ],
+52 silly audit   stackback: [ '0.0.2' ],
+52 silly audit   'std-env': [ '3.10.0' ],
+52 silly audit   'stream-chain': [ '2.2.5' ],
+52 silly audit   'stream-events': [ '1.0.5' ],
+52 silly audit   'stream-json': [ '1.9.1' ],
+52 silly audit   'stream-shift': [ '1.0.3' ],
+52 silly audit   streamx: [ '2.28.0' ],
+52 silly audit   'strip-json-comments': [ '2.0.1' ],
+52 silly audit   strnum: [ '2.4.1' ],
+52 silly audit   stubs: [ '3.0.0' ],
+52 silly audit   'styled-jsx': [ '5.1.6' ],
+52 silly audit   superstatic: [ '10.0.0' ],
+52 silly audit   'supports-color': [ '7.2.0' ],
+52 silly audit   'supports-hyperlinks': [ '3.2.0' ],
+52 silly audit   tar: [ '7.5.22' ],
+52 silly audit   'tar-stream': [ '3.2.0' ],
+52 silly audit   'tcp-port-used': [ '1.0.3' ],
+52 silly audit   teex: [ '1.0.1' ],
+52 silly audit   'text-decoder': [ '1.2.7' ],
+52 silly audit   'text-hex': [ '1.0.0' ],
+52 silly audit   thenify: [ '3.3.1' ],
+52 silly audit   'thenify-all': [ '1.6.0' ],
+52 silly audit   tinybench: [ '2.9.0' ],
+52 silly audit   tinyexec: [ '0.3.2' ],
+52 silly audit   tinyglobby: [ '0.2.17' ],
+52 silly audit   fdir: [ '6.5.0' ],
+52 silly audit   tinypool: [ '1.1.1' ],
+52 silly audit   tinyrainbow: [ '1.2.0' ],
+52 silly audit   tinyspy: [ '3.0.2' ],
+52 silly audit   tmp: [ '0.2.7' ],
+52 silly audit   'to-regex-range': [ '5.0.1' ],
+52 silly audit   toidentifier: [ '1.0.1' ],
+52 silly audit   toxic: [ '1.0.1' ],
+52 silly audit   tr46: [ '0.0.3' ],
+52 silly audit   'triple-beam': [ '1.4.1' ],
+52 silly audit   tslib: [ '2.8.1' ],
+52 silly audit   tsscmp: [ '1.0.6' ],
+52 silly audit   'type-fest': [ '0.20.2' ],
+52 silly audit   'typedarray-to-buffer': [ '3.1.5' ],
+52 silly audit   typescript: [ '5.9.3' ],
+52 silly audit   undici: [ '6.28.0' ],
+52 silly audit   'undici-types': [ '6.21.0' ],
+52 silly audit   'unicode-emoji-modifier-base': [ '1.0.0' ],
+52 silly audit   'unique-string': [ '2.0.0' ],
+52 silly audit   'universal-analytics': [ '0.5.4' ],
+52 silly audit   uuid: [ '9.0.1', '11.1.1', '14.0.1' ],
+52 silly audit   universalify: [ '2.0.1' ],
+52 silly audit   unpipe: [ '1.0.0' ],
+52 silly audit   'update-notifier-cjs': [ '5.1.7' ],
+52 silly audit   'url-join': [ '0.0.1' ],
+52 silly audit   'url-template': [ '2.0.8' ],
+52 silly audit   'util-deprecate': [ '1.0.2' ],
+52 silly audit   'utils-merge': [ '1.0.1' ],
+52 silly audit   'valid-url': [ '1.0.9' ],
+52 silly audit   vary: [ '1.1.2' ],
+52 silly audit   vite: [ '5.4.21' ],
+52 silly audit   'vite-node': [ '2.1.9' ],
+52 silly audit   vitest: [ '2.1.9' ],
+52 silly audit   wcwidth: [ '1.0.1' ],
+52 silly audit   'web-streams-polyfill': [ '3.3.3' ],
+52 silly audit   'web-vitals': [ '4.2.4' ],
+52 silly audit   'webidl-conversions': [ '3.0.1' ],
+52 silly audit   'websocket-driver': [ '0.7.5' ],
+52 silly audit   'websocket-extensions': [ '0.1.4' ],
+52 silly audit   'whatwg-fetch': [ '3.6.20' ],
+52 silly audit   'whatwg-url': [ '5.0.0' ],
+52 silly audit   'why-is-node-running': [ '2.3.0' ],
+52 silly audit   'widest-line': [ '3.1.0' ],
+52 silly audit   winston: [ '3.19.0' ],
+52 silly audit   'winston-transport': [ '4.9.0' ],
+52 silly audit   wrappy: [ '1.0.2' ],
+52 silly audit   'write-file-atomic': [ '3.0.3' ],
+52 silly audit   ws: [ '8.21.1' ],
+52 silly audit   'xdg-basedir': [ '4.0.0' ],
+52 silly audit   'xml-naming': [ '0.3.0' ],
+52 silly audit   xtend: [ '4.0.2' ],
+52 silly audit   y18n: [ '5.0.8' ],
+52 silly audit   yallist: [ '5.0.0' ],
+52 silly audit   yaml: [ '2.9.0' ],
+52 silly audit   'yocto-queue': [ '0.1.0' ],
+52 silly audit   'yoctocolors-cjs': [ '2.1.3' ],
+52 silly audit   'zip-stream': [ '6.0.1' ],
+52 silly audit   'zod-to-json-schema': [ '3.25.2' ],
+52 silly audit   '@mba/domain': [ '1.0.0' ]
+52 silly audit }
+53 http cache fdir@https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz 0ms (cache hit)
+54 http cache tinyglobby@https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz 0ms (cache hit)
+55 http cache nopt@https://registry.npmjs.org/nopt/-/nopt-9.0.0.tgz 0ms (cache hit)
+56 http cache re2@https://registry.npmjs.org/re2/-/re2-1.24.1.tgz 0ms (cache hit)
+57 http cache proc-log@https://registry.npmjs.org/proc-log/-/proc-log-6.1.0.tgz 0ms (cache hit)
+58 http cache which@https://registry.npmjs.org/which/-/which-6.0.1.tgz 0ms (cache hit)
+59 http cache node-gyp@https://registry.npmjs.org/node-gyp/-/node-gyp-12.4.0.tgz 0ms (cache hit)
+60 http cache isexe@https://registry.npmjs.org/isexe/-/isexe-4.0.0.tgz 0ms (cache hit)
+61 http cache nan@https://registry.npmjs.org/nan/-/nan-2.28.0.tgz 0ms (cache hit)
+62 http cache exponential-backoff@https://registry.npmjs.org/exponential-backoff/-/exponential-backoff-3.1.3.tgz 0ms (cache hit)
+63 http cache abbrev@https://registry.npmjs.org/abbrev/-/abbrev-4.0.0.tgz 0ms (cache hit)
+64 http cache install-artifact-from-github@https://registry.npmjs.org/install-artifact-from-github/-/install-artifact-from-github-1.7.0.tgz 0ms (cache hit)
+65 http cache env-paths@https://registry.npmjs.org/env-paths/-/env-paths-2.2.1.tgz 0ms (cache hit)
+66 http cache uuid@https://registry.npmjs.org/uuid/-/uuid-14.0.1.tgz 0ms (cache hit)
+67 http cache uuid@https://registry.npmjs.org/uuid/-/uuid-11.1.1.tgz 0ms (cache hit)
+68 silly tarball no local data for uuid@https://registry.npmjs.org/uuid/-/uuid-14.0.1.tgz. Extracting by manifest.
+69 http fetch GET 200 https://registry.npmjs.org/uuid/-/uuid-14.0.1.tgz 200ms (cache miss)
+70 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 234ms
+71 silly audit report {
+71 silly audit report   '@opentelemetry/core': [
+71 silly audit report     {
+71 silly audit report       id: 1120821,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-8988-4f7v-96qf',
+71 silly audit report       title: 'OpenTelemetry Core: Unbounded memory allocation in W3C Baggage propagation',
+71 silly audit report       severity: 'moderate',
+71 silly audit report       vulnerable_versions: '<2.8.0',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     }
+71 silly audit report   ],
+71 silly audit report   esbuild: [
+71 silly audit report     {
+71 silly audit report       id: 1102341,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-67mh-4wv8-2f99',
+71 silly audit report       title: 'esbuild enables any website to send any requests to the development server and read the response',
+71 silly audit report       severity: 'moderate',
+71 silly audit report       vulnerable_versions: '<=0.24.2',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     }
+71 silly audit report   ],
+71 silly audit report   postcss: [
+71 silly audit report     {
+71 silly audit report       id: 1117015,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-qx2v-qp2m-jg93',
+71 silly audit report       title: 'PostCSS has XSS via Unescaped </style> in its CSS Stringify Output',
+71 silly audit report       severity: 'moderate',
+71 silly audit report       vulnerable_versions: '<8.5.10',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     },
+71 silly audit report     {
+71 silly audit report       id: 1124252,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-6g55-p6wh-862q',
+71 silly audit report       title: 'PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments',
+71 silly audit report       severity: 'high',
+71 silly audit report       vulnerable_versions: '<=8.5.11',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     },
+71 silly audit report     {
+71 silly audit report       id: 1124288,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-r28c-9q8g-f849',
+71 silly audit report       title: 'PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure',
+71 silly audit report       severity: 'high',
+71 silly audit report       vulnerable_versions: '<=8.5.17',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     }
+71 silly audit report   ],
+71 silly audit report   re2: [
+71 silly audit report     {
+71 silly audit report       id: 1130576,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-ff84-5f28-78qj',
+71 silly audit report       title: 're2: Out-of-bounds heap read in `exec`/`test`/`match` via attacker-influenced `lastIndex` on a non-ASCII subject → uncatchable process crash (DoS)',
+71 silly audit report       severity: 'moderate',
+71 silly audit report       vulnerable_versions: '<=1.25.1',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     },
+71 silly audit report     {
+71 silly audit report       id: 1130577,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-6hxr-mr5r-9836',
+71 silly audit report       title: 're2: Global `String.prototype.match` with an empty-matchable pattern never advances → infinite loop with unbounded native memory growth (DoS)',
+71 silly audit report       severity: 'moderate',
+71 silly audit report       vulnerable_versions: '<=1.25.1',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     }
+71 silly audit report   ],
+71 silly audit report   sharp: [
+71 silly audit report     {
+71 silly audit report       id: 1124066,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-f88m-g3jw-g9cj',
+71 silly audit report       title: 'sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591',
+71 silly audit report       severity: 'high',
+71 silly audit report       vulnerable_versions: '<0.35.0',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     }
+71 silly audit report   ],
+71 silly audit report   uuid: [
+71 silly audit report     {
+71 silly audit report       id: 1119441,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-w5hq-g745-h8pq',
+71 silly audit report       title: 'uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided',
+71 silly audit report       severity: 'moderate',
+71 silly audit report       vulnerable_versions: '<11.1.1',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     }
+71 silly audit report   ],
+71 silly audit report   vite: [
+71 silly audit report     {
+71 silly audit report       id: 1120784,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-v6wh-96g9-6wx3',
+71 silly audit report       title: 'launch-editor: NTLMv2 hash disclosure via UNC path handling on Windows',
+71 silly audit report       severity: 'moderate',
+71 silly audit report       vulnerable_versions: '<=6.4.2',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     },
+71 silly audit report     {
+71 silly audit report       id: 1116229,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-4w7w-66w2-5vf9',
+71 silly audit report       title: 'Vite Vulnerable to Path Traversal in Optimized Deps `.map` Handling',
+71 silly audit report       severity: 'moderate',
+71 silly audit report       vulnerable_versions: '<=6.4.1',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     },
+71 silly audit report     {
+71 silly audit report       id: 1123525,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-fx2h-pf6j-xcff',
+71 silly audit report       title: 'vite: `server.fs.deny` bypass on Windows alternate paths',
+71 silly audit report       severity: 'high',
+71 silly audit report       vulnerable_versions: '<=6.4.2',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     }
+71 silly audit report   ],
+71 silly audit report   vitest: [
+71 silly audit report     {
+71 silly audit report       id: 1120126,
+71 silly audit report       url: 'https://github.com/advisories/GHSA-5xrq-8626-4rwp',
+71 silly audit report       title: 'When Vitest UI server is listening, arbitrary file can be read and executed',
+71 silly audit report       severity: 'critical',
+71 silly audit report       vulnerable_versions: '<3.2.6',
+71 silly audit report       cwe: [Array],
+71 silly audit report       cvss: [Object]
+71 silly audit report     }
+71 silly audit report   ]
+71 silly audit report }
+72 silly packumentCache corgi:https://registry.npmjs.org/@opentelemetry%2fcore cache-miss
+73 silly packumentCache corgi:https://registry.npmjs.org/esbuild cache-miss
+74 silly packumentCache corgi:https://registry.npmjs.org/postcss cache-miss
+75 silly packumentCache corgi:https://registry.npmjs.org/re2 cache-miss
+76 silly packumentCache corgi:https://registry.npmjs.org/sharp cache-miss
+77 silly packumentCache corgi:https://registry.npmjs.org/uuid cache-miss
+78 silly packumentCache corgi:https://registry.npmjs.org/vite cache-miss
+79 silly packumentCache corgi:https://registry.npmjs.org/vitest cache-miss
+80 http cache https://registry.npmjs.org/@opentelemetry%2fcore 23ms (cache hit)
+81 silly packumentCache corgi:https://registry.npmjs.org/@opentelemetry%2fcore set size:385194 disposed:false
+82 http cache https://registry.npmjs.org/re2 26ms (cache hit)
+83 silly packumentCache corgi:https://registry.npmjs.org/re2 set size:100915 disposed:false
+84 http fetch GET 200 https://registry.npmjs.org/postcss 32ms (cache revalidated)
+85 silly packumentCache corgi:https://registry.npmjs.org/postcss set size:354683 disposed:false
+86 http fetch GET 200 https://registry.npmjs.org/esbuild 38ms (cache revalidated)
+87 silly packumentCache corgi:https://registry.npmjs.org/esbuild set size:887361 disposed:false
+88 http fetch GET 200 https://registry.npmjs.org/sharp 66ms (cache revalidated)
+89 silly packumentCache corgi:https://registry.npmjs.org/sharp set size:291503 disposed:false
+90 http fetch GET 200 https://registry.npmjs.org/vitest 71ms (cache revalidated)
+91 silly packumentCache corgi:https://registry.npmjs.org/vitest set size:1264033 disposed:false
+92 http fetch GET 200 https://registry.npmjs.org/vite 84ms (cache revalidated)
+93 silly packumentCache corgi:https://registry.npmjs.org/vite set size:2291880 disposed:false
+94 http fetch GET 200 https://registry.npmjs.org/uuid 435ms (cache revalidated)
+95 silly packumentCache corgi:https://registry.npmjs.org/uuid set size:82973 disposed:false
+96 silly packumentCache corgi:https://registry.npmjs.org/@google-cloud%2fpubsub cache-miss
+97 http cache https://registry.npmjs.org/@google-cloud%2fpubsub 5ms (cache hit)
+98 silly packumentCache corgi:https://registry.npmjs.org/@google-cloud%2fpubsub set size:377242 disposed:false
+99 silly packumentCache corgi:https://registry.npmjs.org/next cache-miss
+100 http fetch GET 200 https://registry.npmjs.org/next 60ms (cache revalidated)
+101 silly packumentCache corgi:https://registry.npmjs.org/next set size:25415748 disposed:false
+102 silly packumentCache corgi:https://registry.npmjs.org/superstatic cache-miss
+103 http cache https://registry.npmjs.org/superstatic 5ms (cache hit)
+104 silly packumentCache corgi:https://registry.npmjs.org/superstatic set size:301023 disposed:false
+105 silly packumentCache corgi:https://registry.npmjs.org/teeny-request cache-miss
+106 http fetch GET 200 https://registry.npmjs.org/teeny-request 21ms (cache revalidated)
+107 silly packumentCache corgi:https://registry.npmjs.org/teeny-request set size:101034 disposed:false
+108 silly packumentCache corgi:https://registry.npmjs.org/@vitest%2fmocker cache-miss
+109 silly packumentCache corgi:https://registry.npmjs.org/vite-node cache-miss
+110 http fetch GET 200 https://registry.npmjs.org/vite-node 23ms (cache revalidated)
+111 silly packumentCache corgi:https://registry.npmjs.org/vite-node set size:453359 disposed:false
+112 http fetch GET 200 https://registry.npmjs.org/@vitest%2fmocker 30ms (cache revalidated)
+113 silly packumentCache corgi:https://registry.npmjs.org/@vitest%2fmocker set size:123096 disposed:false
+114 silly packumentCache corgi:https://registry.npmjs.org/firebase-tools cache-miss
+115 http cache https://registry.npmjs.org/firebase-tools 7ms (cache hit)
+116 silly packumentCache corgi:https://registry.npmjs.org/firebase-tools set size:1504331 disposed:false
+117 silly packumentCache corgi:https://registry.npmjs.org/@google-cloud%2fstorage cache-miss
+118 silly packumentCache corgi:https://registry.npmjs.org/retry-request cache-miss
+119 http fetch GET 200 https://registry.npmjs.org/retry-request 22ms (cache revalidated)
+120 silly packumentCache corgi:https://registry.npmjs.org/retry-request set size:43443 disposed:false
+121 http fetch GET 200 https://registry.npmjs.org/@google-cloud%2fstorage 254ms (cache revalidated)
+122 silly packumentCache corgi:https://registry.npmjs.org/@google-cloud%2fstorage set size:479910 disposed:false
+123 silly packumentCache corgi:https://registry.npmjs.org/firebase-admin cache-miss
+124 http fetch GET 200 https://registry.npmjs.org/firebase-admin 17ms (cache revalidated)
+125 silly packumentCache corgi:https://registry.npmjs.org/firebase-admin set size:349635 disposed:false
+126 silly packumentCache corgi:https://registry.npmjs.org/firebase-functions cache-miss
+127 http fetch GET 200 https://registry.npmjs.org/firebase-functions 29ms (cache revalidated)
+128 silly packumentCache corgi:https://registry.npmjs.org/firebase-functions set size:318319 disposed:false
+129 info run re2@1.24.1 install node_modules/re2 install-from-cache --artifact build/Release/re2.node --host-var RE2_DOWNLOAD_MIRROR --skip-path-var RE2_DOWNLOAD_SKIP_PATH --skip-ver-var RE2_DOWNLOAD_SKIP_VER || node-gyp -j max rebuild
+130 info run re2@1.24.1 install { code: 1, signal: null }
+131 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\re2
+132 silly reify mark deleted [ 'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\re2' ]
+133 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\install-artifact-from-github
+134 silly reify mark deleted [
+134 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\install-artifact-from-github',
+134 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\hash-github-cache',
+134 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\hash-github-cache.cmd',
+134 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\hash-github-cache.ps1',
+134 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\install-from-cache',
+134 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\install-from-cache.cmd',
+134 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\install-from-cache.ps1',
+134 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\save-to-github-cache',
+134 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\save-to-github-cache.cmd',
+134 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\save-to-github-cache.ps1'
+134 silly reify ]
+135 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\nan
+136 silly reify mark deleted [ 'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\nan' ]
+137 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\node-gyp
+138 silly reify mark deleted [
+138 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\node-gyp',
+138 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\node-gyp',
+138 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\node-gyp.cmd',
+138 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\node-gyp.ps1'
+138 silly reify ]
+139 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\env-paths
+140 silly reify mark deleted [ 'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\env-paths' ]
+141 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\exponential-backoff
+142 silly reify mark deleted [
+142 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\exponential-backoff'
+142 silly reify ]
+143 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\nopt
+144 silly reify mark deleted [
+144 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\nopt',
+144 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\nopt',
+144 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\nopt.cmd',
+144 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\.bin\\nopt.ps1'
+144 silly reify ]
+145 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\proc-log
+146 silly reify mark deleted [ 'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\proc-log' ]
+147 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\tinyglobby
+148 silly reify mark deleted [
+148 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\tinyglobby'
+148 silly reify ]
+149 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\node-gyp\node_modules\which
+150 silly reify mark deleted [
+150 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\node-gyp\\node_modules\\which',
+150 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\node-gyp\\node_modules\\.bin\\node-which',
+150 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\node-gyp\\node_modules\\.bin\\node-which.cmd',
+150 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\node-gyp\\node_modules\\.bin\\node-which.ps1'
+150 silly reify ]
+151 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\abbrev
+152 silly reify mark deleted [ 'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\abbrev' ]
+153 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\tinyglobby\node_modules\fdir
+154 silly reify mark deleted [
+154 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\tinyglobby\\node_modules\\fdir'
+154 silly reify ]
+155 verbose reify failed optional dependency C:\Users\vedsp\Desktop\MBA dashboard\node_modules\node-gyp\node_modules\isexe
+156 silly reify mark deleted [
+156 silly reify   'C:\\Users\\vedsp\\Desktop\\MBA dashboard\\node_modules\\node-gyp\\node_modules\\isexe'
+156 silly reify ]
+157 silly ADD
+158 silly ADD node_modules/fdir
+159 silly ADD
+160 silly ADD
+161 silly ADD
+162 silly ADD
+163 silly ADD node_modules/which
+164 silly ADD node_modules/isexe
+165 silly ADD
+166 silly ADD
+167 silly ADD
+168 silly ADD
+169 silly ADD
+170 silly CHANGE node_modules/universal-analytics/node_modules/uuid
+171 silly ADD node_modules/gaxios/node_modules/uuid
+172 verbose cwd C:\Users\vedsp\Desktop\MBA dashboard
+173 verbose os Windows_NT 10.0.26200
+174 verbose node v24.13.0
+175 verbose npm  v11.6.2
+176 verbose exit 0
+177 info ok
