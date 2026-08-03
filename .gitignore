@@ -1,0 +1,99 @@
+# Dependencies and package-manager caches
+node_modules/
+.npm/
+.npm-cache/
+.yarn/cache/
+.yarn/unplugged/
+.pnp.*
+
+# Environment files and local secrets
+**/.env
+**/.env.*
+!**/.env.example
+.npmrc
+!.npmrc.example
+.sentryclirc
+
+# Firebase Admin/service-account credentials and private keys
+**/*-firebase-adminsdk-*.json
+**/firebase-adminsdk-*.json
+**/firebase-service-account*.json
+**/service-account*.json
+**/serviceAccountKey*.json
+**/google-application-credentials*.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local Firebase selection, emulator state, exports, and logs
+.firebaserc
+.firebase/
+firebase-export-*/
+emulator-data/
+*-debug.log
+*-debug.log.*
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+database-debug.log*
+storage-debug.log*
+pubsub-debug.log*
+
+# Real rosters contain passwords; keep only the sanitized sample fixture
+**/roster*.csv
+**/student-roster*.csv
+**/students*.csv
+**/credentials*.csv
+**/passwords*.csv
+!fixtures/roster.sample.csv
+/private/
+/local-data/
+/imports/
+/exports/
+/backups/
+
+# Next.js, TypeScript, and compiled workspace output
+.next/
+out/
+dist/
+lib/
+*.tsbuildinfo
+next-env.d.ts
+
+# Tests and coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+
+# Vercel local project metadata
+.vercel/
+
+# Runtime logs and temporary files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+~$*
+
+# IDE and operating-system metadata
+.idea/
+.vscode/
+*.code-workspace
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+node_modules

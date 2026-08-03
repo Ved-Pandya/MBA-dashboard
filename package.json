@@ -1,0 +1,40 @@
+{
+  "name": "mba-deadline-command-center",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "functions",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @mba/web",
+    "build": "npm run build -w @mba/domain && npm run build -w @mba/functions && npm run build -w @mba/web",
+    "typecheck": "npm run build -w @mba/domain && npm run typecheck -w @mba/functions && npm run typecheck -w @mba/web",
+    "test": "npm run build -w @mba/domain && npm run test -w @mba/domain && npm run test -w @mba/functions",
+    "test:rules": "firebase emulators:exec --project demo-deadlineos --only firestore \"npm run test:rules -w @mba/functions\"",
+    "emulators": "firebase emulators:start",
+    "deploy:firebase": "npm run build -w @mba/domain && firebase deploy --only firestore"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.25.1"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.25",
+      "sharp": "0.35.0"
+    },
+    "@google-cloud/storage": {
+      "retry-request": "8.0.4",
+      "teeny-request": {
+        "uuid": "11.1.1"
+      }
+    },
+    "gaxios": {
+      "uuid": "11.1.1"
+    }
+  }
+}
