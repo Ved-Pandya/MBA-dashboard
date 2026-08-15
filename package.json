@@ -17,7 +17,7 @@
     "deploy:firebase": "npm run build -w @mba/domain && firebase deploy --only firestore"
   },
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   },
   "devDependencies": {
     "firebase-tools": "^15.25.1"
