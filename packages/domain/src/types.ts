@@ -5,11 +5,22 @@ export const TASK_TYPES = [
   "administrative_form",
 ] as const;
 
+export const WING_IDS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"] as const;
+export const ACADEMIC_EVENT_TYPES = ["assignment_deadline", "quiz", "midterm", "pre_read"] as const;
+export const OPPORTUNITY_RESPONSE_STATUSES = ["no_response", "team_draft", "registered", "not_participating"] as const;
+
 export type TaskType = (typeof TASK_TYPES)[number];
 export type TaskStatus = "draft" | "publishing" | "published" | "closed" | "cancelled";
 export type AssignmentStatus = "pending" | "completed" | "exempt";
 export type UserStatus = "invited" | "active" | "suspended";
 export type SectionId = "A" | "B";
+export type WingId = (typeof WING_IDS)[number];
+export type AcademicEventType = (typeof ACADEMIC_EVENT_TYPES)[number];
+export type OpportunityResponseStatus = (typeof OPPORTUNITY_RESPONSE_STATUSES)[number];
+export type CompetitionStatus = "draft" | "published" | "registration_closed" | "in_progress" | "completed" | "cancelled";
+export type CompetitionTeamStatus = "draft" | "registered" | "withdrawn" | "disqualified";
+export type CompetitionRoundStatus = "draft" | "open" | "finalized" | "cancelled";
+export type RoundEntryStatus = "pending" | "submitted" | "advanced" | "eliminated" | "waived";
 
 export interface RoleMap {
   student: true;
@@ -29,7 +40,7 @@ export interface UserProfile {
   rollNumber: string;
   status: UserStatus;
   sectionId: SectionId;
-  wingId: string;
+  wingId: WingId;
   roles: RoleMap;
   scopes: RoleScopes;
 }
@@ -49,6 +60,44 @@ export interface TaskDraft {
   target: TaskTarget;
   dueAtIso: string;
   resourceUrl?: string;
+}
+
+export interface TimetableRow {
+  subjectCode: string;
+  subjectName: string;
+  sectionId: SectionId;
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  room?: string;
+}
+
+export interface AcademicEventDraft {
+  offeringId: string;
+  eventType: AcademicEventType;
+  title: string;
+  details: string;
+  occursAtIso: string;
+  resourceUrl?: string;
+  timetableSlotId?: string;
+}
+
+export interface CompetitionDraft {
+  title: string;
+  organizer: string;
+  description: string;
+  registrationUrl?: string;
+  registrationDeadlineIso: string;
+  minTeamSize: number;
+  maxTeamSize: number;
+}
+
+export interface InternshipDraft {
+  company: string;
+  role: string;
+  description: string;
+  registrationUrl?: string;
+  registrationDeadlineIso: string;
 }
 
 export interface AuthorizationDecision {

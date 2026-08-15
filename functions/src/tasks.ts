@@ -22,6 +22,12 @@ interface StoredTask {
 
 const idSchema = z.object({ taskId: z.string().min(1), reason: z.string().trim().max(500).optional() });
 
+function requireAdministrativeForm(input: z.infer<typeof taskDraftSchema>) {
+  if (input.taskType !== "administrative_form" || input.target.kind !== "wing") {
+    throw new HttpsError("failed-precondition", "Use Academics for subject dates and Opportunities for competitions. This workflow is only for wing administrative forms.");
+  }
+}
+
 function toStoredDraft(input: z.infer<typeof taskDraftSchema>, actor: Actor) {
   return {
     title: input.title,
@@ -72,6 +78,7 @@ export const previewTaskRecipients = onCall(callableOptions, async (request) => 
   try {
     const actor = await requireActor(request);
     const input = taskDraftSchema.parse(request.data);
+    requireAdministrativeForm(input);
     const target = await validateCatalogTarget(input.target);
     requireTaskManager(actor, input.taskType, target);
     const recipients = await eligibleRecipients(target);
@@ -94,6 +101,7 @@ export const createTask = onCall(callableOptions, async (request) => {
   try {
     const actor = await requireActor(request);
     const input = taskDraftSchema.parse(request.data);
+    requireAdministrativeForm(input);
     const target = await validateCatalogTarget(input.target);
     requireTaskManager(actor, input.taskType, target);
     input.target = target;
@@ -126,6 +134,7 @@ export const updateTask = onCall(callableOptions, async (request) => {
     const actor = await requireActor(request);
     const taskId = requireString((request.data as Record<string, unknown>)?.taskId, "taskId");
     const input = taskDraftSchema.parse(request.data);
+    requireAdministrativeForm(input);
     input.target = await validateCatalogTarget(input.target);
     const { ref, data: task } = await loadTask(taskId);
     requireTaskManager(actor, task.taskType, task.target);

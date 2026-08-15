@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
+import { WING_IDS } from "@mba/domain";
 import { db, FieldValue } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, requireAdmin, writeAudit } from "./helpers.js";
 
@@ -40,10 +41,7 @@ export const initializeAppConfig = onCall(callableOptions, async (request) => {
     }, { merge: true });
     writer.set(db.doc(`academicTerms/${input.currentTermId}`), { name: input.currentTermId, active: true, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     for (const sectionId of ["A", "B"]) writer.set(db.doc(`sections/${sectionId}`), { name: `Section ${sectionId}`, active: true }, { merge: true });
-    for (let index = 1; index <= 10; index += 1) {
-      const wingId = `W${String(index).padStart(2, "0")}`;
-      writer.set(db.doc(`wings/${wingId}`), { name: `Wing ${index}`, active: true }, { merge: true });
-    }
+    for (const wingId of WING_IDS) writer.set(db.doc(`wings/${wingId}`), { name: `Wing ${wingId}`, active: true }, { merge: true });
     await writer.close();
     await writeAudit({ actorUid: actor.uid, action: "app.initialized", resourceType: "appConfig", resourceId: "current", after: input });
     return { ok: true };

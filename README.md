@@ -10,6 +10,11 @@ DeadlineOS is a mobile-first MBA deadline compliance platform built with Next.js
 - Scoped task preview, draft creation, publication, close/cancel, audience sync, and exemptions.
 - Named compliance reporting and CSV export for authorized POCs and CRs.
 - Admin batch initialization, subject offering management, and validate/commit roster import.
+- Dedicated, atomic POC Setup for exactly one Wing POC per Wing A–J and one Subject POC per offering.
+- Browser-local timetable PDF extraction with an editable confirmation table and manual fallback.
+- Informational academic calendar for assignments, quizzes, midterms, and next-class pre-reads.
+- Batch-wide competitions, explicit student responses, draft team reservations, locked registration, rounds, advancement, team submissions, and membership disputes.
+- Internship registration/no-participation tracking and sanitized Wing POC reports.
 - Deterministic T-24h, T-2h, T+15m reminder records, daily overdue digests, and reconciliation.
 - Default-deny Firestore Security Rules, required indexes, audit events, and operation records.
 
@@ -26,7 +31,7 @@ Firebase Cloud Functions, Cloud Scheduler, and Cloud Tasks are not deployed. The
 
 ## Local setup
 
-Prerequisites: Node 20 or 22, npm, and Java 21 if you want to run the Firestore Emulator.
+Prerequisites: Node 24, npm, and Java 21 if you want to run the Firestore Emulator.
 
 1. Install dependencies:
 
@@ -58,7 +63,7 @@ Prerequisites: Node 20 or 22, npm, and Java 21 if you want to run the Firestore 
 
 5. In the Auth Emulator UI, create `24m2000@users.deadlineos.app` with your chosen password. Sign into the app with roll number `24M2000`.
 
-6. In Admin, initialize the batch and offerings, then validate and commit the roster. A sample is available at `fixtures/roster.sample.csv`.
+6. In Admin, initialize the batch, then validate and commit the roster. Import the timetable or create offerings, and assign POCs from the dedicated POC Setup page. A sample is available at `fixtures/roster.sample.csv`.
 
 The roster contains each roll number and its administrator-chosen password. Passwords are sent only to the privileged Vercel route and are handed to Firebase Authentication; they are never stored in Firestore or audit events. Re-importing an existing roll number deliberately resets its password.
 
@@ -116,6 +121,7 @@ Monitor:
 - `systemHealth/sparkRuntime` for pulse throttling.
 - Failed `operations` and pending `reminderJobs`.
 - `reminderDeliveries` and `taskStats.reconciledAt`.
+- `operations` entries for timetable imports and membership disputes.
 - Vercel Function and Cron logs.
 
 ## Current MVP constraints

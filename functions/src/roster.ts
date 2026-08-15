@@ -11,6 +11,7 @@ function validateUniqueRows(rows: z.infer<typeof rosterRowSchema>[]) {
   const errors: string[] = [];
   rows.forEach((row, index) => {
     if (rolls.has(row.rollNumber)) errors.push(`Row ${index + 1}: duplicate roll number ${row.rollNumber}`);
+    if (row.wingPocWings.length || row.subjectPocOfferings.length) errors.push(`Row ${index + 1}: assign POCs from the dedicated POC Setup page`);
     rolls.add(row.rollNumber);
   });
   return errors;
@@ -30,7 +31,7 @@ export const validateRosterImport = onCall(callableOptions, async (request) => {
         sectionA: parsed.rows.filter((row) => row.sectionId === "A").length,
         sectionB: parsed.rows.filter((row) => row.sectionId === "B").length,
         crs: parsed.rows.filter((row) => row.cr).length,
-        pocs: parsed.rows.filter((row) => row.wingPocWings.length || row.subjectPocOfferings.length).length,
+        pocs: 0,
       },
     };
   } catch (error) {
@@ -78,8 +79,8 @@ export const commitRosterImport = onCall({ ...callableOptions, timeoutSeconds: 5
           roles: { student: true, cr: row.cr, systemAdmin: row.rollNumber === actor.rollNumber },
           scopes: {
             crSections: row.cr ? { [row.sectionId]: true } : {},
-            wingPocWings: Object.fromEntries(row.wingPocWings.map((id) => [id, true])),
-            subjectPocOfferings: Object.fromEntries(row.subjectPocOfferings.map((id) => [id, true])),
+            wingPocWings: existingProfile.exists ? (existingProfile.get("scopes.wingPocWings") ?? {}) : {},
+            subjectPocOfferings: existingProfile.exists ? (existingProfile.get("scopes.subjectPocOfferings") ?? {}) : {},
           },
           updatedAt: FieldValue.serverTimestamp(),
           ...(existingProfile.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
@@ -119,8 +120,8 @@ export const updateRoleAssignments = onCall(callableOptions, async (request) => 
     const roles = { student: true, cr: input.cr, systemAdmin: input.systemAdmin };
     const scopes = {
       crSections: input.crSections,
-      wingPocWings: input.wingPocWings,
-      subjectPocOfferings: input.subjectPocOfferings,
+      wingPocWings: before.get("scopes.wingPocWings") ?? {},
+      subjectPocOfferings: before.get("scopes.subjectPocOfferings") ?? {},
     };
     await ref.update({ roles, scopes, updatedAt: FieldValue.serverTimestamp() });
     await writeAudit({ actorUid: actor.uid, action: "roles.updated", resourceType: "user", resourceId: input.uid, before: before.data(), after: { roles, scopes } });

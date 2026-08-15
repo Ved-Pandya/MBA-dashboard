@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import type { TaskType } from "@mba/domain";
 import type { TaskRecord } from "@/lib/models";
 import { getFirebase } from "@/lib/firebase";
 import { useAuth } from "./auth-provider";
@@ -19,7 +18,7 @@ function indiaIso(value: string) {
 export function ManagementView() {
   const { user, profile } = useAuth();
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
-  const [type, setType] = useState<TaskType>(Object.keys(profile?.scopes.subjectPocOfferings ?? {}).length ? "subject_assignment" : "administrative_form");
+  const type = "administrative_form" as const;
   const [scopeId, setScopeId] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -28,12 +27,10 @@ export function ManagementView() {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const subjectIds = Object.keys(profile?.scopes.subjectPocOfferings ?? {});
   const wingIds = Object.keys(profile?.scopes.wingPocWings ?? {});
-  const academic = type === "subject_assignment" || type === "pre_read";
-  const availableScopes = academic ? subjectIds : wingIds;
+  const availableScopes = wingIds;
 
-  useEffect(() => { setScopeId(availableScopes[0] ?? ""); setPreview(null); }, [academic]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setScopeId(availableScopes[0] ?? ""); setPreview(null); }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!user) return;
     return onSnapshot(query(collection(getFirebase().db, "tasks"), where("ownerUid", "==", user.uid)), (snap) => {
@@ -43,12 +40,10 @@ export function ManagementView() {
 
   const payload = useMemo(() => ({
     title, description, taskType: type,
-    target: academic
-      ? { kind: "subject_offering" as const, scopeKey: `subject:${scopeId}`, subjectOfferingId: scopeId, sectionId: profile?.sectionId ?? "A" }
-      : { kind: "wing" as const, scopeKey: `wing:${scopeId}`, wingId: scopeId },
+    target: { kind: "wing" as const, scopeKey: `wing:${scopeId}`, wingId: scopeId },
     dueAtIso: dueAt ? indiaIso(dueAt) : "",
     resourceUrl: resourceUrl || undefined,
-  }), [title, description, type, academic, scopeId, profile, dueAt, resourceUrl]);
+  }), [title, description, scopeId, dueAt, resourceUrl]);
 
   async function previewRecipients() {
     setBusy(true); setError(null);
@@ -80,11 +75,8 @@ export function ManagementView() {
       <div className="two-column">
         <form className="panel create-form" onSubmit={create}>
           <div className="panel-head"><div><p className="eyebrow">NEW OBLIGATION</p><h2>Create deadline</h2></div><span className="status-pill">Draft</span></div>
-          <label>Task type<select value={type} onChange={(event) => setType(event.target.value as TaskType)}>
-            {subjectIds.length > 0 && <><option value="subject_assignment">Subject assignment</option><option value="pre_read">Pre-read</option></>}
-            {wingIds.length > 0 && <><option value="case_competition">Case competition</option><option value="administrative_form">Administrative form</option></>}
-          </select></label>
-          <label>{academic ? "Subject offering" : "Wing"}<select value={scopeId} onChange={(event) => { setScopeId(event.target.value); setPreview(null); }} required>
+          <label>Task type<select value={type} disabled><option value="administrative_form">Administrative form</option></select></label>
+          <label>Wing<select value={scopeId} onChange={(event) => { setScopeId(event.target.value); setPreview(null); }} required>
             {!availableScopes.length && <option value="">No authorized scope</option>}
             {availableScopes.map((id) => <option key={id} value={id}>{id}</option>)}
           </select></label>

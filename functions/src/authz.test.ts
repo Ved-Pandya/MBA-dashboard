@@ -7,20 +7,20 @@ const wingPoc: UserProfile = {
   rollNumber: "24M2001",
   status: "active",
   sectionId: "A",
-  wingId: "W01",
+  wingId: "A",
   roles: { student: true, cr: false, systemAdmin: false },
-  scopes: { crSections: {}, wingPocWings: { W01: true }, subjectPocOfferings: {} },
+  scopes: { crSections: {}, wingPocWings: { A: true }, subjectPocOfferings: {} },
 };
 
 describe("RBAC contract", () => {
   it("blocks a Wing 1 POC from Wing 2", () => {
-    const decision = canManageTask(wingPoc, "case_competition", { kind: "wing", scopeKey: "wing:W02", wingId: "W02" }, "create");
+    const decision = canManageTask(wingPoc, "case_competition", { kind: "wing", scopeKey: "wing:B", wingId: "B" }, "create");
     expect(decision.allowed).toBe(false);
   });
 
   it("does not turn a CR into a task editor", () => {
     const cr = { ...wingPoc, roles: { student: true as const, cr: true, systemAdmin: false }, scopes: { ...wingPoc.scopes, wingPocWings: {} } };
-    const decision = canManageTask(cr, "administrative_form", { kind: "wing", scopeKey: "wing:W01", wingId: "W01" }, "update");
+    const decision = canManageTask(cr, "administrative_form", { kind: "wing", scopeKey: "wing:A", wingId: "A" }, "update");
     expect(decision.allowed).toBe(false);
   });
 });

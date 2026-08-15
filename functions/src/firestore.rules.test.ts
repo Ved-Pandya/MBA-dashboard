@@ -20,12 +20,15 @@ suite("Firestore RBAC rules", () => {
     });
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const db = context.firestore();
-      await setDoc(doc(db, "users/student"), { status: "active", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes() });
-      await setDoc(doc(db, "users/other"), { status: "active", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes() });
-      await setDoc(doc(db, "users/wingPoc"), { status: "active", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes({ W01: true }) });
-      await setDoc(doc(db, "users/cr"), { status: "active", roles: { student: true, cr: true, systemAdmin: false }, scopes: scopes() });
-      await setDoc(doc(db, "taskAssignments/task1_student"), { taskId: "task1", uid: "student", wingId: "W01", subjectOfferingId: null, scopeKey: "wing:W01" });
-      await setDoc(doc(db, "taskAssignments/task2_other"), { taskId: "task2", uid: "other", wingId: "W02", subjectOfferingId: null, scopeKey: "wing:W02" });
+      await setDoc(doc(db, "users/student"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes() });
+      await setDoc(doc(db, "users/other"), { status: "active", sectionId: "B", wingId: "B", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes() });
+      await setDoc(doc(db, "users/wingPoc"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes({ A: true }) });
+      await setDoc(doc(db, "users/cr"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: true, systemAdmin: false }, scopes: scopes() });
+      await setDoc(doc(db, "taskAssignments/task1_student"), { taskId: "task1", uid: "student", wingId: "A", subjectOfferingId: null, scopeKey: "wing:A" });
+      await setDoc(doc(db, "taskAssignments/task2_other"), { taskId: "task2", uid: "other", wingId: "B", subjectOfferingId: null, scopeKey: "wing:B" });
+      await setDoc(doc(db, "opportunityResponses/comp_student"), { opportunityId: "comp", uid: "student", wingId: "A", status: "registered" });
+      await setDoc(doc(db, "opportunityResponses/comp_other"), { opportunityId: "comp", uid: "other", wingId: "B", status: "registered" });
+      await setDoc(doc(db, "competitionTeams/team_student"), { competitionId: "comp", memberUids: ["student", "other"], members: [{ uid: "student", wingId: "A" }, { uid: "other", wingId: "B" }] });
     });
   });
 
@@ -46,5 +49,14 @@ suite("Firestore RBAC rules", () => {
   it("allows a CR to read batch-wide tracking", async () => {
     const db = testEnv.authenticatedContext("cr").firestore();
     await expect(assertSucceeds(getDoc(doc(db, "taskAssignments/task2_other")))).resolves.toBeDefined();
+  });
+
+  it("keeps cross-wing teams behind sanitized server reports", async () => {
+    const pocDb = testEnv.authenticatedContext("wingPoc").firestore();
+    await assertSucceeds(getDoc(doc(pocDb, "opportunityResponses/comp_student")));
+    await assertFails(getDoc(doc(pocDb, "opportunityResponses/comp_other")));
+    await assertFails(getDoc(doc(pocDb, "competitionTeams/team_student")));
+    const memberDb = testEnv.authenticatedContext("student").firestore();
+    await assertSucceeds(getDoc(doc(memberDb, "competitionTeams/team_student")));
   });
 });

@@ -40,7 +40,7 @@ export async function requireActor(request: CallableRequest<unknown>, allowBoots
       rollNumber,
       status: "active",
       sectionId: "A",
-      wingId: "W01",
+      wingId: "A",
       roles: { student: true, cr: false, systemAdmin: true },
       scopes: { crSections: {}, wingPocWings: {}, subjectPocOfferings: {} },
     };

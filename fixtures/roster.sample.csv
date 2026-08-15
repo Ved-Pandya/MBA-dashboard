@@ -1,6 +1,6 @@
-rollNumber,password,displayName,sectionId,wingId,cr,wingPocWings,subjectPocOfferings
-24M2000,AdminPass123!,System Admin,A,W01,false,,
-24M2001,AaravPass123!,Aarav Shah,A,W01,false,,
-24M2002,DiyaPass123!,Diya Mehta,A,W02,false,,FIN-A
-24M2003,KabirPass123!,Kabir Rao,B,W01,false,W01,
-24M2004,MeeraPass123!,Meera Iyer,A,W03,true,,
+rollNumber,password,displayName,sectionId,wingId,cr
+24M2000,AdminPass123!,System Admin,A,A,false
+24M2001,AaravPass123!,Aarav Shah,A,A,false
+24M2002,DiyaPass123!,Diya Mehta,A,B,false
+24M2003,KabirPass123!,Kabir Rao,B,A,true
+24M2004,MeeraPass123!,Meera Iyer,A,C,true

@@ -93,6 +93,83 @@
         { "fieldPath": "readAt", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "academicEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sectionId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "occursAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "academicEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "offeringId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "occursAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "timetableSlots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sectionId", "order": "ASCENDING" },
+        { "fieldPath": "weekday", "order": "ASCENDING" },
+        { "fieldPath": "startTime", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "opportunityResponses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "opportunityId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "wingId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "internshipResponses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "internshipId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "wingId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "competitionTeams",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "competitionId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "competitionRoundEntries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "roundId", "order": "ASCENDING" },
+        { "fieldPath": "submissionStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "competitions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "registrationDeadline", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "internships",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "registrationDeadline", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

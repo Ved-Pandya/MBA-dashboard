@@ -22,6 +22,14 @@ service cloud.firestore {
       return active() && me().roles.cr == true;
     }
 
+    function wingPoc(wingId) {
+      return active() && me().scopes.wingPocWings[wingId] == true;
+    }
+
+    function subjectPoc(offeringId) {
+      return active() && me().scopes.subjectPocOfferings[offeringId] == true;
+    }
+
     function managesTask(data) {
       return active() && (
         (data.target.kind == "wing" && me().scopes.wingPocWings[data.target.wingId] == true) ||
@@ -63,6 +71,88 @@ service cloud.firestore {
     match /subjectOfferings/{id} {
       allow read: if active();
       allow write: if false;
+    }
+
+    match /pocAssignments/{id} {
+      allow read: if admin() || cr();
+      allow write: if false;
+    }
+
+    match /timetableSlots/{id} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /timetableExceptions/{id} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /academicEvents/{id} {
+      allow read: if active() && (
+        admin() || cr() || resource.data.sectionId == me().sectionId ||
+        subjectPoc(resource.data.offeringId)
+      );
+      allow write: if false;
+    }
+
+    match /competitions/{id} {
+      allow read: if active() && (resource.data.status == "published" || resource.data.status == "in_progress" || resource.data.status == "completed" || admin() || cr());
+      allow write: if false;
+    }
+
+    match /internships/{id} {
+      allow read: if active() && (resource.data.status == "published" || resource.data.status == "completed" || admin() || cr());
+      allow write: if false;
+    }
+
+    match /opportunityResponses/{id} {
+      allow read: if active() && (admin() || cr() || resource.data.uid == request.auth.uid || wingPoc(resource.data.wingId));
+      allow write: if false;
+    }
+
+    match /internshipResponses/{id} {
+      allow read: if active() && (admin() || cr() || resource.data.uid == request.auth.uid || wingPoc(resource.data.wingId));
+      allow write: if false;
+    }
+
+    match /competitionTeams/{id} {
+      allow read: if active() && (admin() || cr() || request.auth.uid in resource.data.memberUids);
+      allow write: if false;
+    }
+
+    match /competitionMemberships/{id} {
+      allow read: if active() && (admin() || cr() || resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /competitionRounds/{id} {
+      allow read: if active() && (admin() || cr() || resource.data.status == "open" || resource.data.status == "finalized");
+      allow write: if false;
+    }
+
+    match /competitionRoundEntries/{id} {
+      allow read: if active() && (admin() || cr() || request.auth.uid in resource.data.memberUids);
+      allow write: if false;
+    }
+
+    match /competitionStats/{id} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /internshipStats/{id} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /competitionRoundStats/{id} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /competitionTeamNames/{id} {
+      allow read, write: if false;
     }
 
     match /users/{uid} {
@@ -113,7 +203,7 @@ service cloud.firestore {
     }
 
     match /operations/{id} {
-      allow read: if admin() || (active() && resource.data.actorUid == request.auth.uid);
+      allow read: if admin() || cr() || (active() && resource.data.get("actorUid", "") == request.auth.uid) || (active() && resource.data.get("reporterUid", "") == request.auth.uid);
       allow write: if false;
     }
 

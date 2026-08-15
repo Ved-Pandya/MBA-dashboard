@@ -45,4 +45,50 @@ export interface TaskRecord {
   ownerUid: string;
 }
 
+export interface AcademicEventRecord {
+  id: string;
+  offeringId: string;
+  sectionId: "A" | "B";
+  eventType: "assignment_deadline" | "quiz" | "midterm" | "pre_read";
+  title: string;
+  details: string;
+  occursAt: Timestamp;
+  resourceUrl?: string | null;
+  status: "published" | "cancelled";
+}
+
+export interface CompetitionRecord {
+  id: string;
+  title: string;
+  organizer: string;
+  description: string;
+  registrationUrl?: string | null;
+  registrationDeadline: Timestamp;
+  minTeamSize: number;
+  maxTeamSize: number;
+  status: string;
+}
+
+export interface InternshipRecord {
+  id: string;
+  title: string;
+  company: string;
+  role: string;
+  description: string;
+  registrationUrl?: string | null;
+  registrationDeadline: Timestamp;
+  status: string;
+}
+
+export interface CompetitionTeamRecord {
+  id: string;
+  competitionId: string;
+  name: string;
+  captainUid: string;
+  memberUids: string[];
+  members: Array<{ uid: string; displayName: string; rollNumber: string; wingId: string; sectionId: string }>;
+  status: "draft" | "registered" | "withdrawn" | "disqualified";
+  registeredLate?: boolean;
+}
+
 export type Profile = UserProfile;

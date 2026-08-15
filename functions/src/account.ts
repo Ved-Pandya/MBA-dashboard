@@ -18,7 +18,7 @@ export const activateMyAccount = onCall(callableOptions, async (request) => {
         rollNumber,
         status: "active",
         sectionId: "A",
-        wingId: "W01",
+        wingId: "A",
         roles: { student: true, cr: false, systemAdmin: true },
         scopes: { crSections: {}, wingPocWings: {}, subjectPocOfferings: {} },
         createdAt: FieldValue.serverTimestamp(),
