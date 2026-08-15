@@ -2,6 +2,7 @@ import type { CallableFunction } from "firebase-functions/v2/https";
 import { notificationCopy, type ReminderStage } from "@mba/domain";
 import { activateMyAccount } from "./account.js";
 import { createTestAccounts } from "./test-accounts.js";
+import { clearTestData, seedTestData } from "./test-data.js";
 import { initializeAppConfig, saveSubjectOffering } from "./catalog.js";
 import { getComplianceExport, markNotificationsRead, reopenMyCompletion, setMyCompletion, setTaskExemption } from "./completion.js";
 import { adminAuth, db, FieldValue, Timestamp } from "./firebase.js";
@@ -19,6 +20,8 @@ import {
 const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   activateMyAccount,
   createTestAccounts,
+  seedTestData,
+  clearTestData,
   initializeAppConfig,
   saveSubjectOffering,
   validateRosterImport,
@@ -117,6 +120,7 @@ async function deliverReminder(jobId: string, job: { taskId: string; scheduleVer
     });
     return 0;
   }
+  const demoMetadata = task.get("demoSeedId") ? { isTestData: true, demoSeedId: task.get("demoSeedId") } : {};
 
   const assignments = await db.collection("taskAssignments")
     .where("taskId", "==", job.taskId)
@@ -154,6 +158,7 @@ async function deliverReminder(jobId: string, job: { taskId: string; scheduleVer
             status: "skipped",
             skipReason: "recipient_no_longer_pending",
             updatedAt: FieldValue.serverTimestamp(),
+            ...demoMetadata,
           }, { merge: true });
           return false;
         }
@@ -164,6 +169,7 @@ async function deliverReminder(jobId: string, job: { taskId: string; scheduleVer
           taskId: job.taskId,
           createdAt: FieldValue.serverTimestamp(),
           readAt: null,
+          ...demoMetadata,
         });
         tx.set(deliveryRef, {
           jobId,
@@ -175,6 +181,7 @@ async function deliverReminder(jobId: string, job: { taskId: string; scheduleVer
           attempts: FieldValue.increment(1),
           sentAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
+          ...demoMetadata,
         }, { merge: true });
         return true;
       });
@@ -191,6 +198,7 @@ async function deliverReminder(jobId: string, job: { taskId: string; scheduleVer
       taskId: job.taskId,
       createdAt: FieldValue.serverTimestamp(),
       readAt: null,
+      ...demoMetadata,
     }, { merge: true });
   }
   await db.doc(`reminderJobs/${jobId}`).update({
@@ -227,6 +235,7 @@ async function deliverOpportunityReminder(jobId: string, job: OpportunityJob) {
     await db.doc(`reminderJobs/${jobId}`).set({ status: "skipped", skipReason: "stale_or_inactive_opportunity", leaseUntil: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     return 0;
   }
+  const demoMetadata = source.get("demoSeedId") ? { isTestData: true, demoSeedId: source.get("demoSeedId") } : {};
 
   const recipientUids = new Set<string>();
   const recipientChecks = new Map<string, FirebaseFirestore.DocumentReference[]>();
@@ -258,12 +267,12 @@ async function deliverOpportunityReminder(jobId: string, job: OpportunityJob) {
           ? freshChecks.some((check) => check.exists && check.get("status") === "no_response")
           : freshChecks.some((check) => check.exists && check.get("submissionStatus") === "pending");
       if (!stillPending || !freshSource.exists || freshSource.get("status") !== activeStatus || Number(freshSource.get("scheduleVersion") ?? 1) !== job.scheduleVersion || !user.exists || user.get("status") === "suspended") {
-        tx.set(deliveryRef, { jobId, uid, status: "skipped", skipReason: "recipient_or_source_inactive", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        tx.set(deliveryRef, { jobId, uid, status: "skipped", skipReason: "recipient_or_source_inactive", ...demoMetadata, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
         return false;
       }
       const copy = opportunityNotificationCopy(job);
-      tx.set(notificationRef, { type: "opportunity_deadline_reminder", ...copy, opportunityKind: job.kind, opportunityId: job.opportunityId, createdAt: FieldValue.serverTimestamp(), readAt: null });
-      tx.set(deliveryRef, { jobId, uid, status: "sent", stage: job.stage, opportunityKind: job.kind, opportunityId: job.opportunityId, scheduleVersion: job.scheduleVersion, attempts: FieldValue.increment(1), sentAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      tx.set(notificationRef, { type: "opportunity_deadline_reminder", ...copy, opportunityKind: job.kind, opportunityId: job.opportunityId, ...demoMetadata, createdAt: FieldValue.serverTimestamp(), readAt: null });
+      tx.set(deliveryRef, { jobId, uid, status: "sent", stage: job.stage, opportunityKind: job.kind, opportunityId: job.opportunityId, scheduleVersion: job.scheduleVersion, ...demoMetadata, attempts: FieldValue.increment(1), sentAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       return true;
     });
     if (delivered) deliveries += 1;

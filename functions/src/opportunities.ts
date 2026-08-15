@@ -40,6 +40,7 @@ async function createOpportunityReminderJobs(input: {
   title: string;
   deadline: Date;
   scheduleVersion: number;
+  demoSeedId?: string;
 }) {
   const writer = db.bulkWriter();
   for (const scheduled of buildReminderSchedule(input.deadline)) {
@@ -53,6 +54,7 @@ async function createOpportunityReminderJobs(input: {
       fireAt: Timestamp.fromDate(scheduled.fireAt),
       status: "scheduled",
       attempts: 0,
+      ...(input.demoSeedId ? { isTestData: true, demoSeedId: input.demoSeedId } : {}),
       createdAt: FieldValue.serverTimestamp(),
     }, { merge: true });
   }
@@ -141,8 +143,8 @@ export const updateCompetition = onCall(callableOptions, async (request) => {
     await ref.update({ title: input.title, organizer: input.organizer, description: input.description, registrationUrl: input.registrationUrl || null, registrationDeadline: deadline, minTeamSize: input.minTeamSize, maxTeamSize: input.maxTeamSize, version, scheduleVersion, updatedBy: actor.uid, updatedAt: FieldValue.serverTimestamp() });
     if (before.get("status") === "published") {
       const responses = await db.collection("opportunityResponses").where("opportunityId", "==", input.competitionId).get();
-      await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `competition_changed_${input.competitionId}_v${version}`, { type: "competition_changed", title: input.title, body: "Competition details or registration deadline changed.", competitionId: input.competitionId });
-      await createOpportunityReminderJobs({ kind: "competition_registration", opportunityId: input.competitionId, title: input.title, deadline: deadline.toDate(), scheduleVersion });
+      await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `competition_changed_${input.competitionId}_v${version}`, { type: "competition_changed", title: input.title, body: "Competition details or registration deadline changed.", competitionId: input.competitionId, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}) });
+      await createOpportunityReminderJobs({ kind: "competition_registration", opportunityId: input.competitionId, title: input.title, deadline: deadline.toDate(), scheduleVersion, demoSeedId: before.get("demoSeedId") ? String(before.get("demoSeedId")) : undefined });
     }
     await writeAudit({ actorUid: actor.uid, action: "competition.updated", resourceType: "competition", resourceId: input.competitionId, before: before.data(), after: input });
     return { competitionId: input.competitionId, version };
@@ -159,7 +161,7 @@ export const cancelCompetition = onCall(callableOptions, async (request) => {
     if (before.get("status") === "cancelled") return { idempotent: true };
     await ref.update({ status: "cancelled", cancellationReason: input.reason, scheduleVersion: FieldValue.increment(1), cancelledBy: actor.uid, cancelledAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     const responses = await db.collection("opportunityResponses").where("opportunityId", "==", input.competitionId).get();
-    await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `competition_cancelled_${input.competitionId}`, { type: "competition_cancelled", title: String(before.get("title")), body: `Cancelled: ${input.reason}`, competitionId: input.competitionId });
+    await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `competition_cancelled_${input.competitionId}`, { type: "competition_cancelled", title: String(before.get("title")), body: `Cancelled: ${input.reason}`, competitionId: input.competitionId, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}) });
     await writeAudit({ actorUid: actor.uid, action: "competition.cancelled", resourceType: "competition", resourceId: input.competitionId, before: before.data(), reason: input.reason });
     return { competitionId: input.competitionId };
   } catch (error) { asHttpsError(error); }
@@ -208,6 +210,7 @@ export const createTeam = onCall(callableOptions, async (request) => {
     if (!competition.exists || competition.get("status") !== "published") throw new HttpsError("failed-precondition", "Competition is not accepting teams");
     const members = await resolveMembers(actor, input.memberRollNumbers);
     if (members.length > Number(competition.get("maxTeamSize"))) throw new HttpsError("invalid-argument", "Team exceeds the competition maximum size");
+    const demoMetadata = competition.get("demoSeedId") ? { isTestData: true, demoSeedId: competition.get("demoSeedId") } : {};
     const teamRef = db.collection("competitionTeams").doc();
     const nameRef = db.doc(`competitionTeamNames/${input.competitionId}_${cleanName(input.name)}`);
     const memberRefs = members.map((member) => db.doc(`competitionMemberships/${input.competitionId}_${member.uid}`));
@@ -219,13 +222,14 @@ export const createTeam = onCall(callableOptions, async (request) => {
       tx.set(teamRef, {
         competitionId: input.competitionId, name: input.name, normalizedName: cleanName(input.name), captainUid: actor.uid,
         members, memberUids: members.map((member) => member.uid), status: "draft", version: 1,
+        ...demoMetadata,
         createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       });
-      tx.set(nameRef, { competitionId: input.competitionId, teamId: teamRef.id, active: true });
-      members.forEach((member, index) => tx.set(memberRefs[index]!, { competitionId: input.competitionId, teamId: teamRef.id, uid: member.uid, active: true, status: "draft", createdAt: FieldValue.serverTimestamp() }));
+      tx.set(nameRef, { competitionId: input.competitionId, teamId: teamRef.id, active: true, ...demoMetadata });
+      members.forEach((member, index) => tx.set(memberRefs[index]!, { competitionId: input.competitionId, teamId: teamRef.id, uid: member.uid, active: true, status: "draft", ...demoMetadata, createdAt: FieldValue.serverTimestamp() }));
       members.forEach((member) => tx.set(db.doc(`opportunityResponses/${input.competitionId}_${member.uid}`), { status: "team_draft", teamId: teamRef.id, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
     });
-    await notifyUsers(members.map((member) => member.uid), `team_created_${teamRef.id}`, { type: "team_created", title: input.name, body: `${actor.displayName} added you to this competition team.`, competitionId: input.competitionId, teamId: teamRef.id });
+    await notifyUsers(members.map((member) => member.uid), `team_created_${teamRef.id}`, { type: "team_created", title: input.name, body: `${actor.displayName} added you to this competition team.`, competitionId: input.competitionId, teamId: teamRef.id, ...demoMetadata });
     await writeAudit({ actorUid: actor.uid, action: "competition_team.created", resourceType: "competitionTeam", resourceId: teamRef.id, after: { ...input, memberUids: members.map((member) => member.uid) } });
     return { teamId: teamRef.id };
   } catch (error) { asHttpsError(error); }
@@ -245,6 +249,7 @@ export const updateTeam = onCall(callableOptions, async (request) => {
     const members = await resolveMembers(actor, input.memberRollNumbers);
     const competition = await db.doc(`competitions/${input.competitionId}`).get();
     if (!competition.exists || members.length > Number(competition.get("maxTeamSize"))) throw new HttpsError("invalid-argument", "Team exceeds the competition maximum size");
+    const demoMetadata = before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {};
     const oldMembers = (before.get("members") as Array<{ uid: string }>) ?? [];
     const oldUids = oldMembers.map((member) => member.uid);
     const newUids = members.map((member) => member.uid);
@@ -264,7 +269,7 @@ export const updateTeam = onCall(callableOptions, async (request) => {
         tx.set(db.doc(`opportunityResponses/${input.competitionId}_${uid}`), { status: "no_response", teamId: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       });
       members.forEach((member) => {
-        tx.set(db.doc(`competitionMemberships/${input.competitionId}_${member.uid}`), { competitionId: input.competitionId, teamId: input.teamId, uid: member.uid, active: true, status: "draft", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        tx.set(db.doc(`competitionMemberships/${input.competitionId}_${member.uid}`), { competitionId: input.competitionId, teamId: input.teamId, uid: member.uid, active: true, status: "draft", ...demoMetadata, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
         tx.set(db.doc(`opportunityResponses/${input.competitionId}_${member.uid}`), { status: "team_draft", teamId: input.teamId, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       });
     });
@@ -338,7 +343,7 @@ export const registerTeam = onCall(callableOptions, async (request) => {
         tx.set(db.doc(`opportunityResponses/${competitionId}_${uid}`), { status: "registered", teamId, registeredAt: FieldValue.serverTimestamp(), registeredLate: late, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       });
     });
-    await notifyUsers(memberUids, `team_registered_${teamId}`, { type: "team_registered", title: String(team.get("name")), body: late ? "Team registered after the deadline." : "Team registration confirmed.", competitionId, teamId });
+    await notifyUsers(memberUids, `team_registered_${teamId}`, { type: "team_registered", title: String(team.get("name")), body: late ? "Team registered after the deadline." : "Team registration confirmed.", competitionId, teamId, ...(team.get("demoSeedId") ? { isTestData: true, demoSeedId: team.get("demoSeedId") } : {}) });
     await writeAudit({ actorUid: actor.uid, action: "competition_team.registered", resourceType: "competitionTeam", resourceId: teamId, after: { late } });
     return { teamId, late };
   } catch (error) { asHttpsError(error); }
@@ -356,6 +361,7 @@ export const createNextRound = onCall({ ...callableOptions, timeoutSeconds: 120 
     const previousRound = rounds.docs.filter((item) => item.get("status") === "open").sort((a, b) => Number(b.get("sequence")) - Number(a.get("sequence")))[0];
     const previousEntries = previousRound ? await db.collection("competitionRoundEntries").where("roundId", "==", previousRound.id).get() : null;
     const roundRef = db.collection("competitionRounds").doc();
+    const demoMetadata = competition.get("demoSeedId") ? { isTestData: true, demoSeedId: competition.get("demoSeedId") } : {};
     const teams = await Promise.all(input.eligibleTeamIds.map((id) => db.doc(`competitionTeams/${id}`).get()));
     if (teams.some((team) => !team.exists || team.get("competitionId") !== input.competitionId || team.get("status") !== "registered")) throw new HttpsError("invalid-argument", "Every eligible team must be registered for this competition");
     const writer = db.bulkWriter();
@@ -373,6 +379,7 @@ export const createNextRound = onCall({ ...callableOptions, timeoutSeconds: 120 
       competitionId: input.competitionId, sequence, name: input.name, instructions: input.instructions,
       submissionDeadline: Timestamp.fromDate(new Date(input.submissionDeadlineIso)), resourceUrl: input.resourceUrl || null,
       status: "open", scheduleVersion: 1, ownerUid: actor.uid, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+      ...demoMetadata,
     });
     const recipientUids: string[] = [];
     teams.forEach((team) => {
@@ -381,13 +388,14 @@ export const createNextRound = onCall({ ...callableOptions, timeoutSeconds: 120 
       writer.set(db.doc(`competitionRoundEntries/${roundRef.id}_${team.id}`), {
         roundId: roundRef.id, competitionId: input.competitionId, teamId: team.id, teamName: team.get("name"), memberUids: uids,
         status: "pending", eligible: true, submissionStatus: "pending", createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+        ...demoMetadata,
       });
     });
     writer.update(db.doc(`competitions/${input.competitionId}`), { status: "in_progress", currentRoundId: roundRef.id, updatedAt: FieldValue.serverTimestamp() });
     await writer.close();
-    await notifyUsers(recipientUids, `round_open_${roundRef.id}`, { type: "competition_round_open", title: input.name, body: "Your team has advanced. Review the next-round instructions.", competitionId: input.competitionId, roundId: roundRef.id });
-    if (previousRound && eliminatedUids.length) await notifyUsers(eliminatedUids, `round_eliminated_${previousRound.id}`, { type: "round_result", title: String(previousRound.get("name")), body: "Your team did not advance to the next round.", competitionId: input.competitionId, roundId: previousRound.id });
-    await createOpportunityReminderJobs({ kind: "competition_round", opportunityId: roundRef.id, title: `${competition.get("title")} - ${input.name}`, deadline: new Date(input.submissionDeadlineIso), scheduleVersion: 1 });
+    await notifyUsers(recipientUids, `round_open_${roundRef.id}`, { type: "competition_round_open", title: input.name, body: "Your team has advanced. Review the next-round instructions.", competitionId: input.competitionId, roundId: roundRef.id, ...demoMetadata });
+    if (previousRound && eliminatedUids.length) await notifyUsers(eliminatedUids, `round_eliminated_${previousRound.id}`, { type: "round_result", title: String(previousRound.get("name")), body: "Your team did not advance to the next round.", competitionId: input.competitionId, roundId: previousRound.id, ...(previousRound.get("demoSeedId") ? { isTestData: true, demoSeedId: previousRound.get("demoSeedId") } : {}) });
+    await createOpportunityReminderJobs({ kind: "competition_round", opportunityId: roundRef.id, title: `${competition.get("title")} - ${input.name}`, deadline: new Date(input.submissionDeadlineIso), scheduleVersion: 1, demoSeedId: competition.get("demoSeedId") ? String(competition.get("demoSeedId")) : undefined });
     await writeAudit({ actorUid: actor.uid, action: "competition_round.created", resourceType: "competitionRound", resourceId: roundRef.id, after: { ...input, sequence } });
     return { roundId: roundRef.id, sequence, eligibleTeams: teams.length };
   } catch (error) { asHttpsError(error); }
@@ -410,7 +418,7 @@ export const markRoundSubmitted = onCall(callableOptions, async (request) => {
       if (entry.get("submissionStatus") === "submitted") return;
       tx.update(ref, { status: "submitted", submissionStatus: "submitted", submittedAt: FieldValue.serverTimestamp(), submittedBy: actor.uid, submittedLate: late, confirmationReference: input.confirmationReference, updatedAt: FieldValue.serverTimestamp() });
     });
-    await notifyUsers((team.get("memberUids") as string[]) ?? [], `round_submitted_${input.roundId}_${input.teamId}`, { type: "round_submitted", title: String(round.get("name")), body: late ? "Submission recorded late." : "Team submission recorded.", roundId: input.roundId, teamId: input.teamId });
+    await notifyUsers((team.get("memberUids") as string[]) ?? [], `round_submitted_${input.roundId}_${input.teamId}`, { type: "round_submitted", title: String(round.get("name")), body: late ? "Submission recorded late." : "Team submission recorded.", roundId: input.roundId, teamId: input.teamId, ...(round.get("demoSeedId") ? { isTestData: true, demoSeedId: round.get("demoSeedId") } : {}) });
     return { late };
   } catch (error) { asHttpsError(error); }
 });
@@ -455,7 +463,7 @@ export const finalizeRound = onCall(callableOptions, async (request) => {
     });
     writer.update(roundRef, { status: "finalized", finalizedBy: actor.uid, finalizedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     await writer.close();
-    await Promise.all(notify.map((item) => notifyUsers(item.uids, `round_result_${input.roundId}_${item.teamId}`, { type: "round_result", title: String(round.get("name")), body: item.advanced ? "Your team advanced to the next stage." : "Your team did not advance from this round.", roundId: input.roundId, teamId: item.teamId })));
+    await Promise.all(notify.map((item) => notifyUsers(item.uids, `round_result_${input.roundId}_${item.teamId}`, { type: "round_result", title: String(round.get("name")), body: item.advanced ? "Your team advanced to the next stage." : "Your team did not advance from this round.", roundId: input.roundId, teamId: item.teamId, ...(round.get("demoSeedId") ? { isTestData: true, demoSeedId: round.get("demoSeedId") } : {}) })));
     await writeAudit({ actorUid: actor.uid, action: "competition_round.finalized", resourceType: "competitionRound", resourceId: input.roundId, after: { advancingTeamIds: input.advancingTeamIds }, reason: input.reason });
     return { entries: entries.size, advancing: input.advancingTeamIds.length };
   } catch (error) { asHttpsError(error); }
@@ -512,8 +520,8 @@ export const updateInternship = onCall(callableOptions, async (request) => {
     await ref.update({ company: input.company, role: input.role, title, description: input.description, registrationUrl: input.registrationUrl || null, registrationDeadline: deadline, version, scheduleVersion, updatedBy: actor.uid, updatedAt: FieldValue.serverTimestamp() });
     if (before.get("status") === "published") {
       const responses = await db.collection("internshipResponses").where("internshipId", "==", input.internshipId).get();
-      await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `internship_changed_${input.internshipId}_v${version}`, { type: "internship_changed", title, body: "Internship details or registration deadline changed.", internshipId: input.internshipId });
-      await createOpportunityReminderJobs({ kind: "internship_registration", opportunityId: input.internshipId, title, deadline: deadline.toDate(), scheduleVersion });
+      await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `internship_changed_${input.internshipId}_v${version}`, { type: "internship_changed", title, body: "Internship details or registration deadline changed.", internshipId: input.internshipId, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}) });
+      await createOpportunityReminderJobs({ kind: "internship_registration", opportunityId: input.internshipId, title, deadline: deadline.toDate(), scheduleVersion, demoSeedId: before.get("demoSeedId") ? String(before.get("demoSeedId")) : undefined });
     }
     await writeAudit({ actorUid: actor.uid, action: "internship.updated", resourceType: "internship", resourceId: input.internshipId, before: before.data(), after: input });
     return { internshipId: input.internshipId, version };
@@ -530,7 +538,7 @@ export const cancelInternship = onCall(callableOptions, async (request) => {
     if (before.get("status") === "cancelled") return { idempotent: true };
     await ref.update({ status: "cancelled", cancellationReason: input.reason, scheduleVersion: FieldValue.increment(1), cancelledBy: actor.uid, cancelledAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     const responses = await db.collection("internshipResponses").where("internshipId", "==", input.internshipId).get();
-    await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `internship_cancelled_${input.internshipId}`, { type: "internship_cancelled", title: String(before.get("title")), body: `Cancelled: ${input.reason}`, internshipId: input.internshipId });
+    await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `internship_cancelled_${input.internshipId}`, { type: "internship_cancelled", title: String(before.get("title")), body: `Cancelled: ${input.reason}`, internshipId: input.internshipId, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}) });
     await writeAudit({ actorUid: actor.uid, action: "internship.cancelled", resourceType: "internship", resourceId: input.internshipId, before: before.data(), reason: input.reason });
     return { internshipId: input.internshipId };
   } catch (error) { asHttpsError(error); }

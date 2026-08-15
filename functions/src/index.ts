@@ -4,6 +4,7 @@ setGlobalOptions({ region: "asia-south1", maxInstances: 20, memory: "512MiB" });
 
 export { activateMyAccount } from "./account.js";
 export { createTestAccounts } from "./test-accounts.js";
+export { seedTestData, clearTestData } from "./test-data.js";
 export { initializeAppConfig, saveSubjectOffering } from "./catalog.js";
 export { validateRosterImport, commitRosterImport, updateRoleAssignments } from "./roster.js";
 export { previewTaskRecipients, createTask, updateTask, publishTask, syncTaskRecipients, closeTask, cancelTask } from "./tasks.js";

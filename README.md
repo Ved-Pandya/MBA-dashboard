@@ -67,6 +67,8 @@ Prerequisites: Node 24, npm, and Java 21 if you want to run the Firestore Emulat
 
 For role testing, System Admins can use **Admin → Test identities → Create or reset test accounts**. This creates `24M2901` (Student), `24M2902` (Subject POC for the isolated `TEST-A` offering), and `24M2903` (CR). Secure passwords are generated on demand and displayed only in the administrator's browser.
 
+After creating the identities, click **Seed complete mock data** to reset a tagged demo dataset containing four subjects and timetable slots, four academic events, two competitions, one registered team, one open competition round, one internship, one wing form, mixed response/completion states, reminder jobs, and notifications. **Clear mock data** removes only records tagged with the `mock_v1` seed and leaves the three test login accounts intact.
+
 The roster contains each roll number and its administrator-chosen password. Passwords are sent only to the privileged Vercel route and are handed to Firebase Authentication; they are never stored in Firestore or audit events. Re-importing an existing roll number deliberately resets its password.
 
 ## Commands

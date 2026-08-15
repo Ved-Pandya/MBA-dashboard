@@ -108,6 +108,7 @@ export const createAcademicEvent = onCall(callableOptions, async (request) => {
     const input = academicEventSchema.parse(request.data);
     const offering = await requireOfferingAccess(actor, input.offeringId);
     const ref = db.collection("academicEvents").doc();
+    const demoMetadata = offering.get("demoSeedId") ? { isTestData: true, demoSeedId: offering.get("demoSeedId") } : {};
     const event = {
       offeringId: input.offeringId,
       sectionId: String(offering.get("sectionId")),
@@ -121,12 +122,13 @@ export const createAcademicEvent = onCall(callableOptions, async (request) => {
       status: "published",
       version: 1,
       ownerUid: actor.uid,
+      ...demoMetadata,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
     await ref.set(event);
     const recipientCount = await notifySection(String(offering.get("sectionId")), `academic_created_${ref.id}_v1`, {
-      type: "academic_event_created", title: input.title, body: `${input.eventType.replaceAll("_", " ")} added to your academic calendar.`, academicEventId: ref.id,
+      type: "academic_event_created", title: input.title, body: `${input.eventType.replaceAll("_", " ")} added to your academic calendar.`, academicEventId: ref.id, ...demoMetadata,
     });
     await writeAudit({ actorUid: actor.uid, action: "academic_event.created", resourceType: "academicEvent", resourceId: ref.id, after: event });
     return { eventId: ref.id, recipientCount };
@@ -154,7 +156,7 @@ export const updateAcademicEvent = onCall(callableOptions, async (request) => {
     if (input.timetableSlotId !== undefined) patch.timetableSlotId = input.timetableSlotId || null;
     await ref.update(patch);
     await notifySection(String(before.get("sectionId")), `academic_changed_${ref.id}_v${nextVersion}`, {
-      type: "academic_event_changed", title: String(patch.title ?? before.get("title")), body: "An academic calendar item was updated.", academicEventId: ref.id,
+      type: "academic_event_changed", title: String(patch.title ?? before.get("title")), body: "An academic calendar item was updated.", academicEventId: ref.id, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}),
     });
     await writeAudit({ actorUid: actor.uid, action: "academic_event.updated", resourceType: "academicEvent", resourceId: ref.id, before: before.data(), after: patch });
     return { eventId: ref.id, version: nextVersion };
@@ -173,7 +175,7 @@ export const cancelAcademicEvent = onCall(callableOptions, async (request) => {
     const version = Number(before.get("version") ?? 1) + 1;
     await ref.update({ status: "cancelled", cancellationReason: input.reason, version, cancelledBy: actor.uid, cancelledAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     await notifySection(String(before.get("sectionId")), `academic_cancelled_${ref.id}_v${version}`, {
-      type: "academic_event_cancelled", title: String(before.get("title")), body: `Cancelled: ${input.reason}`, academicEventId: ref.id,
+      type: "academic_event_cancelled", title: String(before.get("title")), body: `Cancelled: ${input.reason}`, academicEventId: ref.id, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}),
     });
     await writeAudit({ actorUid: actor.uid, action: "academic_event.cancelled", resourceType: "academicEvent", resourceId: ref.id, before: before.data(), reason: input.reason });
     return { eventId: ref.id };
