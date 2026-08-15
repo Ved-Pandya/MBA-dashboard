@@ -12,8 +12,9 @@ import { TimetableView } from "./timetable-view";
 import { AcademicsView } from "./academics-view";
 import { OpportunitiesView } from "./opportunities-view";
 import { ReportsView } from "./reports-view";
+import { CrBoardView } from "./cr-board-view";
 
-type View = "today" | "academics" | "opportunities" | "teams" | "forms" | "compliance" | "poc" | "timetable" | "reports" | "admin";
+type View = "today" | "academics" | "opportunities" | "teams" | "forms" | "compliance" | "crBoard" | "poc" | "timetable" | "reports" | "admin";
 
 function Brand() {
   return <div className="brand brand-small"><span className="brand-mark"><i /><i /><i /></span><span>Deadline<span>OS</span></span></div>;
@@ -34,6 +35,7 @@ export function Dashboard() {
     { id: "teams" as const, label: "My teams", icon: "T", show: true },
     { id: "forms" as const, label: "Wing forms", icon: "F", show: isWingPoc },
     { id: "compliance" as const, label: "Task compliance", icon: "C", show: isPoc || governor },
+    { id: "crBoard" as const, label: "CR Board", icon: "B", show: governor },
     { id: "reports" as const, label: "Reports", icon: "R", show: isWingPoc || governor },
     { id: "poc" as const, label: "POC setup", icon: "P", show: governor },
     { id: "timetable" as const, label: "Timetable", icon: "W", show: governor },
@@ -57,6 +59,7 @@ export function Dashboard() {
       {view === "teams" && <OpportunitiesView mode="teams" />}
       {view === "forms" && <ManagementView />}
       {view === "compliance" && <ComplianceView />}
+      {view === "crBoard" && <CrBoardView />}
       {view === "reports" && <ReportsView />}
       {view === "poc" && <PocSetupView />}
       {view === "timetable" && <TimetableView />}

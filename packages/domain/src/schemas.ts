@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ACADEMIC_EVENT_TYPES, OPPORTUNITY_RESPONSE_STATUSES, TASK_TYPES, WING_IDS } from "./types.js";
+import { ACADEMIC_EVENT_TYPES, CR_TASK_STATUSES, OPPORTUNITY_RESPONSE_STATUSES, TASK_TYPES, WING_IDS } from "./types.js";
 import { ROLL_NUMBER_PATTERN } from "./credentials.js";
 
 export const wingIdSchema = z.enum(WING_IDS);
@@ -53,6 +53,26 @@ export const rosterRowSchema = z.object({
 export const completionSchema = z.object({
   taskId: z.string().min(1),
   idempotencyKey: z.string().min(8).max(128).optional(),
+});
+
+const optionalCrDueAt = z.string().datetime({ offset: true }).optional().or(z.literal(""));
+
+export const crTaskCreateSchema = z.object({
+  title: z.string().trim().min(3).max(140),
+  notes: z.string().trim().max(8_000).optional().default(""),
+  dueAtIso: optionalCrDueAt,
+  idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{8,128}$/, "Invalid idempotency key"),
+});
+
+export const crTaskUpdateSchema = z.object({
+  taskId: z.string().regex(/^[A-Za-z0-9_-]{1,200}$/, "Invalid CR task ID"),
+  expectedVersion: z.number().int().positive(),
+  title: z.string().trim().min(3).max(140).optional(),
+  notes: z.string().trim().max(8_000).optional(),
+  dueAtIso: z.string().datetime({ offset: true }).nullable().optional(),
+  status: z.enum(CR_TASK_STATUSES).optional(),
+}).refine((input) => input.title !== undefined || input.notes !== undefined || input.dueAtIso !== undefined || input.status !== undefined, {
+  message: "At least one task change is required",
 });
 
 export const exemptionSchema = z.object({

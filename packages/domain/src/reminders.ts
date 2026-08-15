@@ -13,6 +13,14 @@ export function buildReminderSchedule(dueAt: Date, now = new Date()) {
   })).filter(({ fireAt, stage }) => fireAt > now || stage === "overdue15m");
 }
 
+export function buildCatchUpReminderSchedule(dueAt: Date, now = new Date()) {
+  const reminders = buildReminderSchedule(dueAt, now);
+  if (dueAt > now && !reminders.some(({ stage }) => stage === "minus24h" || stage === "minus2h")) {
+    reminders.unshift({ stage: "minus2h", fireAt: now });
+  }
+  return reminders;
+}
+
 export function notificationCopy(stage: ReminderStage, title: string) {
   switch (stage) {
     case "minus24h":

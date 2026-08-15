@@ -11,6 +11,7 @@ export { previewTaskRecipients, createTask, updateTask, publishTask, syncTaskRec
 export { setMyCompletion, reopenMyCompletion, setTaskExemption, markNotificationsRead, getComplianceExport } from "./completion.js";
 export { scanDueReminderJobs, fanOutReminder, deliverInAppNotification, dailyOverdueDigest, reconcileTaskStats } from "./alerts.js";
 export { getPocSetup, searchRoleCandidates, assignPoc, revokePoc, migrateWingIds } from "./governance.js";
+export { createCrTask, updateCrTask } from "./cr-tasks.js";
 export { commitTimetableImport, createAcademicEvent, updateAcademicEvent, cancelAcademicEvent } from "./academics.js";
 export {
   createCompetition, publishCompetition, updateCompetition, cancelCompetition, setCompetitionResponse,

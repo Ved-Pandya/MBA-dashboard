@@ -39,3 +39,7 @@ export function canReadAssignment(actor: UserProfile, actorUid: string, assignme
     ? Boolean(actor.scopes.wingPocWings[id])
     : Boolean(actor.scopes.subjectPocOfferings[id]);
 }
+
+export function canMutateCrBoard(actor: UserProfile): boolean {
+  return actor.status === "active" && actor.roles.cr === true;
+}

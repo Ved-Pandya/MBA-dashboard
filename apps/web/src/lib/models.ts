@@ -1,4 +1,4 @@
-import type { AssignmentStatus, TaskType, UserProfile } from "@mba/domain";
+import type { AssignmentStatus, CrTaskStatus, TaskType, UserProfile } from "@mba/domain";
 import type { Timestamp } from "firebase/firestore";
 
 export interface AssignmentRecord {
@@ -43,6 +43,23 @@ export interface TaskRecord {
   dueAt: Timestamp;
   resourceUrl?: string;
   ownerUid: string;
+}
+
+export interface CrTaskRecord {
+  id: string;
+  title: string;
+  notes: string;
+  status: CrTaskStatus;
+  dueAt: Timestamp | null;
+  createdBy: string;
+  updatedBy: string;
+  completedBy?: string;
+  creatorSnapshot?: { displayName: string; rollNumber: string };
+  version: number;
+  scheduleVersion: number;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+  completedAt?: Timestamp;
 }
 
 export interface AcademicEventRecord {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { academicEventSchema, buildReminderSchedule, canManageTask, rollNumberToAuthEmail, rosterRowSchema, taskDraftSchema, teamDraftSchema, type UserProfile } from "./index.js";
+import { academicEventSchema, buildCatchUpReminderSchedule, buildReminderSchedule, canManageTask, crTaskCreateSchema, crTaskUpdateSchema, rollNumberToAuthEmail, rosterRowSchema, taskDraftSchema, teamDraftSchema, type UserProfile } from "./index.js";
 
 const actor: UserProfile = {
   authEmail: "24m2001@users.deadlineos.app",
@@ -34,6 +34,13 @@ describe("domain invariants", () => {
     expect(jobs.map((job) => job.stage)).toEqual(["minus24h", "minus2h", "overdue15m"]);
   });
 
+  it("creates only the applicable catch-up reminder before a near CR deadline", () => {
+    const now = new Date("2027-01-01T00:00:00Z");
+    const jobs = buildCatchUpReminderSchedule(new Date("2027-01-01T01:00:00Z"), now);
+    expect(jobs.map((job) => job.stage)).toEqual(["minus2h", "overdue15m"]);
+    expect(jobs[0]?.fireAt).toEqual(now);
+  });
+
   it("maps roll numbers to internal Auth identities without exposing an email login", () => {
     expect(rollNumberToAuthEmail("  24m2001 ")).toBe("24m2001@users.deadlineos.app");
     expect(rosterRowSchema.safeParse({
@@ -49,5 +56,12 @@ describe("domain invariants", () => {
   it("validates team uniqueness and informational academic events", () => {
     expect(teamDraftSchema.safeParse({ competitionId: "comp-1", name: "North Stars", memberRollNumbers: ["24M2001", "24M2001"] }).success).toBe(false);
     expect(academicEventSchema.safeParse({ offeringId: "FIN-A", eventType: "pre_read", title: "Read Chapter 4", details: "", occursAtIso: "2027-01-01T09:00:00+05:30" }).success).toBe(true);
+  });
+
+  it("validates private CR task inputs and exact statuses", () => {
+    expect(crTaskCreateSchema.safeParse({ title: "Coordinate venue", notes: "Confirm capacity", dueAtIso: "2027-01-01T09:00:00+05:30", idempotencyKey: "request_1234" }).success).toBe(true);
+    expect(crTaskUpdateSchema.safeParse({ taskId: "task-1", expectedVersion: 1, status: "in_progress" }).success).toBe(true);
+    expect(crTaskUpdateSchema.safeParse({ taskId: "task-1", expectedVersion: 1, status: "cancelled" }).success).toBe(false);
+    expect(crTaskUpdateSchema.safeParse({ taskId: "task-1", expectedVersion: 1 }).success).toBe(false);
   });
 });

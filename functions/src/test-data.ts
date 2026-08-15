@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { buildReminderSchedule, rollNumberToAuthEmail, type ReminderStage } from "@mba/domain";
+import { buildCatchUpReminderSchedule, buildReminderSchedule, rollNumberToAuthEmail, type ReminderStage } from "@mba/domain";
 import { adminAuth, db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, requireAdmin, writeAudit } from "./helpers.js";
 
@@ -34,16 +34,22 @@ function notification(uid: string, id: string, title: string, body: string, extr
 
 function addReminderJobs(writer: FirebaseFirestore.BulkWriter, input: {
   prefix: string;
-  kind?: "competition_registration" | "internship_registration" | "competition_round";
+  kind?: "competition_registration" | "internship_registration" | "competition_round" | "cr_task";
   opportunityId?: string;
+  crTaskId?: string;
   taskId?: string;
   title: string;
   deadline: Date;
 }) {
-  for (const item of buildReminderSchedule(input.deadline)) {
+  const reminders = input.kind === "cr_task" ? buildCatchUpReminderSchedule(input.deadline) : buildReminderSchedule(input.deadline);
+  for (const item of reminders) {
     const id = `demo_${input.prefix}_${item.stage}`;
     writer.set(db.doc(`reminderJobs/${id}`), {
-      ...(input.kind ? { kind: input.kind, opportunityId: input.opportunityId, title: input.title } : { taskId: input.taskId }),
+      ...(input.kind === "cr_task"
+        ? { kind: input.kind, crTaskId: input.crTaskId }
+        : input.kind
+          ? { kind: input.kind, opportunityId: input.opportunityId, title: input.title }
+          : { taskId: input.taskId }),
       scheduleVersion: 1,
       stage: item.stage as ReminderStage,
       fireAt: Timestamp.fromDate(item.fireAt),
@@ -121,10 +127,18 @@ export const seedTestData = onCall({ ...callableOptions, timeoutSeconds: 120 }, 
     });
     writer.set(db.doc("taskStats/demo_wing_form"), { eligibleCount: 3, pendingCount: 1, completedCount: 1, exemptCount: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp(), reconciledAt: FieldValue.serverTimestamp() }, { merge: true });
 
+    const crTaskAssignedDue = at(26);
+    const crTaskProgressDue = at(1.5);
+    writer.set(db.doc("crTasks/demo_cr_assigned"), { title: "Confirm guest speaker logistics", notes: "Confirm the auditorium, visitor pass, and AV requirements.", status: "assigned", dueAt: Timestamp.fromDate(crTaskAssignedDue), createdBy: cr.uid, updatedBy: cr.uid, creatorSnapshot: { displayName: cr.displayName, rollNumber: cr.rollNumber }, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    writer.set(db.doc("crTasks/demo_cr_progress"), { title: "Compile batch feedback", notes: "Merge the Section A and B feedback before sharing the summary.", status: "in_progress", dueAt: Timestamp.fromDate(crTaskProgressDue), createdBy: cr.uid, updatedBy: cr.uid, creatorSnapshot: { displayName: cr.displayName, rollNumber: cr.rollNumber }, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    writer.set(db.doc("crTasks/demo_cr_completed"), { title: "Publish club room allocation", notes: "Allocation was confirmed and circulated to all clubs.", status: "completed", dueAt: Timestamp.fromDate(at(-2)), createdBy: cr.uid, updatedBy: cr.uid, completedBy: cr.uid, creatorSnapshot: { displayName: cr.displayName, rollNumber: cr.rollNumber }, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), completedAt: FieldValue.serverTimestamp() }, { merge: true });
+
     addReminderJobs(writer, { prefix: "case_open", kind: "competition_registration", opportunityId: "demo_case_open", title: "Demo Product Innovation Sprint", deadline: openCompetitionDeadline });
     addReminderJobs(writer, { prefix: "internship", kind: "internship_registration", opportunityId: "demo_internship", title: "DemoCorp - Strategy Intern", deadline: internshipDeadline });
     addReminderJobs(writer, { prefix: "round_1", kind: "competition_round", opportunityId: "demo_round_1", title: "Demo National Strategy Challenge - Round 1", deadline: roundDeadline });
     addReminderJobs(writer, { prefix: "wing_form", taskId: "demo_wing_form", title: "Demo Corporate Relations Form", deadline: formDeadline });
+    addReminderJobs(writer, { prefix: "cr_assigned", kind: "cr_task", crTaskId: "demo_cr_assigned", title: "Confirm guest speaker logistics", deadline: crTaskAssignedDue });
+    addReminderJobs(writer, { prefix: "cr_progress", kind: "cr_task", crTaskId: "demo_cr_progress", title: "Compile batch feedback", deadline: crTaskProgressDue });
 
     for (const user of users) {
       const notices = [
@@ -134,8 +148,8 @@ export const seedTestData = onCall({ ...callableOptions, timeoutSeconds: 120 }, 
       notices.forEach((notice) => writer.set(notice.ref, notice.data, { merge: true }));
     }
     await writer.close();
-    await writeAudit({ actorUid: actor.uid, action: "test_data.seeded", resourceType: "demoSeed", resourceId: DEMO_SEED_ID, after: { subjects: DEMO_OFFERINGS.length, academicEvents: academicEvents.length, competitions: 2, internships: 1, teams: 1, rounds: 1, wingForms: 1 } });
-    return { subjects: 4, academicEvents: 4, competitions: 2, internships: 1, teams: 1, rounds: 1, wingForms: 1, testUsers: 3 };
+    await writeAudit({ actorUid: actor.uid, action: "test_data.seeded", resourceType: "demoSeed", resourceId: DEMO_SEED_ID, after: { subjects: DEMO_OFFERINGS.length, academicEvents: academicEvents.length, competitions: 2, internships: 1, teams: 1, rounds: 1, wingForms: 1, crTasks: 3 } });
+    return { subjects: 4, academicEvents: 4, competitions: 2, internships: 1, teams: 1, rounds: 1, wingForms: 1, crTasks: 3, testUsers: 3 };
   } catch (error) { asHttpsError(error); }
 });
 
@@ -144,7 +158,7 @@ const DEMO_COLLECTIONS = [
   "competitions", "competitionTeams", "competitionTeamNames", "competitionMemberships", "competitionRounds",
   "competitionRoundEntries", "opportunityResponses", "internships", "internshipResponses", "tasks",
   "taskAssignments", "taskStats", "reminderJobs", "reminderDeliveries", "competitionStats",
-  "internshipStats", "competitionRoundStats", "pocAssignments",
+  "internshipStats", "competitionRoundStats", "pocAssignments", "crTasks",
 ] as const;
 
 async function deleteDemoSeedRecords() {

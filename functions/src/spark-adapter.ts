@@ -9,6 +9,7 @@ import { adminAuth, db, FieldValue, Timestamp } from "./firebase.js";
 import { commitRosterImport, updateRoleAssignments, validateRosterImport } from "./roster.js";
 import { cancelTask, closeTask, createTask, previewTaskRecipients, publishTask, syncTaskRecipients, updateTask } from "./tasks.js";
 import { assignPoc, getPocSetup, migrateWingIds, revokePoc, searchRoleCandidates } from "./governance.js";
+import { createCrTask, updateCrTask } from "./cr-tasks.js";
 import { cancelAcademicEvent, commitTimetableImport, createAcademicEvent, updateAcademicEvent } from "./academics.js";
 import {
   cancelCompetition, cancelInternship, correctRoundSubmission, createCompetition, createInternship, createNextRound, createTeam,
@@ -44,6 +45,8 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   assignPoc,
   revokePoc,
   migrateWingIds,
+  createCrTask,
+  updateCrTask,
   commitTimetableImport,
   createAcademicEvent,
   updateAcademicEvent,
@@ -211,6 +214,94 @@ async function deliverReminder(jobId: string, job: { taskId: string; scheduleVer
   return deliveries;
 }
 
+function crTaskNotificationCopy(stage: ReminderStage, title: string) {
+  if (stage === "minus24h") return { title: "CR task due in 24 hours", body: `"${title}" is due tomorrow.` };
+  if (stage === "minus2h") return { title: "CR task due in 2 hours", body: `"${title}" needs attention now.` };
+  return { title: "CR task overdue", body: `"${title}" is still open after its deadline.` };
+}
+
+async function deliverCrTaskReminder(jobId: string, job: { crTaskId: string; scheduleVersion: number; stage: ReminderStage }) {
+  const taskRef = db.doc(`crTasks/${job.crTaskId}`);
+  const task = await taskRef.get();
+  if (!task.exists || task.get("status") === "completed" || Number(task.get("scheduleVersion")) !== job.scheduleVersion) {
+    await db.doc(`reminderJobs/${jobId}`).set({
+      status: "skipped",
+      skipReason: "stale_or_completed_cr_task",
+      leaseUntil: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return 0;
+  }
+
+  const recipients = await db.collection("users")
+    .where("roles.cr", "==", true)
+    .where("status", "==", "active")
+    .get();
+  const demoMetadata = task.get("demoSeedId") ? { isTestData: true, demoSeedId: task.get("demoSeedId") } : {};
+  let deliveries = 0;
+  for (const recipient of recipients.docs) {
+    const deliveryRef = db.doc(`reminderDeliveries/${jobId}_${recipient.id}`);
+    const notificationRef = recipient.ref.collection("notifications").doc(`${jobId}_${recipient.id}`);
+    const delivered = await db.runTransaction(async (tx) => {
+      const [freshTask, freshUser, previous] = await Promise.all([
+        tx.get(taskRef),
+        tx.get(recipient.ref),
+        tx.get(deliveryRef),
+      ]);
+      if (previous.exists && ["sent", "skipped"].includes(String(previous.get("status")))) return false;
+      const eligible = freshTask.exists
+        && freshTask.get("status") !== "completed"
+        && Number(freshTask.get("scheduleVersion")) === job.scheduleVersion
+        && freshUser.exists
+        && freshUser.get("status") === "active"
+        && freshUser.get("roles.cr") === true;
+      if (!eligible) {
+        tx.set(deliveryRef, {
+          jobId,
+          uid: recipient.id,
+          status: "skipped",
+          skipReason: "recipient_or_cr_task_inactive",
+          ...demoMetadata,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        return false;
+      }
+      const copy = crTaskNotificationCopy(job.stage, String(freshTask.get("title")));
+      tx.set(notificationRef, {
+        type: "cr_task_deadline_reminder",
+        ...copy,
+        crTaskId: job.crTaskId,
+        ...demoMetadata,
+        createdAt: FieldValue.serverTimestamp(),
+        readAt: null,
+      });
+      tx.set(deliveryRef, {
+        jobId,
+        uid: recipient.id,
+        kind: "cr_task",
+        crTaskId: job.crTaskId,
+        stage: job.stage,
+        scheduleVersion: job.scheduleVersion,
+        status: "sent",
+        attempts: FieldValue.increment(1),
+        sentAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        ...demoMetadata,
+      }, { merge: true });
+      return true;
+    });
+    if (delivered) deliveries += 1;
+  }
+  await db.doc(`reminderJobs/${jobId}`).set({
+    status: "complete",
+    recipientCount: recipients.size,
+    completedAt: FieldValue.serverTimestamp(),
+    leaseUntil: FieldValue.delete(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return deliveries;
+}
+
 type OpportunityJob = {
   kind: "competition_registration" | "internship_registration" | "competition_round";
   opportunityId: string;
@@ -328,6 +419,12 @@ async function processDueReminderJobs() {
           scheduleVersion: Number(snap.get("scheduleVersion")),
           stage: snap.get("stage") as ReminderStage,
         })
+        : kind === "cr_task"
+          ? await deliverCrTaskReminder(snap.id, {
+            crTaskId: String(snap.get("crTaskId")),
+            scheduleVersion: Number(snap.get("scheduleVersion")),
+            stage: snap.get("stage") as ReminderStage,
+          })
         : await deliverOpportunityReminder(snap.id, {
           kind: kind as OpportunityJob["kind"],
           opportunityId: String(snap.get("opportunityId")),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canManageTask, type UserProfile } from "@mba/domain";
+import { canManageTask, canMutateCrBoard, type UserProfile } from "@mba/domain";
 
 const wingPoc: UserProfile = {
   authEmail: "24m2001@users.deadlineos.app",
@@ -22,5 +22,13 @@ describe("RBAC contract", () => {
     const cr = { ...wingPoc, roles: { student: true as const, cr: true, systemAdmin: false }, scopes: { ...wingPoc.scopes, wingPocWings: {} } };
     const decision = canManageTask(cr, "administrative_form", { kind: "wing", scopeKey: "wing:A", wingId: "A" }, "update");
     expect(decision.allowed).toBe(false);
+  });
+
+  it("allows active CRs but not admin-only users to mutate the private CR Board", () => {
+    const cr = { ...wingPoc, roles: { student: true as const, cr: true, systemAdmin: false } };
+    const admin = { ...wingPoc, roles: { student: true as const, cr: false, systemAdmin: true } };
+    expect(canMutateCrBoard(cr)).toBe(true);
+    expect(canMutateCrBoard(admin)).toBe(false);
+    expect(canMutateCrBoard({ ...cr, status: "suspended" })).toBe(false);
   });
 });

@@ -13,6 +13,7 @@ function errorStatus(code: string | undefined) {
   if (code?.includes("unauthenticated") || code?.includes("id-token")) return 401;
   if (code?.includes("permission-denied")) return 403;
   if (code?.includes("not-found")) return 404;
+  if (code?.includes("aborted")) return 409;
   if (code?.includes("invalid-argument") || code?.includes("failed-precondition")) return 400;
   return 500;
 }

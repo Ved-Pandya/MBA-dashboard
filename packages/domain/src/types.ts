@@ -8,6 +8,7 @@ export const TASK_TYPES = [
 export const WING_IDS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"] as const;
 export const ACADEMIC_EVENT_TYPES = ["assignment_deadline", "quiz", "midterm", "pre_read"] as const;
 export const OPPORTUNITY_RESPONSE_STATUSES = ["no_response", "team_draft", "registered", "not_participating"] as const;
+export const CR_TASK_STATUSES = ["assigned", "in_progress", "completed"] as const;
 
 export type TaskType = (typeof TASK_TYPES)[number];
 export type TaskStatus = "draft" | "publishing" | "published" | "closed" | "cancelled";
@@ -17,6 +18,7 @@ export type SectionId = "A" | "B";
 export type WingId = (typeof WING_IDS)[number];
 export type AcademicEventType = (typeof ACADEMIC_EVENT_TYPES)[number];
 export type OpportunityResponseStatus = (typeof OPPORTUNITY_RESPONSE_STATUSES)[number];
+export type CrTaskStatus = (typeof CR_TASK_STATUSES)[number];
 export type CompetitionStatus = "draft" | "published" | "registration_closed" | "in_progress" | "completed" | "cancelled";
 export type CompetitionTeamStatus = "draft" | "registered" | "withdrawn" | "disqualified";
 export type CompetitionRoundStatus = "draft" | "open" | "finalized" | "cancelled";

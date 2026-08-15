@@ -197,6 +197,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /crTasks/{taskId} {
+      allow read: if admin() || cr();
+      allow write: if false;
+    }
+
     match /auditEvents/{eventId} {
       allow read: if admin() || cr();
       allow write: if false;
