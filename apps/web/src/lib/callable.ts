@@ -14,7 +14,13 @@ export async function callFunction<TInput, TOutput>(name: string, input: TInput)
     },
     body: JSON.stringify({ data: input }),
   });
-  const payload = await response.json() as { data?: TOutput; error?: { message?: string } };
+  const responseText = await response.text();
+  let payload: { data?: TOutput; error?: { message?: string } };
+  try {
+    payload = JSON.parse(responseText) as typeof payload;
+  } catch {
+    throw new Error(`Server request failed with HTTP ${response.status}. Check the Vercel Function logs.`);
+  }
   if (!response.ok) throw new Error(payload.error?.message ?? "The server operation failed");
   return payload.data as TOutput;
 }

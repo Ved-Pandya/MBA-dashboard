@@ -1,4 +1,3 @@
-import { runSparkMaintenance, verifySparkIdToken } from "@mba/functions/spark-adapter";
 import { NextResponse, type NextRequest } from "next/server";
 
 export const runtime = "nodejs";
@@ -9,14 +8,13 @@ export async function POST(request: NextRequest) {
   const authorization = request.headers.get("authorization") ?? "";
   const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   try {
+    const { runSparkMaintenance, verifySparkIdToken } = await import("@mba/functions/spark-adapter");
     await verifySparkIdToken(idToken);
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  try {
     return NextResponse.json(await runSparkMaintenance("pulse"));
   } catch (error) {
     console.error("Spark maintenance pulse failed", error);
-    return NextResponse.json({ error: "Maintenance failed" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Maintenance failed";
+    const status = message.includes("token") || message.includes("Authentication") ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

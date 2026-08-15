@@ -1,4 +1,3 @@
-import { invokeSparkCallable } from "@mba/functions/spark-adapter";
 import { NextResponse, type NextRequest } from "next/server";
 
 export const runtime = "nodejs";
@@ -20,6 +19,7 @@ function errorStatus(code: string | undefined) {
 
 export async function POST(request: NextRequest, context: { params: Promise<{ name: string }> }) {
   try {
+    const { invokeSparkCallable } = await import("@mba/functions/spark-adapter");
     const { name } = await context.params;
     const body = await request.json() as { data?: unknown };
     const data = await invokeSparkCallable(name, body.data, bearerToken(request));

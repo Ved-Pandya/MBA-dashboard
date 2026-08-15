@@ -1,4 +1,3 @@
-import { runSparkMaintenance } from "@mba/functions/spark-adapter";
 import { NextResponse, type NextRequest } from "next/server";
 
 export const runtime = "nodejs";
@@ -10,5 +9,14 @@ export async function GET(request: NextRequest) {
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.json(await runSparkMaintenance("daily"));
+  try {
+    const { runSparkMaintenance } = await import("@mba/functions/spark-adapter");
+    return NextResponse.json(await runSparkMaintenance("daily"));
+  } catch (error) {
+    console.error("Spark daily maintenance failed", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Maintenance failed" },
+      { status: 500 },
+    );
+  }
 }
