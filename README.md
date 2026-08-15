@@ -65,6 +65,8 @@ Prerequisites: Node 24, npm, and Java 21 if you want to run the Firestore Emulat
 
 6. In Admin, initialize the batch, then validate and commit the roster. Import the timetable or create offerings, and assign POCs from the dedicated POC Setup page. A sample is available at `fixtures/roster.sample.csv`.
 
+For role testing, System Admins can use **Admin → Test identities → Create or reset test accounts**. This creates `24M2901` (Student), `24M2902` (Subject POC for the isolated `TEST-A` offering), and `24M2903` (CR). Secure passwords are generated on demand and displayed only in the administrator's browser.
+
 The roster contains each roll number and its administrator-chosen password. Passwords are sent only to the privileged Vercel route and are handed to Firebase Authentication; they are never stored in Firestore or audit events. Re-importing an existing roll number deliberately resets its password.
 
 ## Commands

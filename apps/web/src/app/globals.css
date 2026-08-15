@@ -15,6 +15,10 @@
   --shadow: 0 18px 55px rgba(31, 48, 40, .08);
 }
 
+@media (max-width: 680px) {
+  .test-credentials > div { grid-template-columns: 1fr !important; }
+}
+
 * { box-sizing: border-box; }
 html { background: var(--paper); }
 body { margin: 0; color: var(--ink); background: var(--paper); font-family: "DM Sans", sans-serif; }
@@ -93,6 +97,7 @@ a { color: inherit; }
 .calendar-groups, .opportunity-grid { margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .academic-editor, .round-editor, .timetable-import { margin-bottom: 20px; }
 .migration-panel { margin-bottom: 20px; }
+.test-credentials { margin-top: 16px; padding: 14px; display: grid; gap: 8px; border: 1px solid #cbdcc8; border-radius: 11px; background: #eef5e9; }.test-credentials > div { display: grid; grid-template-columns: 70px 95px 1fr; gap: 9px; align-items: center; }.test-credentials span { color: var(--green); font-size: 10px; font-weight: 800; }.test-credentials code { overflow-wrap: anywhere; padding: 6px 8px; border-radius: 6px; background: white; color: var(--ink); font-size: 11px; }
 .academic-row, .opportunity-card { min-height: 105px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); }
 .academic-row h3, .opportunity-card h3 { margin: 8px 0 5px; font-size: 14px; }.academic-row p, .opportunity-card p { margin: 0; color: var(--muted); font-size: 11px; }.academic-row small, .opportunity-card small { display: block; margin-top: 6px; color: var(--muted); }
 .opportunity-actions { min-width: 145px; display: grid; justify-items: end; gap: 8px; }.opportunity-actions .primary-button, .opportunity-actions .secondary-button { min-height: 34px; padding: 0 12px; font-size: 11px; }

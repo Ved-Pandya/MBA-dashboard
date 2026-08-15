@@ -1,6 +1,7 @@
 import type { CallableFunction } from "firebase-functions/v2/https";
 import { notificationCopy, type ReminderStage } from "@mba/domain";
 import { activateMyAccount } from "./account.js";
+import { createTestAccounts } from "./test-accounts.js";
 import { initializeAppConfig, saveSubjectOffering } from "./catalog.js";
 import { getComplianceExport, markNotificationsRead, reopenMyCompletion, setMyCompletion, setTaskExemption } from "./completion.js";
 import { adminAuth, db, FieldValue, Timestamp } from "./firebase.js";
@@ -17,6 +18,7 @@ import {
 
 const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   activateMyAccount,
+  createTestAccounts,
   initializeAppConfig,
   saveSubjectOffering,
   validateRosterImport,
