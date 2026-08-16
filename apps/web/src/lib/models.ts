@@ -66,11 +66,14 @@ export interface AcademicEventRecord {
   id: string;
   offeringId: string;
   sectionId: "A" | "B";
-  eventType: "assignment_deadline" | "quiz" | "midterm" | "pre_read";
+  eventType: "assignment_deadline" | "quiz" | "midterm" | "endterm" | "pre_read";
   title: string;
   details: string;
   occursAt: Timestamp;
   resourceUrl?: string | null;
+  endsAt?: Timestamp | null;
+  venue?: string | null;
+  syllabus?: string | null;
   status: "published" | "cancelled";
 }
 
@@ -79,11 +82,56 @@ export interface CompetitionRecord {
   title: string;
   organizer: string;
   description: string;
+  externalRegistrationUrl?: string | null;
+  internalFormUrl?: string | null;
   registrationUrl?: string | null;
   registrationDeadline: Timestamp;
   minTeamSize: number;
   maxTeamSize: number;
   status: string;
+}
+
+export interface SessionIntimationRecord {
+  id: string;
+  title: string;
+  details: string;
+  venue?: string | null;
+  sessionStartsAt: Timestamp;
+  responseDeadline: Timestamp;
+  status: "draft" | "published" | "closed" | "cancelled";
+  ownerUid: string;
+  version: number;
+}
+
+export interface SessionResponseRecord {
+  id: string;
+  sessionId: string;
+  uid: string;
+  status: "no_response" | "attending" | "not_attending";
+  respondedAt?: Timestamp;
+  studentSnapshot: { displayName: string; rollNumber: string; sectionId: "A" | "B"; wingId: string };
+}
+
+export interface GeneralPollRecord {
+  id: string;
+  question: string;
+  details?: string;
+  options: Array<{ id: string; label: string }>;
+  closesAt: Timestamp;
+  linkedSessionId?: string | null;
+  status: "draft" | "published" | "closed" | "cancelled";
+  ownerUid: string;
+  version: number;
+}
+
+export interface PollResponseRecord {
+  id: string;
+  pollId: string;
+  uid: string;
+  status: "no_response" | "responded";
+  optionId?: string | null;
+  respondedAt?: Timestamp;
+  studentSnapshot: { displayName: string; rollNumber: string; sectionId: "A" | "B"; wingId: string };
 }
 
 export interface InternshipRecord {

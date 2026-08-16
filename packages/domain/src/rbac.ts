@@ -43,3 +43,15 @@ export function canReadAssignment(actor: UserProfile, actorUid: string, assignme
 export function canMutateCrBoard(actor: UserProfile): boolean {
   return actor.status === "active" && actor.roles.cr === true;
 }
+
+export function isGroomingPoc(actor: UserProfile): boolean {
+  return actor.status === "active" && actor.scopes.batchPocRoles?.grooming === true;
+}
+
+export function isCaseCompetitionPoc(actor: UserProfile): boolean {
+  return actor.status === "active" && actor.scopes.batchPocRoles?.caseCompetition === true;
+}
+
+export function isWingPoc(actor: UserProfile): boolean {
+  return actor.status === "active" && Object.keys(actor.scopes.wingPocWings ?? {}).length > 0;
+}

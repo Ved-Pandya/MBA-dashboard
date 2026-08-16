@@ -6,9 +6,12 @@ export const TASK_TYPES = [
 ] as const;
 
 export const WING_IDS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"] as const;
-export const ACADEMIC_EVENT_TYPES = ["assignment_deadline", "quiz", "midterm", "pre_read"] as const;
+export const ACADEMIC_EVENT_TYPES = ["assignment_deadline", "quiz", "midterm", "endterm", "pre_read"] as const;
 export const OPPORTUNITY_RESPONSE_STATUSES = ["no_response", "team_draft", "registered", "not_participating"] as const;
 export const CR_TASK_STATUSES = ["assigned", "in_progress", "completed"] as const;
+export const POC_KINDS = ["wing", "subject", "grooming", "case_competition"] as const;
+export const SESSION_RESPONSE_STATUSES = ["no_response", "attending", "not_attending"] as const;
+export const COMPETITION_CONFIRMATION_KINDS = ["externalRegistration", "internalForm"] as const;
 
 export type TaskType = (typeof TASK_TYPES)[number];
 export type TaskStatus = "draft" | "publishing" | "published" | "closed" | "cancelled";
@@ -19,6 +22,9 @@ export type WingId = (typeof WING_IDS)[number];
 export type AcademicEventType = (typeof ACADEMIC_EVENT_TYPES)[number];
 export type OpportunityResponseStatus = (typeof OPPORTUNITY_RESPONSE_STATUSES)[number];
 export type CrTaskStatus = (typeof CR_TASK_STATUSES)[number];
+export type PocKind = (typeof POC_KINDS)[number];
+export type SessionResponseStatus = (typeof SESSION_RESPONSE_STATUSES)[number];
+export type CompetitionConfirmationKind = (typeof COMPETITION_CONFIRMATION_KINDS)[number];
 export type CompetitionStatus = "draft" | "published" | "registration_closed" | "in_progress" | "completed" | "cancelled";
 export type CompetitionTeamStatus = "draft" | "registered" | "withdrawn" | "disqualified";
 export type CompetitionRoundStatus = "draft" | "open" | "finalized" | "cancelled";
@@ -34,6 +40,10 @@ export interface RoleScopes {
   crSections: Record<string, true>;
   wingPocWings: Record<string, true>;
   subjectPocOfferings: Record<string, true>;
+  batchPocRoles: {
+    grooming?: true;
+    caseCompetition?: true;
+  };
 }
 
 export interface UserProfile {
@@ -82,13 +92,17 @@ export interface AcademicEventDraft {
   occursAtIso: string;
   resourceUrl?: string;
   timetableSlotId?: string;
+  endsAtIso?: string;
+  venue?: string;
+  syllabus?: string;
 }
 
 export interface CompetitionDraft {
   title: string;
   organizer: string;
   description: string;
-  registrationUrl?: string;
+  externalRegistrationUrl: string;
+  internalFormUrl: string;
   registrationDeadlineIso: string;
   minTeamSize: number;
   maxTeamSize: number;

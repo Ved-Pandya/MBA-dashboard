@@ -30,6 +30,18 @@ service cloud.firestore {
       return active() && me().scopes.subjectPocOfferings[offeringId] == true;
     }
 
+    function anyWingPoc() {
+      return active() && me().scopes.wingPocWings.keys().size() > 0;
+    }
+
+    function groomingPoc() {
+      return active() && me().scopes.get("batchPocRoles", {}).get("grooming", false) == true;
+    }
+
+    function caseCompetitionPoc() {
+      return active() && me().scopes.get("batchPocRoles", {}).get("caseCompetition", false) == true;
+    }
+
     function managesTask(data) {
       return active() && (
         (data.target.kind == "wing" && me().scopes.wingPocWings[data.target.wingId] == true) ||
@@ -97,7 +109,7 @@ service cloud.firestore {
     }
 
     match /competitions/{id} {
-      allow read: if active() && (resource.data.status == "published" || resource.data.status == "in_progress" || resource.data.status == "completed" || admin() || cr());
+      allow read: if active() && (resource.data.status == "published" || resource.data.status == "in_progress" || resource.data.status == "completed" || admin() || cr() || caseCompetitionPoc());
       allow write: if false;
     }
 
@@ -107,7 +119,7 @@ service cloud.firestore {
     }
 
     match /opportunityResponses/{id} {
-      allow read: if active() && (admin() || cr() || resource.data.uid == request.auth.uid || wingPoc(resource.data.wingId));
+      allow read: if active() && (admin() || cr() || caseCompetitionPoc() || resource.data.uid == request.auth.uid || wingPoc(resource.data.wingId));
       allow write: if false;
     }
 
@@ -117,22 +129,22 @@ service cloud.firestore {
     }
 
     match /competitionTeams/{id} {
-      allow read: if active() && (admin() || cr() || request.auth.uid in resource.data.memberUids);
+      allow read: if active() && (admin() || cr() || caseCompetitionPoc() || request.auth.uid in resource.data.memberUids);
       allow write: if false;
     }
 
     match /competitionMemberships/{id} {
-      allow read: if active() && (admin() || cr() || resource.data.uid == request.auth.uid);
+      allow read: if active() && (admin() || cr() || caseCompetitionPoc() || resource.data.uid == request.auth.uid);
       allow write: if false;
     }
 
     match /competitionRounds/{id} {
-      allow read: if active() && (admin() || cr() || resource.data.status == "open" || resource.data.status == "finalized");
+      allow read: if active() && (admin() || cr() || caseCompetitionPoc() || resource.data.status == "open" || resource.data.status == "finalized");
       allow write: if false;
     }
 
     match /competitionRoundEntries/{id} {
-      allow read: if active() && (admin() || cr() || request.auth.uid in resource.data.memberUids);
+      allow read: if active() && (admin() || cr() || caseCompetitionPoc() || request.auth.uid in resource.data.memberUids);
       allow write: if false;
     }
 
@@ -152,6 +164,34 @@ service cloud.firestore {
     }
 
     match /competitionTeamNames/{id} {
+      allow read, write: if false;
+    }
+
+    match /sessionIntimations/{id} {
+      allow read: if active() && (resource.data.status in ["published", "closed", "cancelled"] || admin() || cr() || anyWingPoc());
+      allow write: if false;
+    }
+
+    match /sessionResponses/{id} {
+      allow read: if active() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /sessionStats/{id} {
+      allow read, write: if false;
+    }
+
+    match /generalPolls/{id} {
+      allow read: if active() && (resource.data.status in ["published", "closed", "cancelled"] || admin() || cr() || groomingPoc());
+      allow write: if false;
+    }
+
+    match /pollResponses/{id} {
+      allow read: if active() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /pollStats/{id} {
       allow read, write: if false;
     }
 

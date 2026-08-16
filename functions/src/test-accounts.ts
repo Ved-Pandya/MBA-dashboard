@@ -77,6 +77,7 @@ export const createTestAccounts = onCall(callableOptions, async (request) => {
           crSections: account.cr ? { A: true, B: true } : {},
           wingPocWings: {},
           subjectPocOfferings: account.key === "poc" ? { "TEST-A": true } : {},
+          batchPocRoles: {},
         },
         isTestAccount: true,
         updatedAt: FieldValue.serverTimestamp(),

@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { createHash } from "node:crypto";
-import { academicEventSchema, timetableImportSchema, type UserProfile } from "@mba/domain";
+import { academicEventFieldsSchema, academicEventSchema, timetableImportSchema, type UserProfile } from "@mba/domain";
 import { db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, writeAudit } from "./helpers.js";
 
@@ -99,7 +99,7 @@ export const commitTimetableImport = onCall({ ...callableOptions, timeoutSeconds
   } catch (error) { asHttpsError(error); }
 });
 
-const updateEventSchema = academicEventSchema.partial().extend({ eventId: z.string().min(1), offeringId: z.string().min(1) });
+const updateEventSchema = academicEventFieldsSchema.partial().extend({ eventId: z.string().min(1), offeringId: z.string().min(1) }).refine((event) => !event.endsAtIso || !event.occursAtIso || new Date(event.endsAtIso).getTime() > new Date(event.occursAtIso).getTime(), { message: "End time must be after the start time", path: ["endsAtIso"] });
 const cancelEventSchema = z.object({ eventId: z.string().min(1), reason: z.string().trim().min(3).max(500) });
 
 export const createAcademicEvent = onCall(callableOptions, async (request) => {
@@ -119,6 +119,9 @@ export const createAcademicEvent = onCall(callableOptions, async (request) => {
       occursAt: Timestamp.fromDate(new Date(input.occursAtIso)),
       resourceUrl: input.resourceUrl || null,
       timetableSlotId: input.timetableSlotId || null,
+      endsAt: input.endsAtIso ? Timestamp.fromDate(new Date(input.endsAtIso)) : null,
+      venue: input.venue || null,
+      syllabus: input.syllabus || null,
       status: "published",
       version: 1,
       ownerUid: actor.uid,
@@ -154,6 +157,9 @@ export const updateAcademicEvent = onCall(callableOptions, async (request) => {
     if (input.occursAtIso !== undefined) patch.occursAt = Timestamp.fromDate(new Date(input.occursAtIso));
     if (input.resourceUrl !== undefined) patch.resourceUrl = input.resourceUrl || null;
     if (input.timetableSlotId !== undefined) patch.timetableSlotId = input.timetableSlotId || null;
+    if (input.endsAtIso !== undefined) patch.endsAt = input.endsAtIso ? Timestamp.fromDate(new Date(input.endsAtIso)) : null;
+    if (input.venue !== undefined) patch.venue = input.venue || null;
+    if (input.syllabus !== undefined) patch.syllabus = input.syllabus || null;
     await ref.update(patch);
     await notifySection(String(before.get("sectionId")), `academic_changed_${ref.id}_v${nextVersion}`, {
       type: "academic_event_changed", title: String(patch.title ?? before.get("title")), body: "An academic calendar item was updated.", academicEventId: ref.id, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}),

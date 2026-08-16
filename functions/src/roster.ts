@@ -81,6 +81,7 @@ export const commitRosterImport = onCall({ ...callableOptions, timeoutSeconds: 5
             crSections: row.cr ? { [row.sectionId]: true } : {},
             wingPocWings: existingProfile.exists ? (existingProfile.get("scopes.wingPocWings") ?? {}) : {},
             subjectPocOfferings: existingProfile.exists ? (existingProfile.get("scopes.subjectPocOfferings") ?? {}) : {},
+            batchPocRoles: existingProfile.exists ? (existingProfile.get("scopes.batchPocRoles") ?? {}) : {},
           },
           updatedAt: FieldValue.serverTimestamp(),
           ...(existingProfile.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),

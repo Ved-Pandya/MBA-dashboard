@@ -8,8 +8,8 @@ const runRules = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 const suite = runRules ? describe : describe.skip;
 let testEnv: RulesTestEnvironment;
 
-const scopes = (wing: Record<string, true> = {}, subject: Record<string, true> = {}) => ({
-  crSections: {}, wingPocWings: wing, subjectPocOfferings: subject,
+const scopes = (wing: Record<string, true> = {}, subject: Record<string, true> = {}, batchPocRoles: Record<string, true> = {}) => ({
+  crSections: {}, wingPocWings: wing, subjectPocOfferings: subject, batchPocRoles,
 });
 
 suite("Firestore RBAC rules", () => {
@@ -23,6 +23,8 @@ suite("Firestore RBAC rules", () => {
       await setDoc(doc(db, "users/student"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes() });
       await setDoc(doc(db, "users/other"), { status: "active", sectionId: "B", wingId: "B", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes() });
       await setDoc(doc(db, "users/wingPoc"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes({ A: true }) });
+      await setDoc(doc(db, "users/groomingPoc"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes({}, {}, { grooming: true }) });
+      await setDoc(doc(db, "users/casePoc"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes({}, {}, { caseCompetition: true }) });
       await setDoc(doc(db, "users/cr"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: true, systemAdmin: false }, scopes: scopes() });
       await setDoc(doc(db, "users/admin"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: true }, scopes: scopes() });
       await setDoc(doc(db, "users/suspendedCr"), { status: "suspended", sectionId: "B", wingId: "B", roles: { student: true, cr: true, systemAdmin: false }, scopes: scopes() });
@@ -37,6 +39,12 @@ suite("Firestore RBAC rules", () => {
       await setDoc(doc(db, "pushJobs/job1"), { uid: "student", status: "queued" });
       await setDoc(doc(db, "pushDeliveries/job1_device"), { uid: "student", status: "sent" });
       await setDoc(doc(db, "systemHealth/push"), { configured: true, delivered: 1 });
+      await setDoc(doc(db, "sessionIntimations/session1"), { title: "Session", status: "published" });
+      await setDoc(doc(db, "sessionResponses/session1_student"), { sessionId: "session1", uid: "student", status: "no_response" });
+      await setDoc(doc(db, "sessionResponses/session1_other"), { sessionId: "session1", uid: "other", status: "attending" });
+      await setDoc(doc(db, "generalPolls/poll1"), { question: "Question", status: "published" });
+      await setDoc(doc(db, "pollResponses/poll1_student"), { pollId: "poll1", uid: "student", status: "no_response" });
+      await setDoc(doc(db, "pollResponses/poll1_other"), { pollId: "poll1", uid: "other", status: "responded" });
     });
   });
 
@@ -93,5 +101,26 @@ suite("Firestore RBAC rules", () => {
     await assertSucceeds(getDoc(doc(adminDb, "systemHealth/push")));
     await assertFails(getDoc(doc(studentDb, "systemHealth/push")));
     await assertFails(setDoc(doc(adminDb, "pushSubscriptions/admin_device"), { endpoint: "https://push.example/admin" }));
+  });
+
+  it("keeps named session and poll responses private", async () => {
+    const studentDb = testEnv.authenticatedContext("student").firestore();
+    const wingDb = testEnv.authenticatedContext("wingPoc").firestore();
+    const groomingDb = testEnv.authenticatedContext("groomingPoc").firestore();
+    await assertSucceeds(getDoc(doc(studentDb, "sessionIntimations/session1")));
+    await assertSucceeds(getDoc(doc(studentDb, "sessionResponses/session1_student")));
+    await assertFails(getDoc(doc(studentDb, "sessionResponses/session1_other")));
+    await assertFails(getDoc(doc(wingDb, "sessionResponses/session1_other")));
+    await assertSucceeds(getDoc(doc(studentDb, "generalPolls/poll1")));
+    await assertSucceeds(getDoc(doc(studentDb, "pollResponses/poll1_student")));
+    await assertFails(getDoc(doc(groomingDb, "pollResponses/poll1_other")));
+    await assertFails(setDoc(doc(studentDb, "pollResponses/poll1_student"), { optionId: "option_1" }, { merge: true }));
+  });
+
+  it("lets the case competition POC read competition records but not private polls", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => setDoc(doc(context.firestore(), "competitions/draft"), { status: "draft" }));
+    const caseDb = testEnv.authenticatedContext("casePoc").firestore();
+    await assertSucceeds(getDoc(doc(caseDb, "competitions/draft")));
+    await assertFails(getDoc(doc(caseDb, "pollResponses/poll1_other")));
   });
 });

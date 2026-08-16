@@ -14,10 +14,13 @@ export { getPocSetup, searchRoleCandidates, assignPoc, revokePoc, migrateWingIds
 export { createCrTask, updateCrTask } from "./cr-tasks.js";
 export { registerPushSubscription, removePushSubscription } from "./push.js";
 export { commitTimetableImport, createAcademicEvent, updateAcademicEvent, cancelAcademicEvent } from "./academics.js";
+export { createSessionIntimation, updateSessionIntimation, publishSessionIntimation, setSessionResponse, closeSessionIntimation, cancelSessionIntimation, correctSessionResponse, getSessionReport } from "./sessions.js";
+export { createGeneralPoll, updateGeneralPoll, publishGeneralPoll, setPollResponse, closeGeneralPoll, cancelGeneralPoll, getPollReport } from "./polls.js";
 export {
   createCompetition, publishCompetition, updateCompetition, cancelCompetition, setCompetitionResponse,
   createTeam, updateTeam, reportTeamMembership, deleteDraftTeam, registerTeam,
   createNextRound, markRoundSubmitted, correctRoundSubmission, finalizeRound,
   createInternship, publishInternship, updateInternship, cancelInternship, setInternshipResponse,
-  getWingOpportunityReport, getCompetitionExport,
+  getWingOpportunityReport, getCompetitionExport, setCompetitionConfirmation, reopenCompetitionConfirmation,
+  correctCompetitionConfirmation, getCompetitionConfirmationReport, migrateCompetitionConfirmations,
 } from "./opportunities.js";

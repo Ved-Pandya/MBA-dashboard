@@ -16,6 +16,15 @@
 }
 
 @media (max-width: 680px) {
+  .mobile-nav { display: grid !important; grid-template-columns: repeat(4, 1fr); overflow: hidden !important; }
+  .mobile-nav button { min-width: 0 !important; }
+  .more-grid, .home-actions { grid-template-columns: 1fr; gap: 10px; }
+  .more-card, .action-card { min-height: 102px; padding: 16px; }
+  .simple-table-row { grid-template-columns: 1fr 1fr; gap: 5px 10px; }
+  .exam-panel { padding: 18px; }
+}
+
+@media (max-width: 680px) {
   .test-credentials > div { grid-template-columns: 1fr !important; }
 }
 
@@ -113,6 +122,9 @@ a { color: inherit; }
 .test-actions { flex-wrap: wrap; justify-content: flex-start; }.danger-button { min-height: 46px; border: 1px solid #e2b8b0; border-radius: 12px; padding: 0 18px; background: #fff4f1; color: var(--red); font-weight: 700; }
 .academic-row, .opportunity-card { min-height: 105px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); }
 .academic-row h3, .opportunity-card h3 { margin: 8px 0 5px; font-size: 14px; }.academic-row p, .opportunity-card p { margin: 0; color: var(--muted); font-size: 11px; }.academic-row small, .opportunity-card small { display: block; margin-top: 6px; color: var(--muted); }
+.management-nav { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }.management-nav > small { padding: 0 13px 8px; color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: 1.4px; }
+.more-grid, .home-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }.home-actions { margin-bottom: 20px; }.more-card, .action-card { min-height: 126px; padding: 20px; text-align: left; text-decoration: none; color: inherit; }.more-card { display: flex; align-items: flex-start; gap: 15px; cursor: pointer; }.more-card > span { width: 34px; height: 34px; display: grid; place-items: center; flex: none; border-radius: 10px; background: var(--lime); color: var(--green); font-size: 18px; }.more-card h2, .action-card h2 { margin: 9px 0 5px; font-size: 16px; }.more-card p, .action-card p { margin: 0; color: var(--muted); font-size: 11px; }
+.simple-table { display: grid; }.simple-table-row { min-height: 52px; padding: 10px 0; display: grid; grid-template-columns: 1.6fr 1fr .8fr 1fr; align-items: center; gap: 12px; border-top: 1px solid var(--line); font-size: 11px; }.exam-panel { margin-top: 20px; padding: 22px; }.exam-group + .exam-group { margin-top: 20px; }.exam-group > h3 { margin: 0 0 8px; color: var(--muted); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
 .opportunity-actions { min-width: 145px; display: grid; justify-items: end; gap: 8px; }.opportunity-actions .primary-button, .opportunity-actions .secondary-button { min-height: 34px; padding: 0 12px; font-size: 11px; }
 .opportunities-lower, .round-editor, .report-teams { margin-top: 20px; }.report-teams { padding: 25px; }
 .timetable-import table input, .timetable-import table select { min-width: 95px; width: 100%; border: 1px solid var(--line); border-radius: 7px; padding: 8px; background: white; }

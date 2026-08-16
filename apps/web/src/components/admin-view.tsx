@@ -88,6 +88,11 @@ export function AdminView() {
     try { const result = await callFunction<unknown, { updated: number; idempotent?: boolean }>("migrateWingIds", {}); setMessage(result.idempotent ? "Wing migration was already completed." : `${result.updated} legacy records migrated to Wings A–J.`); }
     catch (migrationError) { setError(readableError(migrationError)); } finally { setBusy(false); }
   }
+  async function migrateCompetitions() {
+    setBusy(true); setError(null);
+    try { const result = await callFunction<unknown, { updated: number; idempotent?: boolean }>("migrateCompetitionConfirmations", {}); setMessage(result.idempotent ? "Competition confirmation migration was already completed." : `${result.updated} competition records prepared for dual confirmations.`); }
+    catch (migrationError) { setError(readableError(migrationError)); } finally { setBusy(false); }
+  }
   async function createTestUsers() {
     if (!window.confirm("Create or reset the Student, Subject POC, and CR test accounts? Existing test passwords will stop working.")) return;
     setBusy(true); setError(null); setTestCredentials([]);
@@ -126,6 +131,7 @@ export function AdminView() {
       </div>
       <section className="panel create-form migration-panel"><div className="panel-head"><div><p className="eyebrow">TEST IDENTITIES</p><h2>Student, POC, and CR accounts</h2></div></div><p className="helper">Creates or resets 24M2901, 24M2902, and 24M2903. The POC receives isolated demo subject scopes, so real POC assignments are not disturbed.</p><div className="form-actions test-actions"><button className="secondary-button" onClick={createTestUsers} disabled={busy}>1. Create/reset accounts</button><button className="primary-button" onClick={seedDemoData} disabled={busy}>2. Seed complete mock data</button><button className="danger-button" onClick={clearDemoData} disabled={busy}>Clear mock data</button></div>{testCredentials.length > 0 && <div className="test-credentials"><strong>Copy these passwords now</strong>{testCredentials.map((item) => <div key={item.rollNumber}><span>{item.role.toUpperCase()}</span><code>{item.rollNumber}</code><code>{item.password}</code></div>)}</div>}{demoSummary && <div className="recipient-preview"><strong>Mock dataset ready</strong><p>{Object.entries(demoSummary).map(([key, value]) => `${key}: ${value}`).join(" · ")}</p></div>}</section>
       <section className="panel create-form migration-panel"><div className="panel-head"><div><p className="eyebrow">ONE-TIME MIGRATION</p><h2>Convert W01–W10 to A–J</h2></div></div><p className="helper">Safe to run repeatedly. It updates legacy users, wing task scopes, and assignment snapshots, then marks old wing records inactive.</p><button className="secondary-button" onClick={migrateWings} disabled={busy}>Run wing migration</button></section>
+      <section className="panel create-form migration-panel"><div className="panel-head"><div><p className="eyebrow">ONE-TIME MIGRATION</p><h2>Enable dual competition confirmations</h2></div></div><p className="helper">Copies legacy registration links, preserves registered teams, and flags competitions that still need an internal Google Form.</p><button className="secondary-button" onClick={migrateCompetitions} disabled={busy}>Run competition migration</button></section>
       <section className="panel create-form migration-panel">
         <div className="panel-head"><div><p className="eyebrow">MOBILE DELIVERY</p><h2>Scheduler and push health</h2></div></div>
         <div className="form-row">

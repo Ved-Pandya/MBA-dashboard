@@ -34,19 +34,22 @@ function notification(uid: string, id: string, title: string, body: string, extr
 
 function addReminderJobs(writer: FirebaseFirestore.BulkWriter, input: {
   prefix: string;
-  kind?: "competition_registration" | "internship_registration" | "competition_round" | "cr_task";
+  kind?: "competition_registration" | "internship_registration" | "competition_round" | "cr_task" | "session_response";
   opportunityId?: string;
   crTaskId?: string;
+  sessionId?: string;
   taskId?: string;
   title: string;
   deadline: Date;
 }) {
-  const reminders = input.kind === "cr_task" ? buildCatchUpReminderSchedule(input.deadline) : buildReminderSchedule(input.deadline);
+  const reminders = (input.kind === "cr_task" ? buildCatchUpReminderSchedule(input.deadline) : buildReminderSchedule(input.deadline)).filter((item) => input.kind !== "session_response" || item.stage === "minus24h" || item.stage === "minus2h");
   for (const item of reminders) {
     const id = `demo_${input.prefix}_${item.stage}`;
     writer.set(db.doc(`reminderJobs/${id}`), {
       ...(input.kind === "cr_task"
         ? { kind: input.kind, crTaskId: input.crTaskId }
+        : input.kind === "session_response"
+          ? { kind: input.kind, sessionId: input.sessionId, title: input.title }
         : input.kind
           ? { kind: input.kind, opportunityId: input.opportunityId, title: input.title }
           : { taskId: input.taskId }),
@@ -88,35 +91,51 @@ export const seedTestData = onCall({ ...callableOptions, timeoutSeconds: 120 }, 
     });
     const demoPocScopes: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
     DEMO_OFFERINGS.forEach((offering) => { demoPocScopes[`scopes.subjectPocOfferings.${offering.id}`] = true; });
+    demoPocScopes["scopes.batchPocRoles.grooming"] = true;
+    demoPocScopes["scopes.batchPocRoles.caseCompetition"] = true;
     writer.update(db.doc(`users/${poc.uid}`), demoPocScopes);
+    writer.set(db.doc("pocAssignments/grooming_batch"), { kind: "grooming", scopeId: "batch", uid: poc.uid, active: true, assignedBy: actor.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    writer.set(db.doc("pocAssignments/case_competition_batch"), { kind: "case_competition", scopeId: "batch", uid: poc.uid, active: true, assignedBy: actor.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 
     const academicEvents = [
       { id: "demo_preread_fin", offeringId: "DEMO-FIN-A", eventType: "pre_read", title: "Read: Time Value of Money", details: "Review pages 42–58 before the next Finance class.", hours: 20, resourceUrl: "https://example.com/finance-preread" },
       { id: "demo_assignment_mkt", offeringId: "DEMO-MKT-A", eventType: "assignment_deadline", title: "Brand Positioning Memo", details: "Submit the two-page positioning memo on the course portal.", hours: 52, resourceUrl: "https://example.com/marketing-assignment" },
       { id: "demo_quiz_ops", offeringId: "DEMO-OPS-A", eventType: "quiz", title: "Process Analysis Quiz", details: "In-class quiz covering capacity and bottlenecks.", hours: 76, resourceUrl: null },
       { id: "demo_midterm_strategy", offeringId: "DEMO-STR-A", eventType: "midterm", title: "Strategy Midterm", details: "Closed-book midterm covering modules 1–4.", hours: 8 * day, resourceUrl: null },
+      { id: "demo_endterm_fin", offeringId: "DEMO-FIN-A", eventType: "endterm", title: "Finance Endterm", details: "Formal endterm covering the full term.", hours: 20 * day, resourceUrl: null },
     ];
     academicEvents.forEach((event) => writer.set(db.doc(`academicEvents/${event.id}`), { offeringId: event.offeringId, sectionId: "A", termId: "DEMO-TERM", eventType: event.eventType, title: event.title, details: event.details, occursAt: Timestamp.fromDate(at(event.hours)), resourceUrl: event.resourceUrl, status: "published", version: 1, ownerUid: poc.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
 
     const competitionDeadline = at(48);
-    writer.set(db.doc("competitions/demo_case_registered"), { title: "Demo National Strategy Challenge", organizer: "Demo Consulting Club", description: "A mock strategy case competition used to test team registration and round tracking.", registrationUrl: "https://example.com/demo-case", registrationDeadline: Timestamp.fromDate(competitionDeadline), minTeamSize: 2, maxTeamSize: 4, status: "in_progress", ownerUid: actor.uid, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, publishedAt: FieldValue.serverTimestamp(), createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    writer.set(db.doc("competitions/demo_case_registered"), { title: "Demo National Strategy Challenge", organizer: "Demo Consulting Club", description: "A mock strategy case competition used to test team registration and round tracking.", externalRegistrationUrl: "https://example.com/demo-case", internalFormUrl: "https://example.com/demo-internal", registrationDeadline: Timestamp.fromDate(competitionDeadline), minTeamSize: 2, maxTeamSize: 4, status: "in_progress", ownerUid: actor.uid, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, publishedAt: FieldValue.serverTimestamp(), createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     writer.set(db.doc("competitionTeams/demo_team_alpha"), { competitionId: "demo_case_registered", name: "Alpha Strategists", normalizedName: "alpha-strategists", captainUid: student.uid, members: [student, poc], memberUids: [student.uid, poc.uid], status: "registered", registeredAt: Timestamp.fromDate(at(-3)), registeredLate: false, membershipLocked: true, version: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     writer.set(db.doc("competitionTeamNames/demo_case_registered_alpha-strategists"), { competitionId: "demo_case_registered", teamId: "demo_team_alpha", active: true, isTestData: true, demoSeedId: DEMO_SEED_ID }, { merge: true });
     [student, poc].forEach((member) => writer.set(db.doc(`competitionMemberships/demo_case_registered_${member.uid}`), { competitionId: "demo_case_registered", teamId: "demo_team_alpha", uid: member.uid, active: true, status: "registered", locked: true, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
-    users.forEach((user) => writer.set(db.doc(`opportunityResponses/demo_case_registered_${user.uid}`), { opportunityId: "demo_case_registered", uid: user.uid, sectionId: user.sectionId, wingId: user.wingId, status: user.uid === cr.uid ? "not_participating" : "registered", ...(user.uid === cr.uid ? {} : { teamId: "demo_team_alpha", registeredAt: Timestamp.fromDate(at(-3)), registeredLate: false }), studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber }, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+    users.forEach((user) => writer.set(db.doc(`opportunityResponses/demo_case_registered_${user.uid}`), { opportunityId: "demo_case_registered", uid: user.uid, sectionId: user.sectionId, wingId: user.wingId, status: user.uid === cr.uid ? "not_participating" : "registered", participationStatus: user.uid === cr.uid ? "not_participating" : "registered", externalRegistration: { status: user.uid === cr.uid ? "pending" : "confirmed" }, internalForm: { status: user.uid === cr.uid ? "pending" : "confirmed" }, confirmationsLocked: user.uid !== cr.uid, ...(user.uid === cr.uid ? {} : { teamId: "demo_team_alpha", registeredAt: Timestamp.fromDate(at(-3)), registeredLate: false }), studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber }, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
 
     const roundDeadline = at(2.25);
     writer.set(db.doc("competitionRounds/demo_round_1"), { competitionId: "demo_case_registered", sequence: 1, name: "Round 1 – Executive Summary", instructions: "Submit a five-slide executive summary through the external portal.", submissionDeadline: Timestamp.fromDate(roundDeadline), resourceUrl: "https://example.com/demo-round", status: "open", scheduleVersion: 1, ownerUid: actor.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     writer.set(db.doc("competitionRoundEntries/demo_round_1_demo_team_alpha"), { roundId: "demo_round_1", competitionId: "demo_case_registered", teamId: "demo_team_alpha", teamName: "Alpha Strategists", memberUids: [student.uid, poc.uid], status: "pending", eligible: true, submissionStatus: "pending", isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 
     const openCompetitionDeadline = at(26);
-    writer.set(db.doc("competitions/demo_case_open"), { title: "Demo Product Innovation Sprint", organizer: "Demo Entrepreneurship Cell", description: "An open mock competition for testing no-response and team-creation flows.", registrationUrl: "https://example.com/demo-innovation", registrationDeadline: Timestamp.fromDate(openCompetitionDeadline), minTeamSize: 2, maxTeamSize: 5, status: "published", ownerUid: actor.uid, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, publishedAt: FieldValue.serverTimestamp(), createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    users.forEach((user) => writer.set(db.doc(`opportunityResponses/demo_case_open_${user.uid}`), { opportunityId: "demo_case_open", uid: user.uid, sectionId: user.sectionId, wingId: user.wingId, status: "no_response", studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber }, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+    writer.set(db.doc("competitions/demo_case_open"), { title: "Demo Product Innovation Sprint", organizer: "Demo Entrepreneurship Cell", description: "An open mock competition for testing no-response and team-creation flows.", externalRegistrationUrl: "https://example.com/demo-innovation", internalFormUrl: "https://example.com/demo-innovation-internal", registrationDeadline: Timestamp.fromDate(openCompetitionDeadline), minTeamSize: 2, maxTeamSize: 5, status: "published", ownerUid: actor.uid, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, publishedAt: FieldValue.serverTimestamp(), createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    users.forEach((user) => writer.set(db.doc(`opportunityResponses/demo_case_open_${user.uid}`), { opportunityId: "demo_case_open", uid: user.uid, sectionId: user.sectionId, wingId: user.wingId, status: "no_response", participationStatus: "no_response", externalRegistration: { status: "pending" }, internalForm: { status: "pending" }, studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber }, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
 
     const internshipDeadline = at(26.5);
     writer.set(db.doc("internships/demo_internship"), { title: "DemoCorp - Strategy Intern", company: "DemoCorp", role: "Strategy Intern", description: "Mock summer internship registration for testing response tracking.", registrationUrl: "https://example.com/demo-internship", registrationDeadline: Timestamp.fromDate(internshipDeadline), status: "published", ownerUid: actor.uid, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, publishedAt: FieldValue.serverTimestamp(), createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     const internshipStatuses = new Map([[student.uid, "no_response"], [poc.uid, "registered"], [cr.uid, "not_participating"]]);
     users.forEach((user) => writer.set(db.doc(`internshipResponses/demo_internship_${user.uid}`), { internshipId: "demo_internship", uid: user.uid, sectionId: user.sectionId, wingId: user.wingId, status: internshipStatuses.get(user.uid), registeredLate: false, studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber }, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+
+    const sessionDeadline = at(25);
+    writer.set(db.doc("sessionIntimations/demo_placement_session"), { title: "Demo Consulting Grooming Session", details: "Confirm whether you will attend the interview grooming session.", venue: "Demo Auditorium", sessionStartsAt: Timestamp.fromDate(at(28)), responseDeadline: Timestamp.fromDate(sessionDeadline), status: "published", audience: { kind: "batch" }, ownerUid: cr.uid, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    const sessionStatuses = new Map([[student.uid, "no_response"], [poc.uid, "attending"], [cr.uid, "not_attending"]]);
+    users.forEach((user) => writer.set(db.doc(`sessionResponses/demo_placement_session_${user.uid}`), { sessionId: "demo_placement_session", uid: user.uid, status: sessionStatuses.get(user.uid), ...(user.uid === student.uid ? {} : { respondedAt: FieldValue.serverTimestamp() }), studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber, sectionId: user.sectionId, wingId: user.wingId }, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+    writer.set(db.doc("sessionStats/demo_placement_session"), { eligibleCount: 3, noResponseCount: 1, attendingCount: 1, notAttendingCount: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+
+    writer.set(db.doc("generalPolls/demo_open_poll"), { question: "Which theme should the next batch social use?", details: "Named demo poll for testing the general area.", options: [{ id: "option_1", label: "Retro" }, { id: "option_2", label: "Sports" }, { id: "option_3", label: "Formal" }], closesAt: Timestamp.fromDate(at(30)), status: "published", ownerUid: poc.uid, version: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    users.forEach((user, index) => writer.set(db.doc(`pollResponses/demo_open_poll_${user.uid}`), { pollId: "demo_open_poll", uid: user.uid, status: index === 0 ? "no_response" : "responded", optionId: index === 0 ? null : `option_${index}`, ...(index === 0 ? {} : { respondedAt: FieldValue.serverTimestamp() }), studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber, sectionId: user.sectionId, wingId: user.wingId }, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+    writer.set(db.doc("pollStats/demo_open_poll"), { eligibleCount: 3, responseCount: 2, noResponseCount: 1, optionCounts: { option_1: 1, option_2: 1 }, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    writer.set(db.doc("generalPolls/demo_closed_poll"), { question: "Demo closed poll", details: "Historical poll state.", options: [{ id: "option_1", label: "Yes" }, { id: "option_2", label: "No" }], closesAt: Timestamp.fromDate(at(-24)), status: "closed", ownerUid: poc.uid, version: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), closedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 
     const formDeadline = at(2.5);
     writer.set(db.doc("tasks/demo_wing_form"), { title: "Demo Corporate Relations Form", description: "Mock administrative form for testing pending, completed, and exempt states.", taskType: "administrative_form", status: "published", target: { kind: "wing", scopeKey: "wing:A", wingId: "A" }, dueAt: Timestamp.fromDate(formDeadline), dueTimezone: "Asia/Kolkata", resourceUrl: "https://example.com/demo-form", ownerUid: actor.uid, version: 1, audienceVersion: 1, scheduleVersion: 1, audienceSyncStatus: "ready", isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -136,6 +155,7 @@ export const seedTestData = onCall({ ...callableOptions, timeoutSeconds: 120 }, 
     addReminderJobs(writer, { prefix: "case_open", kind: "competition_registration", opportunityId: "demo_case_open", title: "Demo Product Innovation Sprint", deadline: openCompetitionDeadline });
     addReminderJobs(writer, { prefix: "internship", kind: "internship_registration", opportunityId: "demo_internship", title: "DemoCorp - Strategy Intern", deadline: internshipDeadline });
     addReminderJobs(writer, { prefix: "round_1", kind: "competition_round", opportunityId: "demo_round_1", title: "Demo National Strategy Challenge - Round 1", deadline: roundDeadline });
+    addReminderJobs(writer, { prefix: "placement_session", kind: "session_response", sessionId: "demo_placement_session", title: "Demo Consulting Grooming Session", deadline: sessionDeadline });
     addReminderJobs(writer, { prefix: "wing_form", taskId: "demo_wing_form", title: "Demo Corporate Relations Form", deadline: formDeadline });
     addReminderJobs(writer, { prefix: "cr_assigned", kind: "cr_task", crTaskId: "demo_cr_assigned", title: "Confirm guest speaker logistics", deadline: crTaskAssignedDue });
     addReminderJobs(writer, { prefix: "cr_progress", kind: "cr_task", crTaskId: "demo_cr_progress", title: "Compile batch feedback", deadline: crTaskProgressDue });
@@ -148,8 +168,8 @@ export const seedTestData = onCall({ ...callableOptions, timeoutSeconds: 120 }, 
       notices.forEach((notice) => writer.set(notice.ref, notice.data, { merge: true }));
     }
     await writer.close();
-    await writeAudit({ actorUid: actor.uid, action: "test_data.seeded", resourceType: "demoSeed", resourceId: DEMO_SEED_ID, after: { subjects: DEMO_OFFERINGS.length, academicEvents: academicEvents.length, competitions: 2, internships: 1, teams: 1, rounds: 1, wingForms: 1, crTasks: 3 } });
-    return { subjects: 4, academicEvents: 4, competitions: 2, internships: 1, teams: 1, rounds: 1, wingForms: 1, crTasks: 3, testUsers: 3 };
+    await writeAudit({ actorUid: actor.uid, action: "test_data.seeded", resourceType: "demoSeed", resourceId: DEMO_SEED_ID, after: { subjects: DEMO_OFFERINGS.length, academicEvents: academicEvents.length, competitions: 2, internships: 1, sessions: 1, polls: 2, teams: 1, rounds: 1, wingForms: 1, crTasks: 3 } });
+    return { subjects: 4, academicEvents: academicEvents.length, competitions: 2, internships: 1, sessions: 1, polls: 2, teams: 1, rounds: 1, wingForms: 1, crTasks: 3, testUsers: 3 };
   } catch (error) { asHttpsError(error); }
 });
 
@@ -159,6 +179,7 @@ const DEMO_COLLECTIONS = [
   "competitionRoundEntries", "opportunityResponses", "internships", "internshipResponses", "tasks",
   "taskAssignments", "taskStats", "reminderJobs", "reminderDeliveries", "competitionStats",
   "internshipStats", "competitionRoundStats", "pocAssignments", "crTasks", "pushJobs", "pushDeliveries",
+  "sessionIntimations", "sessionResponses", "sessionStats", "generalPolls", "pollResponses", "pollStats",
 ] as const;
 
 async function deleteDemoSeedRecords() {
@@ -174,6 +195,8 @@ async function deleteDemoSeedRecords() {
     notices.docs.forEach((record) => { writer.delete(record.ref); deleted += 1; });
     const scopeDeletes: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
     DEMO_OFFERINGS.forEach((offering) => { scopeDeletes[`scopes.subjectPocOfferings.${offering.id}`] = FieldValue.delete(); });
+    scopeDeletes["scopes.batchPocRoles.grooming"] = FieldValue.delete();
+    scopeDeletes["scopes.batchPocRoles.caseCompetition"] = FieldValue.delete();
     writer.update(user.ref, scopeDeletes);
   }
   await writer.close();

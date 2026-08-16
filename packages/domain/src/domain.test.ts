@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { academicEventSchema, buildCatchUpReminderSchedule, buildReminderSchedule, canManageTask, crTaskCreateSchema, crTaskUpdateSchema, isVapidPrivateKey, isVapidPublicKey, normalizeConfigValue, normalizeVapidKey, rollNumberToAuthEmail, rosterRowSchema, taskDraftSchema, teamDraftSchema, type UserProfile } from "./index.js";
+import { academicEventSchema, buildCatchUpReminderSchedule, buildReminderSchedule, canManageTask, competitionDraftSchema, crTaskCreateSchema, crTaskUpdateSchema, isVapidPrivateKey, isVapidPublicKey, normalizeConfigValue, normalizeVapidKey, rollNumberToAuthEmail, rosterRowSchema, sessionIntimationSchema, taskDraftSchema, teamDraftSchema, type UserProfile } from "./index.js";
 
 const actor: UserProfile = {
   authEmail: "24m2001@users.deadlineos.app",
@@ -9,7 +9,7 @@ const actor: UserProfile = {
   sectionId: "A",
   wingId: "A",
   roles: { student: true, cr: false, systemAdmin: false },
-  scopes: { crSections: {}, wingPocWings: { A: true }, subjectPocOfferings: { "FIN-A": true } },
+  scopes: { crSections: {}, wingPocWings: { A: true }, subjectPocOfferings: { "FIN-A": true }, batchPocRoles: {} },
 };
 
 describe("domain invariants", () => {
@@ -27,6 +27,20 @@ describe("domain invariants", () => {
   it("permits only exact POC scopes", () => {
     expect(canManageTask(actor, "administrative_form", { kind: "wing", scopeKey: "wing:A", wingId: "A" }, "create").allowed).toBe(true);
     expect(canManageTask(actor, "administrative_form", { kind: "wing", scopeKey: "wing:B", wingId: "B" }, "create").allowed).toBe(false);
+  });
+
+  it("requires both case competition forms", () => {
+    const result = competitionDraftSchema.safeParse({ title: "Case challenge", organizer: "Club", description: "Details", externalRegistrationUrl: "https://example.com/external", internalFormUrl: "", registrationDeadlineIso: "2027-01-01T12:00:00+05:30", minTeamSize: 2, maxTeamSize: 4 });
+    expect(result.success).toBe(false);
+  });
+
+  it("keeps session response deadlines before the session", () => {
+    const result = sessionIntimationSchema.safeParse({ title: "Placement session", details: "", sessionStartsAtIso: "2027-01-01T10:00:00+05:30", responseDeadlineIso: "2027-01-01T11:00:00+05:30" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts endterms with exam details", () => {
+    expect(academicEventSchema.safeParse({ offeringId: "FIN-A", eventType: "endterm", title: "Finance endterm", details: "", occursAtIso: "2027-01-01T10:00:00+05:30", endsAtIso: "2027-01-01T12:00:00+05:30", venue: "Hall A", syllabus: "Full term" }).success).toBe(true);
   });
 
   it("builds the locked alert ladder", () => {

@@ -9,7 +9,7 @@ const wingPoc: UserProfile = {
   sectionId: "A",
   wingId: "A",
   roles: { student: true, cr: false, systemAdmin: false },
-  scopes: { crSections: {}, wingPocWings: { A: true }, subjectPocOfferings: {} },
+  scopes: { crSections: {}, wingPocWings: { A: true }, subjectPocOfferings: {}, batchPocRoles: {} },
 };
 
 describe("RBAC contract", () => {

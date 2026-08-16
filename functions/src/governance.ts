@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
-import { WING_IDS, type UserProfile } from "@mba/domain";
+import { POC_KINDS, WING_IDS, type PocKind, type UserProfile } from "@mba/domain";
 import { db, FieldValue } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, requireString, writeAudit } from "./helpers.js";
 
@@ -9,16 +9,22 @@ function requireGovernance(actor: UserProfile) {
 }
 
 const assignmentSchema = z.object({
-  kind: z.enum(["wing", "subject"]),
+  kind: z.enum(POC_KINDS),
   scopeId: z.string().trim().min(1).max(80),
   uid: z.string().min(1),
+}).superRefine((value, ctx) => {
+  const batchKind = value.kind === "grooming" || value.kind === "case_competition";
+  if (batchKind && value.scopeId !== "batch") ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["scopeId"], message: "Batch POC roles must use the batch scope" });
 });
 
-function scopePath(kind: "wing" | "subject", scopeId: string) {
-  return kind === "wing" ? `scopes.wingPocWings.${scopeId}` : `scopes.subjectPocOfferings.${scopeId}`;
+function scopePath(kind: PocKind, scopeId: string) {
+  if (kind === "wing") return `scopes.wingPocWings.${scopeId}`;
+  if (kind === "subject") return `scopes.subjectPocOfferings.${scopeId}`;
+  return `scopes.batchPocRoles.${kind === "grooming" ? "grooming" : "caseCompetition"}`;
 }
 
-async function validateScope(kind: "wing" | "subject", scopeId: string) {
+async function validateScope(kind: PocKind, scopeId: string) {
+  if (kind === "grooming" || kind === "case_competition") return;
   const ref = kind === "wing" ? db.doc(`wings/${scopeId}`) : db.doc(`subjectOfferings/${scopeId}`);
   const snap = await ref.get();
   if (!snap.exists || snap.get("active") !== true) throw new HttpsError("failed-precondition", `${kind === "wing" ? "Wing" : "Subject"} scope is not active`);
@@ -80,10 +86,10 @@ export const assignPoc = onCall(callableOptions, async (request) => {
     });
     const writer = db.bulkWriter();
     writer.set(db.doc(`users/${input.uid}/notifications/poc_assigned_${input.kind}_${input.scopeId}`), {
-      type: "poc_assigned", title: "POC responsibility assigned", body: `You now manage ${input.kind} ${input.scopeId}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
+      type: "poc_assigned", title: "POC responsibility assigned", body: `You now manage ${input.kind.replaceAll("_", " ")} ${input.scopeId === "batch" ? "for the batch" : input.scopeId}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
     }, { merge: true });
     if (replacedUid && replacedUid !== input.uid) writer.set(db.doc(`users/${replacedUid}/notifications/poc_replaced_${input.kind}_${input.scopeId}`), {
-      type: "poc_revoked", title: "POC responsibility updated", body: `You no longer manage ${input.kind} ${input.scopeId}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
+      type: "poc_revoked", title: "POC responsibility updated", body: `You no longer manage ${input.kind.replaceAll("_", " ")} ${input.scopeId === "batch" ? "for the batch" : input.scopeId}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
     }, { merge: true });
     await writer.close();
     await writeAudit({ actorUid: actor.uid, action: "poc.assigned", resourceType: "pocAssignment", resourceId: assignmentRef.id, before: { uid: replacedUid }, after: input });
@@ -95,7 +101,8 @@ export const revokePoc = onCall(callableOptions, async (request) => {
   try {
     const actor = await requireActor(request);
     requireGovernance(actor);
-    const input = assignmentSchema.omit({ uid: true }).parse(request.data);
+    const input = z.object({ kind: z.enum(POC_KINDS), scopeId: z.string().trim().min(1).max(80) }).parse(request.data);
+    if ((input.kind === "grooming" || input.kind === "case_competition") && input.scopeId !== "batch") throw new HttpsError("invalid-argument", "Batch POC roles must use the batch scope");
     const ref = db.doc(`pocAssignments/${input.kind}_${input.scopeId}`);
     let revokedUid = "";
     await db.runTransaction(async (tx) => {
@@ -106,7 +113,7 @@ export const revokePoc = onCall(callableOptions, async (request) => {
       tx.update(ref, { active: false, revokedBy: actor.uid, revokedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     });
     if (revokedUid) await db.doc(`users/${revokedUid}/notifications/poc_revoked_${input.kind}_${input.scopeId}`).set({
-      type: "poc_revoked", title: "POC responsibility removed", body: `You no longer manage ${input.kind} ${input.scopeId}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
+      type: "poc_revoked", title: "POC responsibility removed", body: `You no longer manage ${input.kind.replaceAll("_", " ")} ${input.scopeId === "batch" ? "for the batch" : input.scopeId}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
     }, { merge: true });
     await writeAudit({ actorUid: actor.uid, action: "poc.revoked", resourceType: "pocAssignment", resourceId: ref.id, before: { uid: revokedUid }, after: input });
     return { ok: true };

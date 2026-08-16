@@ -20,7 +20,7 @@ export const activateMyAccount = onCall(callableOptions, async (request) => {
         sectionId: "A",
         wingId: "A",
         roles: { student: true, cr: false, systemAdmin: true },
-        scopes: { crSections: {}, wingPocWings: {}, subjectPocOfferings: {} },
+        scopes: { crSections: {}, wingPocWings: {}, subjectPocOfferings: {}, batchPocRoles: {} },
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });

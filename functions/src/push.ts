@@ -42,7 +42,9 @@ function safePushPayload(type: string, jobId: string) {
   let view = "today";
   if (type.includes("academic") || type.includes("pre_read")) { title = "Academic update"; view = "academics"; }
   else if (type.includes("cr_task")) { title = "CR Board update"; view = "crBoard"; }
-  else if (type.includes("team") || type.includes("round") || type.includes("membership")) { title = "Team update"; view = "teams"; }
+  else if (type.includes("session")) { title = "Placement session update"; view = "sessions"; }
+  else if (type.includes("poll")) { title = "New batch poll"; view = "polls"; }
+  else if (type.includes("team") || type.includes("round") || type.includes("membership")) { title = "Team update"; view = "opportunities"; }
   else if (type.includes("competition") || type.includes("internship") || type.includes("opportunity")) { title = "Opportunity update"; view = "opportunities"; }
   else if (type.includes("poc")) { title = "POC responsibility update"; view = "poc"; }
   else if (type.includes("deadline") || type.includes("overdue") || type.includes("reminder")) title = "Deadline alert";

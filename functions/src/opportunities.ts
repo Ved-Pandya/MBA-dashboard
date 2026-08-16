@@ -2,19 +2,22 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import {
   buildReminderSchedule,
+  competitionConfirmationCorrectionSchema,
+  competitionConfirmationSchema,
   competitionDraftSchema,
   competitionRoundSchema,
   internshipDraftSchema,
   internshipResponseSchema,
   opportunityResponseSchema,
   teamDraftSchema,
+  isCaseCompetitionPoc,
   type UserProfile,
 } from "@mba/domain";
 import { db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, writeAudit, type Actor } from "./helpers.js";
 
 function requireOpportunityManager(actor: UserProfile) {
-  if (!actor.roles.systemAdmin && !actor.roles.cr) throw new HttpsError("permission-denied", "Admin or CR access required");
+  if (!actor.roles.systemAdmin && !actor.roles.cr && !isCaseCompetitionPoc(actor)) throw new HttpsError("permission-denied", "Case Competition POC, Admin, or CR access required");
 }
 
 function cleanName(value: string) {
@@ -73,7 +76,8 @@ export const createCompetition = onCall(callableOptions, async (request) => {
       description: input.description,
       minTeamSize: input.minTeamSize,
       maxTeamSize: input.maxTeamSize,
-      registrationUrl: input.registrationUrl || null,
+      externalRegistrationUrl: input.externalRegistrationUrl,
+      internalFormUrl: input.internalFormUrl,
       registrationDeadline: Timestamp.fromDate(new Date(input.registrationDeadlineIso)),
       status: "draft",
       ownerUid: actor.uid,
@@ -109,6 +113,9 @@ export const publishCompetition = onCall({ ...callableOptions, timeoutSeconds: 1
         sectionId: student.get("sectionId"),
         wingId: student.get("wingId"),
         status: "no_response",
+        participationStatus: "no_response",
+        externalRegistration: { status: "pending" },
+        internalForm: { status: "pending" },
         studentSnapshot: { displayName: student.get("displayName"), rollNumber: student.get("rollNumber") },
         createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
@@ -140,7 +147,7 @@ export const updateCompetition = onCall(callableOptions, async (request) => {
     const version = Number(before.get("version") ?? 1) + 1;
     const scheduleVersion = Number(before.get("scheduleVersion") ?? 1) + 1;
     const deadline = Timestamp.fromDate(new Date(input.registrationDeadlineIso));
-    await ref.update({ title: input.title, organizer: input.organizer, description: input.description, registrationUrl: input.registrationUrl || null, registrationDeadline: deadline, minTeamSize: input.minTeamSize, maxTeamSize: input.maxTeamSize, version, scheduleVersion, updatedBy: actor.uid, updatedAt: FieldValue.serverTimestamp() });
+    await ref.update({ title: input.title, organizer: input.organizer, description: input.description, externalRegistrationUrl: input.externalRegistrationUrl, internalFormUrl: input.internalFormUrl, registrationUrl: FieldValue.delete(), needsConfiguration: false, registrationDeadline: deadline, minTeamSize: input.minTeamSize, maxTeamSize: input.maxTeamSize, version, scheduleVersion, updatedBy: actor.uid, updatedAt: FieldValue.serverTimestamp() });
     if (before.get("status") === "published") {
       const responses = await db.collection("opportunityResponses").where("opportunityId", "==", input.competitionId).get();
       await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `competition_changed_${input.competitionId}_v${version}`, { type: "competition_changed", title: input.title, body: "Competition details or registration deadline changed.", competitionId: input.competitionId, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}) });
@@ -178,6 +185,7 @@ export const setCompetitionResponse = onCall(callableOptions, async (request) =>
     await db.doc(`opportunityResponses/${input.opportunityId}_${actor.uid}`).set({
       opportunityId: input.opportunityId, uid: actor.uid, sectionId: actor.sectionId, wingId: actor.wingId,
       status: "not_participating", respondedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+      participationStatus: "not_participating",
       studentSnapshot: { displayName: actor.displayName, rollNumber: actor.rollNumber },
     }, { merge: true });
     await writeAudit({ actorUid: actor.uid, action: "competition.response_set", resourceType: "competition", resourceId: input.opportunityId, after: { status: input.status } });
@@ -227,7 +235,7 @@ export const createTeam = onCall(callableOptions, async (request) => {
       });
       tx.set(nameRef, { competitionId: input.competitionId, teamId: teamRef.id, active: true, ...demoMetadata });
       members.forEach((member, index) => tx.set(memberRefs[index]!, { competitionId: input.competitionId, teamId: teamRef.id, uid: member.uid, active: true, status: "draft", ...demoMetadata, createdAt: FieldValue.serverTimestamp() }));
-      members.forEach((member) => tx.set(db.doc(`opportunityResponses/${input.competitionId}_${member.uid}`), { status: "team_draft", teamId: teamRef.id, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+      members.forEach((member) => tx.set(db.doc(`opportunityResponses/${input.competitionId}_${member.uid}`), { status: "team_draft", participationStatus: "team_draft", teamId: teamRef.id, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
     });
     await notifyUsers(members.map((member) => member.uid), `team_created_${teamRef.id}`, { type: "team_created", title: input.name, body: `${actor.displayName} added you to this competition team.`, competitionId: input.competitionId, teamId: teamRef.id, ...demoMetadata });
     await writeAudit({ actorUid: actor.uid, action: "competition_team.created", resourceType: "competitionTeam", resourceId: teamRef.id, after: { ...input, memberUids: members.map((member) => member.uid) } });
@@ -266,11 +274,11 @@ export const updateTeam = onCall(callableOptions, async (request) => {
       if (newNameRef.path !== oldNameRef.path) { tx.set(oldNameRef, { active: false }, { merge: true }); tx.set(newNameRef, { competitionId: input.competitionId, teamId: input.teamId, active: true }); }
       oldUids.filter((uid) => !newUids.includes(uid)).forEach((uid) => {
         tx.set(db.doc(`competitionMemberships/${input.competitionId}_${uid}`), { active: false, releasedAt: FieldValue.serverTimestamp() }, { merge: true });
-        tx.set(db.doc(`opportunityResponses/${input.competitionId}_${uid}`), { status: "no_response", teamId: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        tx.set(db.doc(`opportunityResponses/${input.competitionId}_${uid}`), { status: "no_response", participationStatus: "no_response", teamId: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       });
       members.forEach((member) => {
         tx.set(db.doc(`competitionMemberships/${input.competitionId}_${member.uid}`), { competitionId: input.competitionId, teamId: input.teamId, uid: member.uid, active: true, status: "draft", ...demoMetadata, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-        tx.set(db.doc(`opportunityResponses/${input.competitionId}_${member.uid}`), { status: "team_draft", teamId: input.teamId, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        tx.set(db.doc(`opportunityResponses/${input.competitionId}_${member.uid}`), { status: "team_draft", participationStatus: "team_draft", teamId: input.teamId, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       });
     });
     await writeAudit({ actorUid: actor.uid, action: "competition_team.updated", resourceType: "competitionTeam", resourceId: input.teamId, before: before.data(), after: input });
@@ -289,7 +297,7 @@ export const reportTeamMembership = onCall(callableOptions, async (request) => {
     const reportRef = db.doc(`operations/membership_report_${input.teamId}_${actor.uid}`);
     await reportRef.set({ type: "team_membership_report", status: "open", teamId: input.teamId, competitionId: team.get("competitionId"), reporterUid: actor.uid, reporterSnapshot: { displayName: actor.displayName, rollNumber: actor.rollNumber }, reason: input.reason, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     const governors = await db.collection("users").where("status", "==", "active").limit(2_000).get();
-    await notifyUsers(governors.docs.filter((doc) => doc.get("roles.systemAdmin") === true || doc.get("roles.cr") === true).map((doc) => doc.id), `membership_report_${input.teamId}_${actor.uid}`, { type: "team_membership_report", title: "Team membership disputed", body: `${actor.displayName} reported an issue with team ${team.get("name")}.`, teamId: input.teamId });
+    await notifyUsers(governors.docs.filter((doc) => doc.get("roles.systemAdmin") === true || doc.get("roles.cr") === true || doc.get("scopes.batchPocRoles.caseCompetition") === true).map((doc) => doc.id), `membership_report_${input.teamId}_${actor.uid}`, { type: "team_membership_report", title: "Team membership disputed", body: `${actor.displayName} reported an issue with team ${team.get("name")}.`, teamId: input.teamId });
     await writeAudit({ actorUid: actor.uid, action: "competition_team.membership_reported", resourceType: "competitionTeam", resourceId: input.teamId, reason: input.reason });
     return { reportId: reportRef.id };
   } catch (error) { asHttpsError(error); }
@@ -310,7 +318,7 @@ export const deleteDraftTeam = onCall(callableOptions, async (request) => {
       tx.set(db.doc(`competitionTeamNames/${competitionId}_${team.get("normalizedName")}`), { active: false }, { merge: true });
       memberUids.forEach((uid) => {
         tx.set(db.doc(`competitionMemberships/${competitionId}_${uid}`), { active: false, releasedAt: FieldValue.serverTimestamp() }, { merge: true });
-        tx.set(db.doc(`opportunityResponses/${competitionId}_${uid}`), { status: "no_response", teamId: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        tx.set(db.doc(`opportunityResponses/${competitionId}_${uid}`), { status: "no_response", participationStatus: "no_response", teamId: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       });
     });
     await writeAudit({ actorUid: actor.uid, action: "competition_team.deleted", resourceType: "competitionTeam", resourceId: teamId, before: team.data() });
@@ -333,19 +341,101 @@ export const registerTeam = onCall(callableOptions, async (request) => {
     const memberUids = (team.get("memberUids") as string[]) ?? [];
     const size = memberUids.length;
     if (size < Number(competition.get("minTeamSize")) || size > Number(competition.get("maxTeamSize"))) throw new HttpsError("failed-precondition", "Team size is outside the allowed range");
+    if (competition.get("needsConfiguration") === true || !competition.get("externalRegistrationUrl") || !competition.get("internalFormUrl")) throw new HttpsError("failed-precondition", "Both competition forms must be configured before registration");
+    const confirmations = await Promise.all(memberUids.map((uid) => db.doc(`opportunityResponses/${competitionId}_${uid}`).get()));
+    const incomplete = confirmations.filter((response) => response.get("externalRegistration.status") !== "confirmed" || response.get("internalForm.status") !== "confirmed");
+    if (incomplete.length) throw new HttpsError("failed-precondition", `${incomplete.length} team member(s) still need to confirm both registration forms`);
     const late = Date.now() > (competition.get("registrationDeadline") as Timestamp).toMillis();
     await db.runTransaction(async (tx) => {
-      const fresh = await tx.get(teamRef);
+      const [fresh, ...freshConfirmations] = await Promise.all([tx.get(teamRef), ...memberUids.map((uid) => tx.get(db.doc(`opportunityResponses/${competitionId}_${uid}`)))]);
       if (fresh.get("status") === "registered") return;
+      if (freshConfirmations.some((response) => response.get("externalRegistration.status") !== "confirmed" || response.get("internalForm.status") !== "confirmed")) throw new HttpsError("failed-precondition", "Every member must still have both forms confirmed");
       tx.update(teamRef, { status: "registered", registeredAt: FieldValue.serverTimestamp(), registeredLate: late, membershipLocked: true, updatedAt: FieldValue.serverTimestamp() });
       memberUids.forEach((uid) => {
         tx.set(db.doc(`competitionMemberships/${competitionId}_${uid}`), { status: "registered", active: true, locked: true, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-        tx.set(db.doc(`opportunityResponses/${competitionId}_${uid}`), { status: "registered", teamId, registeredAt: FieldValue.serverTimestamp(), registeredLate: late, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        tx.set(db.doc(`opportunityResponses/${competitionId}_${uid}`), { status: "registered", participationStatus: "registered", confirmationsLocked: true, teamId, registeredAt: FieldValue.serverTimestamp(), registeredLate: late, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       });
     });
     await notifyUsers(memberUids, `team_registered_${teamId}`, { type: "team_registered", title: String(team.get("name")), body: late ? "Team registered after the deadline." : "Team registration confirmed.", competitionId, teamId, ...(team.get("demoSeedId") ? { isTestData: true, demoSeedId: team.get("demoSeedId") } : {}) });
     await writeAudit({ actorUid: actor.uid, action: "competition_team.registered", resourceType: "competitionTeam", resourceId: teamId, after: { late } });
     return { teamId, late };
+  } catch (error) { asHttpsError(error); }
+});
+
+async function setConfirmation(input: { competitionId: string; kind: "externalRegistration" | "internalForm" }, uid: string, status: "pending" | "confirmed", actorUid: string, correctionReason?: string) {
+  const competitionRef = db.doc(`competitions/${input.competitionId}`);
+  const responseRef = db.doc(`opportunityResponses/${input.competitionId}_${uid}`);
+  await db.runTransaction(async (tx) => {
+    const [competition, response] = await Promise.all([tx.get(competitionRef), tx.get(responseRef)]);
+    if (!competition.exists || (!correctionReason && competition.get("status") !== "published") || (correctionReason && !["published", "in_progress"].includes(String(competition.get("status"))))) throw new HttpsError("failed-precondition", "Competition is not accepting confirmations");
+    if (!response.exists || response.get("participationStatus") === "not_participating" || response.get("status") === "not_participating") throw new HttpsError("failed-precondition", "Join a draft team before confirming registration forms");
+    if (!correctionReason && response.get("confirmationsLocked") === true) throw new HttpsError("failed-precondition", "Registered-team confirmations are locked");
+    const field = `${input.kind}.status`;
+    if (response.get(field) === status) return;
+    tx.update(responseRef, {
+      [field]: status,
+      [`${input.kind}.confirmedAt`]: status === "confirmed" ? FieldValue.serverTimestamp() : FieldValue.delete(),
+      [`${input.kind}.confirmedBy`]: status === "confirmed" ? actorUid : FieldValue.delete(),
+      ...(correctionReason ? { lastConfirmationCorrectionBy: actorUid, lastConfirmationCorrectionReason: correctionReason } : {}),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+}
+
+export const setCompetitionConfirmation = onCall(callableOptions, async (request) => {
+  try {
+    const actor = await requireActor(request); const input = competitionConfirmationSchema.parse(request.data);
+    const membership = await db.doc(`competitionMemberships/${input.competitionId}_${actor.uid}`).get();
+    if (!membership.exists || membership.get("active") === false) throw new HttpsError("failed-precondition", "Join a team before confirming registration forms");
+    await setConfirmation(input, actor.uid, "confirmed", actor.uid);
+    await writeAudit({ actorUid: actor.uid, action: "competition.confirmation_set", resourceType: "competitionResponse", resourceId: `${input.competitionId}_${actor.uid}`, after: { kind: input.kind, status: "confirmed" } });
+    return { kind: input.kind, status: "confirmed" };
+  } catch (error) { asHttpsError(error); }
+});
+
+export const reopenCompetitionConfirmation = onCall(callableOptions, async (request) => {
+  try {
+    const actor = await requireActor(request); const input = competitionConfirmationSchema.parse(request.data);
+    await setConfirmation(input, actor.uid, "pending", actor.uid);
+    await writeAudit({ actorUid: actor.uid, action: "competition.confirmation_reopened", resourceType: "competitionResponse", resourceId: `${input.competitionId}_${actor.uid}`, after: { kind: input.kind, status: "pending" } });
+    return { kind: input.kind, status: "pending" };
+  } catch (error) { asHttpsError(error); }
+});
+
+export const correctCompetitionConfirmation = onCall(callableOptions, async (request) => {
+  try {
+    const actor = await requireActor(request); requireOpportunityManager(actor); const input = competitionConfirmationCorrectionSchema.parse(request.data);
+    await setConfirmation(input, input.uid, input.status, actor.uid, input.reason);
+    await writeAudit({ actorUid: actor.uid, action: "competition.confirmation_corrected", resourceType: "competitionResponse", resourceId: `${input.competitionId}_${input.uid}`, after: { kind: input.kind, status: input.status }, reason: input.reason });
+    return { kind: input.kind, status: input.status };
+  } catch (error) { asHttpsError(error); }
+});
+
+export const getCompetitionConfirmationReport = onCall(callableOptions, async (request) => {
+  try {
+    const actor = await requireActor(request); requireOpportunityManager(actor); const { competitionId } = idSchema.parse(request.data);
+    const [competition, responses] = await Promise.all([db.doc(`competitions/${competitionId}`).get(), db.collection("opportunityResponses").where("opportunityId", "==", competitionId).limit(2_000).get()]);
+    if (!competition.exists) throw new HttpsError("not-found", "Competition not found");
+    return { competition: { id: competition.id, ...competition.data() }, responses: responses.docs.map((doc) => ({ id: doc.id, ...doc.data() })) };
+  } catch (error) { asHttpsError(error); }
+});
+
+export const migrateCompetitionConfirmations = onCall({ ...callableOptions, timeoutSeconds: 120 }, async (request) => {
+  try {
+    const actor = await requireActor(request); if (!actor.roles.systemAdmin) throw new HttpsError("permission-denied", "System administrator access required");
+    const operationRef = db.doc("operations/migrate_competition_confirmations_v1"); const previous = await operationRef.get();
+    if (previous.get("status") === "complete") return { idempotent: true, updated: previous.get("updated") ?? 0 };
+    const [competitions, responses] = await Promise.all([db.collection("competitions").limit(2_000).get(), db.collection("opportunityResponses").limit(10_000).get()]);
+    const writer = db.bulkWriter(); let updated = 0;
+    for (const competition of competitions.docs) {
+      const legacyUrl = competition.get("registrationUrl"); const internal = competition.get("internalFormUrl");
+      writer.set(competition.ref, { externalRegistrationUrl: competition.get("externalRegistrationUrl") || legacyUrl || null, internalFormUrl: internal || null, needsConfiguration: !internal, schemaVersion: 2, updatedAt: FieldValue.serverTimestamp() }, { merge: true }); updated += 1;
+    }
+    for (const response of responses.docs) {
+      writer.set(response.ref, { participationStatus: response.get("participationStatus") || response.get("status") || "no_response", externalRegistration: response.get("externalRegistration") || { status: response.get("status") === "registered" ? "confirmed" : "pending" }, internalForm: response.get("internalForm") || { status: response.get("status") === "registered" ? "confirmed" : "pending" }, confirmationsLocked: response.get("status") === "registered", updatedAt: FieldValue.serverTimestamp() }, { merge: true }); updated += 1;
+    }
+    writer.set(operationRef, { type: "competition_confirmation_migration", status: "complete", updated, actorUid: actor.uid, completedAt: FieldValue.serverTimestamp() }); await writer.close();
+    await writeAudit({ actorUid: actor.uid, action: "competitions.confirmations_migrated", resourceType: "catalog", resourceId: "competitions", after: { updated } }); return { updated };
   } catch (error) { asHttpsError(error); }
 });
 

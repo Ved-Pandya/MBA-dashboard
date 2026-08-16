@@ -12,11 +12,14 @@ import { assignPoc, getPocSetup, migrateWingIds, revokePoc, searchRoleCandidates
 import { createCrTask, updateCrTask } from "./cr-tasks.js";
 import { mirrorNotificationPushJobs, processPushJobs, registerPushSubscription, removePushSubscription } from "./push.js";
 import { cancelAcademicEvent, commitTimetableImport, createAcademicEvent, updateAcademicEvent } from "./academics.js";
+import { cancelSessionIntimation, closeSessionIntimation, correctSessionResponse, createSessionIntimation, getSessionReport, publishSessionIntimation, setSessionResponse, updateSessionIntimation } from "./sessions.js";
+import { cancelGeneralPoll, closeGeneralPoll, createGeneralPoll, getPollReport, publishGeneralPoll, setPollResponse, updateGeneralPoll } from "./polls.js";
 import {
   cancelCompetition, cancelInternship, correctRoundSubmission, createCompetition, createInternship, createNextRound, createTeam,
   deleteDraftTeam, finalizeRound, getCompetitionExport, getWingOpportunityReport,
   markRoundSubmitted, publishCompetition, publishInternship, registerTeam,
   reportTeamMembership, setCompetitionResponse, setInternshipResponse, updateCompetition, updateInternship, updateTeam,
+  setCompetitionConfirmation, reopenCompetitionConfirmation, correctCompetitionConfirmation, getCompetitionConfirmationReport, migrateCompetitionConfirmations,
 } from "./opportunities.js";
 
 const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
@@ -54,6 +57,21 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   createAcademicEvent,
   updateAcademicEvent,
   cancelAcademicEvent,
+  createSessionIntimation,
+  updateSessionIntimation,
+  publishSessionIntimation,
+  setSessionResponse,
+  closeSessionIntimation,
+  cancelSessionIntimation,
+  correctSessionResponse,
+  getSessionReport,
+  createGeneralPoll,
+  updateGeneralPoll,
+  publishGeneralPoll,
+  setPollResponse,
+  closeGeneralPoll,
+  cancelGeneralPoll,
+  getPollReport,
   createCompetition,
   publishCompetition,
   updateCompetition,
@@ -75,6 +93,11 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   setInternshipResponse,
   getWingOpportunityReport,
   getCompetitionExport,
+  setCompetitionConfirmation,
+  reopenCompetitionConfirmation,
+  correctCompetitionConfirmation,
+  getCompetitionConfirmationReport,
+  migrateCompetitionConfirmations,
 };
 
 export async function verifySparkIdToken(idToken: string) {
@@ -314,10 +337,32 @@ type OpportunityJob = {
 };
 
 function opportunityNotificationCopy(job: OpportunityJob) {
-  const action = job.kind === "competition_round" ? "team submission" : "registration response";
+  const action = job.kind === "competition_round" ? "team submission" : job.kind === "competition_registration" ? "team registration and both form confirmations" : "registration response";
   if (job.stage === "minus24h") return { title: "Deadline in 24 hours", body: `${job.title}: ${action} is due tomorrow.` };
   if (job.stage === "minus2h") return { title: "Deadline in 2 hours", body: `${job.title}: record the ${action} now.` };
   return { title: "Opportunity deadline passed", body: `${job.title}: the ${action} is overdue. Late status will be retained.` };
+}
+
+async function deliverSessionReminder(jobId: string, job: { sessionId: string; title: string; scheduleVersion: number; stage: ReminderStage }) {
+  const sessionRef = db.doc(`sessionIntimations/${job.sessionId}`); const session = await sessionRef.get();
+  if (!session.exists || session.get("status") !== "published" || Number(session.get("scheduleVersion") ?? 1) !== job.scheduleVersion) {
+    await db.doc(`reminderJobs/${jobId}`).set({ status: "skipped", skipReason: "stale_or_inactive_session", leaseUntil: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }); return 0;
+  }
+  const responses = await db.collection("sessionResponses").where("sessionId", "==", job.sessionId).where("status", "==", "no_response").limit(2_000).get(); let deliveries = 0;
+  for (const response of responses.docs) {
+    const uid = String(response.get("uid")); const deliveryRef = db.doc(`reminderDeliveries/${jobId}_${uid}`); const notificationRef = db.doc(`users/${uid}/notifications/${jobId}_${uid}`);
+    const delivered = await db.runTransaction(async (tx) => {
+      const [freshSession, freshResponse, user, previous] = await Promise.all([tx.get(sessionRef), tx.get(response.ref), tx.get(db.doc(`users/${uid}`)), tx.get(deliveryRef)]);
+      if (previous.exists && ["sent", "skipped"].includes(String(previous.get("status")))) return false;
+      const eligible = freshSession.exists && freshSession.get("status") === "published" && Number(freshSession.get("scheduleVersion") ?? 1) === job.scheduleVersion && freshResponse.exists && freshResponse.get("status") === "no_response" && user.exists && user.get("status") === "active";
+      if (!eligible) { tx.set(deliveryRef, { jobId, uid, status: "skipped", skipReason: "response_or_session_inactive", updatedAt: FieldValue.serverTimestamp() }, { merge: true }); return false; }
+      const copy = job.stage === "minus24h" ? { title: "Session response due in 24 hours", body: `${job.title}: confirm whether you will attend.` } : { title: "Session response due in 2 hours", body: `${job.title}: respond now.` };
+      tx.set(notificationRef, { type: "session_response_reminder", ...copy, sessionId: job.sessionId, createdAt: FieldValue.serverTimestamp(), readAt: null });
+      tx.set(deliveryRef, { jobId, uid, status: "sent", stage: job.stage, sessionId: job.sessionId, scheduleVersion: job.scheduleVersion, attempts: FieldValue.increment(1), sentAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }); return true;
+    });
+    if (delivered) deliveries += 1;
+  }
+  await db.doc(`reminderJobs/${jobId}`).set({ status: "complete", recipientCount: responses.size, completedAt: FieldValue.serverTimestamp(), leaseUntil: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }); return deliveries;
 }
 
 async function deliverOpportunityReminder(jobId: string, job: OpportunityJob) {
@@ -425,6 +470,13 @@ async function processDueReminderJobs() {
         : kind === "cr_task"
           ? await deliverCrTaskReminder(snap.id, {
             crTaskId: String(snap.get("crTaskId")),
+            scheduleVersion: Number(snap.get("scheduleVersion")),
+            stage: snap.get("stage") as ReminderStage,
+          })
+        : kind === "session_response"
+          ? await deliverSessionReminder(snap.id, {
+            sessionId: String(snap.get("sessionId")),
+            title: String(snap.get("title")),
             scheduleVersion: Number(snap.get("scheduleVersion")),
             stage: snap.get("stage") as ReminderStage,
           })

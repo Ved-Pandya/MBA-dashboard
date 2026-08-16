@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ACADEMIC_EVENT_TYPES, CR_TASK_STATUSES, OPPORTUNITY_RESPONSE_STATUSES, TASK_TYPES, WING_IDS } from "./types.js";
+import { ACADEMIC_EVENT_TYPES, COMPETITION_CONFIRMATION_KINDS, CR_TASK_STATUSES, OPPORTUNITY_RESPONSE_STATUSES, SESSION_RESPONSE_STATUSES, TASK_TYPES, WING_IDS } from "./types.js";
 import { ROLL_NUMBER_PATTERN } from "./credentials.js";
 
 export const wingIdSchema = z.enum(WING_IDS);
@@ -101,7 +101,7 @@ export const timetableImportSchema = z.object({
   rows: z.array(timetableRowSchema).min(1).max(500),
 }).refine((value) => value.termEndIso >= value.termStartIso, { message: "Term end must not precede term start", path: ["termEndIso"] });
 
-export const academicEventSchema = z.object({
+export const academicEventFieldsSchema = z.object({
   offeringId: z.string().trim().min(1).max(80),
   eventType: z.enum(ACADEMIC_EVENT_TYPES),
   title: z.string().trim().min(2).max(160),
@@ -109,13 +109,18 @@ export const academicEventSchema = z.object({
   occursAtIso: z.string().datetime({ offset: true }),
   resourceUrl: optionalUrl,
   timetableSlotId: z.string().trim().max(100).optional().or(z.literal("")),
+  endsAtIso: z.string().datetime({ offset: true }).optional().or(z.literal("")),
+  venue: z.string().trim().max(160).optional().default(""),
+  syllabus: z.string().trim().max(4_000).optional().default(""),
 });
+export const academicEventSchema = academicEventFieldsSchema.refine((event) => !event.endsAtIso || new Date(event.endsAtIso).getTime() > new Date(event.occursAtIso).getTime(), { message: "End time must be after the start time", path: ["endsAtIso"] });
 
 export const competitionDraftSchema = z.object({
   title: z.string().trim().min(3).max(160),
   organizer: z.string().trim().min(2).max(120),
   description: z.string().trim().min(1).max(8_000),
-  registrationUrl: optionalUrl,
+  externalRegistrationUrl: z.string().trim().url().max(2_048),
+  internalFormUrl: z.string().trim().url().max(2_048),
   registrationDeadlineIso: z.string().datetime({ offset: true }),
   minTeamSize: z.number().int().min(1).max(20),
   maxTeamSize: z.number().int().min(1).max(20),
@@ -153,4 +158,48 @@ export const internshipResponseSchema = z.object({
   internshipId: z.string().min(1),
   status: z.enum(["registered", "not_participating"]),
   confirmationReference: z.string().trim().max(300).optional().default(""),
+});
+
+export const sessionIntimationFieldsSchema = z.object({
+  title: z.string().trim().min(3).max(160),
+  details: z.string().trim().max(8_000).default(""),
+  venue: z.string().trim().max(160).optional().default(""),
+  sessionStartsAtIso: z.string().datetime({ offset: true }),
+  responseDeadlineIso: z.string().datetime({ offset: true }),
+});
+export const sessionIntimationSchema = sessionIntimationFieldsSchema.refine((value) => new Date(value.responseDeadlineIso).getTime() <= new Date(value.sessionStartsAtIso).getTime(), { message: "The response deadline must not be after the session starts", path: ["responseDeadlineIso"] });
+
+export const sessionResponseSchema = z.object({
+  sessionId: z.string().min(1).max(200),
+  status: z.enum(SESSION_RESPONSE_STATUSES).refine((status) => status !== "no_response", "Choose attending or not attending"),
+});
+
+export const sessionCorrectionSchema = sessionResponseSchema.extend({
+  uid: z.string().min(1).max(200),
+  reason: z.string().trim().min(3).max(500),
+});
+
+export const pollDraftFieldsSchema = z.object({
+  question: z.string().trim().min(3).max(300),
+  details: z.string().trim().max(4_000).optional().default(""),
+  options: z.array(z.object({ id: z.string().regex(/^[A-Za-z0-9_-]{1,60}$/), label: z.string().trim().min(1).max(200) })).min(2).max(20),
+  closesAtIso: z.string().datetime({ offset: true }),
+  linkedSessionId: z.string().trim().max(200).optional().or(z.literal("")),
+});
+export const pollDraftSchema = pollDraftFieldsSchema.refine((poll) => new Set(poll.options.map((option) => option.id)).size === poll.options.length, { message: "Poll option IDs must be unique", path: ["options"] });
+
+export const pollResponseSchema = z.object({
+  pollId: z.string().min(1).max(200),
+  optionId: z.string().min(1).max(60),
+});
+
+export const competitionConfirmationSchema = z.object({
+  competitionId: z.string().min(1).max(200),
+  kind: z.enum(COMPETITION_CONFIRMATION_KINDS),
+});
+
+export const competitionConfirmationCorrectionSchema = competitionConfirmationSchema.extend({
+  uid: z.string().min(1).max(200),
+  status: z.enum(["pending", "confirmed"]),
+  reason: z.string().trim().min(3).max(500),
 });

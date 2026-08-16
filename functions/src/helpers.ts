@@ -42,7 +42,7 @@ export async function requireActor(request: CallableRequest<unknown>, allowBoots
       sectionId: "A",
       wingId: "A",
       roles: { student: true, cr: false, systemAdmin: true },
-      scopes: { crSections: {}, wingPocWings: {}, subjectPocOfferings: {} },
+      scopes: { crSections: {}, wingPocWings: {}, subjectPocOfferings: {}, batchPocRoles: {} },
     };
   }
   throw new HttpsError("permission-denied", "This roll number is not on the imported roster");
