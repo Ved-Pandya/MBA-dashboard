@@ -1,4 +1,5 @@
 import { callFunction } from "./callable";
+import { isVapidPublicKey, normalizeVapidKey } from "@mba/domain";
 
 const DEVICE_ID_KEY = "deadlineos-push-device-id";
 
@@ -12,8 +13,10 @@ export function getPushDeviceId() {
 }
 
 export function applicationServerKey(value: string) {
-  const padding = "=".repeat((4 - value.length % 4) % 4);
-  const raw = window.atob((value + padding).replaceAll("-", "+").replaceAll("_", "/"));
+  const normalized = normalizeVapidKey(value);
+  if (!isVapidPublicKey(normalized)) throw new Error("Push notifications are not configured with a valid VAPID public key.");
+  const padding = "=".repeat((4 - normalized.length % 4) % 4);
+  const raw = window.atob((normalized + padding).replaceAll("-", "+").replaceAll("_", "/"));
   return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
 }
 

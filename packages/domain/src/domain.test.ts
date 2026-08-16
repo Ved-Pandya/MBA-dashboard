@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { academicEventSchema, buildCatchUpReminderSchedule, buildReminderSchedule, canManageTask, crTaskCreateSchema, crTaskUpdateSchema, rollNumberToAuthEmail, rosterRowSchema, taskDraftSchema, teamDraftSchema, type UserProfile } from "./index.js";
+import { academicEventSchema, buildCatchUpReminderSchedule, buildReminderSchedule, canManageTask, crTaskCreateSchema, crTaskUpdateSchema, isVapidPrivateKey, isVapidPublicKey, normalizeConfigValue, normalizeVapidKey, rollNumberToAuthEmail, rosterRowSchema, taskDraftSchema, teamDraftSchema, type UserProfile } from "./index.js";
 
 const actor: UserProfile = {
   authEmail: "24m2001@users.deadlineos.app",
@@ -63,5 +63,16 @@ describe("domain invariants", () => {
     expect(crTaskUpdateSchema.safeParse({ taskId: "task-1", expectedVersion: 1, status: "in_progress" }).success).toBe(true);
     expect(crTaskUpdateSchema.safeParse({ taskId: "task-1", expectedVersion: 1, status: "cancelled" }).success).toBe(false);
     expect(crTaskUpdateSchema.safeParse({ taskId: "task-1", expectedVersion: 1 }).success).toBe(false);
+  });
+
+  it("normalizes quoted and padded VAPID environment values", () => {
+    const publicKey = `B${"A".repeat(86)}`;
+    const privateKey = "A".repeat(43);
+    expect(normalizeVapidKey(` \"${publicKey}=\" `)).toBe(publicKey);
+    expect(normalizeVapidKey(` '${privateKey}=' `)).toBe(privateKey);
+    expect(normalizeConfigValue(" 'mailto:admin@example.com' ")).toBe("mailto:admin@example.com");
+    expect(isVapidPublicKey(publicKey)).toBe(true);
+    expect(isVapidPrivateKey(privateKey)).toBe(true);
+    expect(isVapidPublicKey(`${publicKey}=`)).toBe(false);
   });
 });

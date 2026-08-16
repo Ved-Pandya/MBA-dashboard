@@ -3,6 +3,7 @@ import { FieldPath } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import webpush from "web-push";
 import { z, ZodError } from "zod";
+import { isVapidPrivateKey, isVapidPublicKey, normalizeConfigValue, normalizeVapidKey } from "@mba/domain";
 import { db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor } from "./helpers.js";
 
@@ -195,10 +196,13 @@ type PushJob = {
 };
 
 function configureWebPush() {
-  const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
-  const privateKey = process.env.WEB_PUSH_PRIVATE_KEY;
-  const subject = process.env.WEB_PUSH_SUBJECT;
+  const publicKey = normalizeVapidKey(process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY);
+  const privateKey = normalizeVapidKey(process.env.WEB_PUSH_PRIVATE_KEY);
+  const subject = normalizeConfigValue(process.env.WEB_PUSH_SUBJECT);
   if (!publicKey || !privateKey || !subject) return false;
+  if (!isVapidPublicKey(publicKey)) throw new Error("NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY must be an unpadded URL-safe Base64 VAPID public key");
+  if (!isVapidPrivateKey(privateKey)) throw new Error("WEB_PUSH_PRIVATE_KEY must be an unpadded URL-safe Base64 VAPID private key");
+  if (!subject.startsWith("mailto:") && !subject.startsWith("https://")) throw new Error("WEB_PUSH_SUBJECT must be a mailto: or https:// contact URI");
   webpush.setVapidDetails(subject, publicKey, privateKey);
   return true;
 }
