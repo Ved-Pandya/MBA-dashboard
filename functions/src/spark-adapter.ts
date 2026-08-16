@@ -10,6 +10,7 @@ import { commitRosterImport, updateRoleAssignments, validateRosterImport } from 
 import { cancelTask, closeTask, createTask, previewTaskRecipients, publishTask, syncTaskRecipients, updateTask } from "./tasks.js";
 import { assignPoc, getPocSetup, migrateWingIds, revokePoc, searchRoleCandidates } from "./governance.js";
 import { createCrTask, updateCrTask } from "./cr-tasks.js";
+import { mirrorNotificationPushJobs, processPushJobs, registerPushSubscription, removePushSubscription } from "./push.js";
 import { cancelAcademicEvent, commitTimetableImport, createAcademicEvent, updateAcademicEvent } from "./academics.js";
 import {
   cancelCompetition, cancelInternship, correctRoundSubmission, createCompetition, createInternship, createNextRound, createTeam,
@@ -47,6 +48,8 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   migrateWingIds,
   createCrTask,
   updateCrTask,
+  registerPushSubscription,
+  removePushSubscription,
   commitTimetableImport,
   createAcademicEvent,
   updateAcademicEvent,
@@ -544,8 +547,23 @@ async function reconcileOpportunityStats() {
 
 export async function runSparkMaintenance(mode: "pulse" | "daily" = "pulse") {
   if (mode === "pulse" && !(await claimPulse())) return { skipped: true };
-  const reminderResult = await processDueReminderJobs();
-  if (mode === "pulse") return reminderResult;
-  const [digests, reconciledTasks, reconciledOpportunities] = await Promise.all([createDailyDigests(), reconcileStats(), reconcileOpportunityStats()]);
-  return { ...reminderResult, digests, reconciledTasks, reconciledOpportunities };
+  try {
+    const reminderResult = await processDueReminderJobs();
+    const mirroredPushJobs = await mirrorNotificationPushJobs();
+    const push = await processPushJobs();
+    if (mode === "pulse") return { ...reminderResult, mirroredPushJobs, push };
+    const [digests, reconciledTasks, reconciledOpportunities] = await Promise.all([createDailyDigests(), reconcileStats(), reconcileOpportunityStats()]);
+    return { ...reminderResult, mirroredPushJobs, push, digests, reconciledTasks, reconciledOpportunities };
+  } catch (error) {
+    const healthFailure = {
+      lastFailureAt: FieldValue.serverTimestamp(),
+      lastFailureReason: "Maintenance invocation failed; inspect Vercel logs.",
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    await Promise.all([
+      db.doc("systemHealth/scheduler").set(healthFailure, { merge: true }),
+      db.doc("systemHealth/push").set(healthFailure, { merge: true }),
+    ]);
+    throw error;
+  }
 }

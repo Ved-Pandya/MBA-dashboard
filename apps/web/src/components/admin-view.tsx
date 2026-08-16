@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { doc, onSnapshot, type Timestamp } from "firebase/firestore";
 import { callFunction, readableError } from "@/lib/callable";
+import { getFirebase } from "@/lib/firebase";
 
 interface CsvRow {
   password: string;
@@ -12,6 +14,14 @@ interface CsvRow {
   cr: boolean;
   wingPocWings: string[];
   subjectPocOfferings: string[];
+}
+
+interface PushHealth {
+  configured?: boolean;
+  processed?: number;
+  delivered?: number;
+  failed?: number;
+  lastSuccessAt?: Timestamp;
 }
 
 function parseCsv(text: string): CsvRow[] {
@@ -43,6 +53,15 @@ export function AdminView() {
   const [busy, setBusy] = useState(false);
   const [testCredentials, setTestCredentials] = useState<Array<{ role: string; rollNumber: string; password: string }>>([]);
   const [demoSummary, setDemoSummary] = useState<Record<string, number> | null>(null);
+  const [pushHealth, setPushHealth] = useState<PushHealth | null>(null);
+  const [schedulerHealth, setSchedulerHealth] = useState<{ processedJobs?: number; deliveries?: number; lastSuccessAt?: Timestamp } | null>(null);
+
+  useEffect(() => {
+    const database = getFirebase().db;
+    const stopPush = onSnapshot(doc(database, "systemHealth", "push"), (snapshot) => setPushHealth(snapshot.exists() ? snapshot.data() as PushHealth : null));
+    const stopScheduler = onSnapshot(doc(database, "systemHealth", "scheduler"), (snapshot) => setSchedulerHealth(snapshot.exists() ? snapshot.data() : null));
+    return () => { stopPush(); stopScheduler(); };
+  }, []);
 
   async function initialize(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(null);
@@ -107,6 +126,13 @@ export function AdminView() {
       </div>
       <section className="panel create-form migration-panel"><div className="panel-head"><div><p className="eyebrow">TEST IDENTITIES</p><h2>Student, POC, and CR accounts</h2></div></div><p className="helper">Creates or resets 24M2901, 24M2902, and 24M2903. The POC receives isolated demo subject scopes, so real POC assignments are not disturbed.</p><div className="form-actions test-actions"><button className="secondary-button" onClick={createTestUsers} disabled={busy}>1. Create/reset accounts</button><button className="primary-button" onClick={seedDemoData} disabled={busy}>2. Seed complete mock data</button><button className="danger-button" onClick={clearDemoData} disabled={busy}>Clear mock data</button></div>{testCredentials.length > 0 && <div className="test-credentials"><strong>Copy these passwords now</strong>{testCredentials.map((item) => <div key={item.rollNumber}><span>{item.role.toUpperCase()}</span><code>{item.rollNumber}</code><code>{item.password}</code></div>)}</div>}{demoSummary && <div className="recipient-preview"><strong>Mock dataset ready</strong><p>{Object.entries(demoSummary).map(([key, value]) => `${key}: ${value}`).join(" · ")}</p></div>}</section>
       <section className="panel create-form migration-panel"><div className="panel-head"><div><p className="eyebrow">ONE-TIME MIGRATION</p><h2>Convert W01–W10 to A–J</h2></div></div><p className="helper">Safe to run repeatedly. It updates legacy users, wing task scopes, and assignment snapshots, then marks old wing records inactive.</p><button className="secondary-button" onClick={migrateWings} disabled={busy}>Run wing migration</button></section>
+      <section className="panel create-form migration-panel">
+        <div className="panel-head"><div><p className="eyebrow">MOBILE DELIVERY</p><h2>Scheduler and push health</h2></div></div>
+        <div className="form-row">
+          <div className="recipient-preview"><strong>Reminder scheduler</strong><p>{schedulerHealth?.lastSuccessAt ? `Last run ${schedulerHealth.lastSuccessAt.toDate().toLocaleString("en-IN")}` : "No successful run recorded yet."}</p><small>{schedulerHealth ? `${schedulerHealth.processedJobs ?? 0} jobs · ${schedulerHealth.deliveries ?? 0} inbox deliveries in the last run` : "Deploy the Cloudflare scheduler to wake maintenance every five minutes."}</small></div>
+          <div className="recipient-preview"><strong>Web Push {pushHealth?.configured === false ? "not configured" : pushHealth?.configured ? "configured" : "not checked"}</strong><p>{pushHealth?.lastSuccessAt ? `Last run ${pushHealth.lastSuccessAt.toDate().toLocaleString("en-IN")}` : "No successful push run recorded yet."}</p><small>{pushHealth ? `${pushHealth.delivered ?? 0} delivered · ${pushHealth.failed ?? 0} failed in the last run` : "Push health appears after the first maintenance pass."}</small></div>
+        </div>
+      </section>
       <section className="panel roster-panel"><div className="panel-head"><div><p className="eyebrow">ROSTER IMPORT</p><h2>Validate, then commit</h2></div><a className="text-button" href="data:text/csv;charset=utf-8,rollNumber%2Cpassword%2CdisplayName%2CsectionId%2CwingId%2Ccr%0A24M2001%2CChangeMe123!%2CAarav%20Shah%2CA%2CA%2Cfalse" download="roster-template.csv">Download template</a></div><p className="helper">Roll numbers must match <b>24M2xxx</b>. Wing IDs are A–J. Assign Wing and Subject POCs separately from POC Setup. Committing an existing roll number resets its password to the CSV value.</p><textarea className="csv-area" value={csvText} onChange={(event) => { setCsvText(event.target.value); setPreview(null); }} rows={10} spellCheck={false} />{preview && <div className={preview.valid ? "validation-box valid" : "validation-box"}><strong>{preview.valid ? "Roster is valid" : "Resolve validation errors"}</strong><p>{Object.entries(preview.summary).map(([key, value]) => `${key}: ${value}`).join(" · ")}</p>{preview.errors.map((item) => <small key={item}>{item}</small>)}</div>}<div className="form-actions"><button className="secondary-button" onClick={validateRoster} disabled={busy}>Validate roster</button><button className="primary-button" onClick={commitRoster} disabled={busy || !preview?.valid}>Commit import</button></div></section>
     </div>
   );

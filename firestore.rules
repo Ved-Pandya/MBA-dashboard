@@ -227,6 +227,22 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /pushSubscriptions/{id} {
+      allow read, write: if false;
+    }
+
+    match /pushEndpointOwners/{id} {
+      allow read, write: if false;
+    }
+
+    match /pushJobs/{id} {
+      allow read, write: if false;
+    }
+
+    match /pushDeliveries/{id} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

@@ -71,6 +71,12 @@ blob-report/
 # Vercel local project metadata
 .vercel/
 
+# Cloudflare Worker local state and secrets
+.wrangler/
+**/.dev.vars
+**/.dev.vars.*
+!**/.dev.vars.example
+
 # Runtime logs and temporary files
 *.log
 npm-debug.log*
@@ -97,3 +103,5 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 node_modules
+.env.example
+.env.example

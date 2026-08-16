@@ -7,9 +7,11 @@ import { getFirebase } from "@/lib/firebase";
 import { useAuth } from "./auth-provider";
 import { callFunction } from "@/lib/callable";
 import { formatDeadline } from "@/lib/date";
+import { usePwa } from "./pwa-provider";
 
 export function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user } = useAuth();
+  const { openSetup, pushState } = usePwa();
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   useEffect(() => {
     if (!user) return;
@@ -28,6 +30,7 @@ export function NotificationsPanel({ open, onClose }: { open: boolean; onClose: 
       <aside className={open ? "notification-drawer open" : "notification-drawer"} aria-hidden={!open}>
         <div className="drawer-head"><div><p className="eyebrow">INBOX</p><h2>Notifications <span>{unread.length}</span></h2></div><button className="icon-button" onClick={onClose}>×</button></div>
         <button className="text-button" onClick={markAllRead} disabled={!unread.length}>Mark all as read</button>
+        <button className="text-button app-setup-link" onClick={() => { onClose(); openSetup(); }}>App setup - {pushState === "enabled" ? "notifications on" : "action needed"}</button>
         <div className="notification-list">
           {!notifications.length && <div className="empty-state"><span>◌</span><h3>Quiet for now</h3><p>Deadline alerts will appear here.</p></div>}
           {notifications.map((item) => <article key={item.id} className={item.readAt ? "notification read" : "notification"}><i /><div><strong>{item.title}</strong><p>{item.body}</p><small>{item.createdAt ? formatDeadline(item.createdAt) : "Just now"}</small></div></article>)}

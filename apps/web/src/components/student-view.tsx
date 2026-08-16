@@ -7,6 +7,7 @@ import { getFirebase } from "@/lib/firebase";
 import { useAuth } from "./auth-provider";
 import { asDate, formatDeadline, relativeDeadline, urgency } from "@/lib/date";
 import { callFunction, readableError } from "@/lib/callable";
+import { GuidedAppSetupCard } from "./app-setup";
 
 const labels = {
   subject_assignment: "Assignment",
@@ -68,6 +69,8 @@ export function StudentView() {
         <div><p className="eyebrow">{weekday} COMMAND CENTER</p><h1>{greeting}, {profile?.displayName.split(" ")[0]}.</h1><p>Here’s what needs your attention next.</p></div>
         <div className="date-tile"><strong>{new Date().getDate()}</strong><span>{new Intl.DateTimeFormat("en-IN", { month: "short" }).format(new Date())}</span></div>
       </header>
+
+      <GuidedAppSetupCard />
 
       <section className="stats-grid" aria-label="Task summary">
         <article className="stat-card danger"><span>Overdue</span><strong>{stats.overdue}</strong><small>{stats.overdue ? "Resolve these first" : "All clear"}</small></article>

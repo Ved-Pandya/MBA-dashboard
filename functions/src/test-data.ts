@@ -158,7 +158,7 @@ const DEMO_COLLECTIONS = [
   "competitions", "competitionTeams", "competitionTeamNames", "competitionMemberships", "competitionRounds",
   "competitionRoundEntries", "opportunityResponses", "internships", "internshipResponses", "tasks",
   "taskAssignments", "taskStats", "reminderJobs", "reminderDeliveries", "competitionStats",
-  "internshipStats", "competitionRoundStats", "pocAssignments", "crTasks",
+  "internshipStats", "competitionRoundStats", "pocAssignments", "crTasks", "pushJobs", "pushDeliveries",
 ] as const;
 
 async function deleteDemoSeedRecords() {

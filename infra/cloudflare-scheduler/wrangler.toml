@@ -1,0 +1,6 @@
+name = "deadlineos-scheduler"
+main = "worker.js"
+compatibility_date = "2026-08-16"
+
+[triggers]
+crons = ["*/5 * * * *"]

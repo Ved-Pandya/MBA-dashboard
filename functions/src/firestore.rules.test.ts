@@ -32,6 +32,11 @@ suite("Firestore RBAC rules", () => {
       await setDoc(doc(db, "opportunityResponses/comp_student"), { opportunityId: "comp", uid: "student", wingId: "A", status: "registered" });
       await setDoc(doc(db, "opportunityResponses/comp_other"), { opportunityId: "comp", uid: "other", wingId: "B", status: "registered" });
       await setDoc(doc(db, "competitionTeams/team_student"), { competitionId: "comp", memberUids: ["student", "other"], members: [{ uid: "student", wingId: "A" }, { uid: "other", wingId: "B" }] });
+      await setDoc(doc(db, "pushSubscriptions/student_device"), { uid: "student", endpoint: "https://push.example/subscription", keys: { p256dh: "secret", auth: "secret" } });
+      await setDoc(doc(db, "pushEndpointOwners/hash"), { uid: "student", subscriptionId: "student_device" });
+      await setDoc(doc(db, "pushJobs/job1"), { uid: "student", status: "queued" });
+      await setDoc(doc(db, "pushDeliveries/job1_device"), { uid: "student", status: "sent" });
+      await setDoc(doc(db, "systemHealth/push"), { configured: true, delivered: 1 });
     });
   });
 
@@ -76,5 +81,17 @@ suite("Firestore RBAC rules", () => {
     await assertFails(getDoc(doc(suspendedCrDb, "crTasks/private1")));
     await assertFails(setDoc(doc(crDb, "crTasks/client-write"), { status: "assigned" }));
     await assertFails(setDoc(doc(adminDb, "crTasks/private1"), { status: "completed" }, { merge: true }));
+  });
+
+  it("keeps raw push secrets server-only and exposes only sanitized admin health", async () => {
+    const studentDb = testEnv.authenticatedContext("student").firestore();
+    const adminDb = testEnv.authenticatedContext("admin").firestore();
+    for (const path of ["pushSubscriptions/student_device", "pushEndpointOwners/hash", "pushJobs/job1", "pushDeliveries/job1_device"]) {
+      await assertFails(getDoc(doc(studentDb, path)));
+      await assertFails(getDoc(doc(adminDb, path)));
+    }
+    await assertSucceeds(getDoc(doc(adminDb, "systemHealth/push")));
+    await assertFails(getDoc(doc(studentDb, "systemHealth/push")));
+    await assertFails(setDoc(doc(adminDb, "pushSubscriptions/admin_device"), { endpoint: "https://push.example/admin" }));
   });
 });

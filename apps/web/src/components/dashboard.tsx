@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "./auth-provider";
 import { StudentView } from "./student-view";
 import { NotificationsPanel } from "./notifications-panel";
@@ -13,6 +13,8 @@ import { AcademicsView } from "./academics-view";
 import { OpportunitiesView } from "./opportunities-view";
 import { ReportsView } from "./reports-view";
 import { CrBoardView } from "./cr-board-view";
+import { AppSetupPanel } from "./app-setup";
+import { usePwa } from "./pwa-provider";
 
 type View = "today" | "academics" | "opportunities" | "teams" | "forms" | "compliance" | "crBoard" | "poc" | "timetable" | "reports" | "admin";
 
@@ -22,7 +24,8 @@ function Brand() {
 
 export function Dashboard() {
   const { profile, signOutUser } = useAuth();
-  const [view, setView] = useState<View>("today");
+  const { online } = usePwa();
+  const [view, setViewState] = useState<View>("today");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const isWingPoc = Boolean(Object.keys(profile?.scopes.wingPocWings ?? {}).length);
   const isSubjectPoc = Boolean(Object.keys(profile?.scopes.subjectPocOfferings ?? {}).length);
@@ -42,10 +45,31 @@ export function Dashboard() {
     { id: "admin" as const, label: "Admin", icon: "S", show: Boolean(profile?.roles.systemAdmin) },
   ].filter((item) => item.show), [isPoc, isWingPoc, isSubjectPoc, governor, profile]);
 
+  useEffect(() => {
+    const applyUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const requested = params.get("view") as View | null;
+      setViewState(requested && navigation.some((item) => item.id === requested) ? requested : "today");
+      if (params.get("notifications") === "1") setNotificationsOpen(true);
+    };
+    applyUrl();
+    window.addEventListener("popstate", applyUrl);
+    return () => window.removeEventListener("popstate", applyUrl);
+  }, [navigation]);
+
+  function setView(nextView: View) {
+    setViewState(nextView);
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", nextView);
+    url.searchParams.delete("notifications");
+    window.history.replaceState({}, "", url);
+  }
+
   if (!profile) return null;
   const roleLabel = profile.roles.systemAdmin ? "System admin" : profile.roles.cr ? `CR · Section ${profile.sectionId}` : isPoc ? "Point of contact" : `Section ${profile.sectionId} · Wing ${profile.wingId}`;
 
   return <div className="app-shell">
+    {!online && <div className="offline-banner" role="status">You are offline. Reconnect before viewing or changing DeadlineOS data.</div>}
     <aside className="sidebar">
       <Brand />
       <nav aria-label="Main navigation">{navigation.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)}><span>{item.icon}</span>{item.label}</button>)}</nav>
@@ -67,5 +91,6 @@ export function Dashboard() {
     </main>
     <nav className="mobile-nav">{navigation.map((item) => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => setView(item.id)}><span>{item.icon}</span>{item.label}</button>)}</nav>
     <NotificationsPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+    <AppSetupPanel />
   </div>;
 }

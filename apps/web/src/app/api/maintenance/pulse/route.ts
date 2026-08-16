@@ -9,7 +9,8 @@ export async function POST(request: NextRequest) {
   const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   try {
     const { runSparkMaintenance, verifySparkIdToken } = await import("@mba/functions/spark-adapter");
-    await verifySparkIdToken(idToken);
+    const schedulerAuthorized = Boolean(process.env.CRON_SECRET && idToken === process.env.CRON_SECRET);
+    if (!schedulerAuthorized) await verifySparkIdToken(idToken);
     return NextResponse.json(await runSparkMaintenance("pulse"));
   } catch (error) {
     console.error("Spark maintenance pulse failed", error);

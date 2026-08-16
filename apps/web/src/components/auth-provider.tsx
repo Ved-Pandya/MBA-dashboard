@@ -97,6 +97,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOutUser = useCallback(async () => {
+    try {
+      const { disableCurrentPushSubscription } = await import("@/lib/push-client");
+      await disableCurrentPushSubscription();
+    } catch {
+      // Signing out still invalidates the local Push API endpoint even if server cleanup is unavailable.
+    }
     await signOut(getFirebase().auth);
   }, []);
 

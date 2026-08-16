@@ -12,6 +12,7 @@ export { setMyCompletion, reopenMyCompletion, setTaskExemption, markNotification
 export { scanDueReminderJobs, fanOutReminder, deliverInAppNotification, dailyOverdueDigest, reconcileTaskStats } from "./alerts.js";
 export { getPocSetup, searchRoleCandidates, assignPoc, revokePoc, migrateWingIds } from "./governance.js";
 export { createCrTask, updateCrTask } from "./cr-tasks.js";
+export { registerPushSubscription, removePushSubscription } from "./push.js";
 export { commitTimetableImport, createAcademicEvent, updateAcademicEvent, cancelAcademicEvent } from "./academics.js";
 export {
   createCompetition, publishCompetition, updateCompetition, cancelCompetition, setCompetitionResponse,
