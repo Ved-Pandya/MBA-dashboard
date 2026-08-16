@@ -111,13 +111,6 @@
       ]
     },
     {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "academicEvents",
       "queryScope": "COLLECTION",
       "fields": [
@@ -195,5 +188,15 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "notifications",
+      "fieldPath": "createdAt",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    }
+  ]
 }
