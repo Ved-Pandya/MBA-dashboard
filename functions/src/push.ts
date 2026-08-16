@@ -89,6 +89,8 @@ export const registerPushSubscription = onCall(callableOptions, async (request) 
         userAgent: input.userAgent,
         status: "active",
         failureCount: 0,
+        revokedReason: FieldValue.delete(),
+        revokedAt: FieldValue.delete(),
         ...(subscription.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
