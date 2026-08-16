@@ -18,7 +18,7 @@ DeadlineOS is a mobile-first MBA deadline compliance platform built with Next.js
 - Deterministic T-24h, T-2h, T+15m reminder records, daily overdue digests, and reconciliation.
 - Installable Android/iPhone PWA with an offline-safe shell, guided Home Screen setup, and URL-aware notification navigation.
 - Consent-based standards Web Push with multiple-device subscriptions, endpoint ownership protection, retries, and sanitized lock-screen copy.
-- A free Cloudflare Cron Trigger that wakes the Spark-compatible Vercel maintenance endpoint every five minutes.
+- Immediate, bounded background Web Push after notification-producing mutations, with a free Cloudflare Cron Trigger as the retry and recovery path.
 - Default-deny Firestore Security Rules, required indexes, audit events, and operation records.
 
 ## Runtime architecture
@@ -135,19 +135,19 @@ The server private key is mandatory on Vercel and must never be committed, logge
 2. On Android Chrome, press **Set up** on My Day and then **Install**. If the native button is unavailable, use Chrome's **Install app** menu item.
 3. On iPhone Safari, use **Share > Add to Home Screen**, enable **Open as Web App**, and launch DeadlineOS from the new Home Screen icon. Web Push requires iOS/iPadOS 16.4 or later and the installed Home Screen app.
 4. In the installed app, open **Notifications > App setup** and press **Enable**. DeadlineOS never asks for notification permission without this user action.
-5. From another role, create an event that generates an inbox notification. Keep the recipient app closed and allow up to approximately five minutes for the Cloudflare maintenance pass.
+5. From another role, create an event that generates an inbox notification. Keep the recipient app closed. Immediate delivery normally starts within seconds; allow the Cloudflare recovery path a few minutes if the immediate attempt fails.
 6. Confirm the notification uses generic lock-screen text and opens the correct authenticated DeadlineOS view. Confirm the full private detail exists only in the in-app inbox.
 7. Sign out on that device, create another notification, and confirm the signed-out device no longer receives private alerts.
 
 ## Alert behavior on free plans
 
-Cloudflare's five-minute Cron Trigger is the primary wake-up source. It calls the protected Vercel maintenance route, which processes due reminders, mirrors new inbox notifications into deterministic push jobs, and attempts due push deliveries. `apps/web/vercel.json` retains one protected daily catch-up at 02:30 UTC, corresponding to 08:00 Asia/Kolkata.
+Notification-producing mutations schedule a bounded post-response flush in the same Vercel invocation. The flush mirrors new inbox notifications into deterministic push jobs and processes up to 150 jobs with eight concurrent deliveries, covering the expected 114-student batch plus manager recipients. Cloudflare's one-minute Cron Trigger remains the recovery source for retries, outages, and work above that cap. It calls the protected Vercel maintenance route, which also processes due reminders. `apps/web/vercel.json` retains one protected daily catch-up at 02:30 UTC, corresponding to 08:00 Asia/Kolkata.
 
 Every authenticated browser also sends a lightweight maintenance pulse every five minutes while visible. A Firestore transaction allows only one processor run in each two-minute window, so Cloudflare, Vercel, and active-browser invocations can safely overlap. Notification, push-job, and device-delivery IDs remain deterministic.
 
 Consequences of the no-billing design:
 
-- Due reminders and queued pushes normally begin processing within roughly five minutes, even if nobody has the app open.
+- New item notifications normally begin processing immediately; due reminders and failed/overflow push jobs use the scheduled recovery path.
 - Browser push services, device connectivity, and free hosting remain best-effort; arrival and user attention cannot be guaranteed.
 - If Cloudflare is unavailable, active sessions and the daily Vercel catch-up retain the previous fallback path.
 - Daily cron timing can vary within the scheduled hour.
@@ -155,6 +155,8 @@ Consequences of the no-billing design:
 ## Spark quotas and operational guidance
 
 The free Firestore allowance is finite. Watch the Firebase Firestore Usage dashboard, especially document reads and writes. Keep manager queries paginated and avoid opening many duplicate dashboard tabs.
+
+For a roster of 114 students, the inbox and push pipeline for one full-batch publication with one active device per student can approach 800 Firestore writes; response or assignment materialization can take the complete operation above 900. The immediate path does not duplicate those records or create another Vercel invocation; it changes when the existing queued work runs. Treat ten full-batch publications in one day as a conservative operating budget, leaving headroom for student responses, task assignments, retries, and ordinary dashboard traffic. Multiple subscribed devices per student and repeated test seeding consume additional quota.
 
 Monitor:
 

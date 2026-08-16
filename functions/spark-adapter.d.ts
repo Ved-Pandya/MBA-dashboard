@@ -14,6 +14,18 @@ export declare function invokeSparkCallable(
 
 export declare function verifySparkIdToken(idToken: string): Promise<{ uid: string }>;
 
+export declare function shouldFlushPushAfterCallable(name: string): boolean;
+
+export declare function runImmediatePushDelivery(): Promise<{
+  mirroredPushJobs: number;
+  push: {
+    processed: number;
+    delivered: number;
+    failed: number;
+    configured: boolean;
+  };
+}>;
+
 export declare function runSparkMaintenance(
   mode?: "pulse" | "daily",
 ): Promise<SparkMaintenanceResult>;

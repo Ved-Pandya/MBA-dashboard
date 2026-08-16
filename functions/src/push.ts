@@ -6,6 +6,7 @@ import { z, ZodError } from "zod";
 import { isVapidPrivateKey, isVapidPublicKey, normalizeConfigValue, normalizeVapidKey } from "@mba/domain";
 import { db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor } from "./helpers.js";
+import { boundedPushOptions } from "./push-policy.js";
 
 const deviceIdSchema = z.string().uuid();
 const base64UrlKey = z.string().regex(/^[A-Za-z0-9_-]+$/, "Push keys must use base64url encoding");
@@ -134,7 +135,7 @@ export const removePushSubscription = onCall(callableOptions, async (request) =>
   } catch (error) { pushError(error); }
 });
 
-export async function mirrorNotificationPushJobs() {
+export async function mirrorNotificationPushJobs(limit = 250) {
   const mirrorRef = db.doc("systemHealth/pushMirror");
   const mirror = await mirrorRef.get();
   if (!mirror.exists) {
@@ -147,7 +148,7 @@ export async function mirrorNotificationPushJobs() {
     .where("createdAt", ">=", cursorAt)
     .orderBy("createdAt", "asc")
     .orderBy(FieldPath.documentId(), "asc")
-    .limit(250);
+    .limit(Math.min(250, Math.max(1, Math.trunc(limit))));
   if (cursorPath) notificationsQuery = notificationsQuery.startAfter(cursorAt, cursorPath);
   const notifications = await notificationsQuery.get();
   if (notifications.empty) return 0;
@@ -247,8 +248,17 @@ async function deliverPushJob(jobId: string, jobRef: FirebaseFirestore.DocumentR
         expirationTime: subscription.get("expirationTime") as number | null,
         keys: subscription.get("keys") as { p256dh: string; auth: string },
       }, JSON.stringify(job.payload), { TTL: 60 * 60 * 24, urgency: "high" });
-      await deliveryRef.set({ status: "sent", sentAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      await subscription.ref.set({ failureCount: 0, lastSuccessAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      const writes: Array<Promise<FirebaseFirestore.WriteResult>> = [
+        deliveryRef.set({ status: "sent", sentAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }),
+      ];
+      const lastSuccessAt = subscription.get("lastSuccessAt") as Timestamp | undefined;
+      const needsSubscriptionHealthWrite = Number(subscription.get("failureCount") ?? 0) > 0
+        || !lastSuccessAt
+        || lastSuccessAt.toMillis() <= Date.now() - 24 * 60 * 60_000;
+      if (needsSubscriptionHealthWrite) {
+        writes.push(subscription.ref.set({ failureCount: 0, lastSuccessAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+      }
+      await Promise.all(writes);
       delivered += 1;
     } catch (error) {
       const statusCode = Number((error as { statusCode?: number }).statusCode ?? 0);
@@ -273,17 +283,31 @@ async function deliverPushJob(jobId: string, jobRef: FirebaseFirestore.DocumentR
   return { delivered, failed: transientFailures };
 }
 
-export async function processPushJobs() {
+async function mapWithConcurrency<T, R>(items: T[], concurrency: number, worker: (item: T) => Promise<R>) {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  const runners = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      results[index] = await worker(items[index]!);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
+
+export async function processPushJobs(options: { limit?: number; concurrency?: number; source?: "scheduled" | "immediate" } = {}) {
   if (!configureWebPush()) {
     await db.doc("systemHealth/push").set({ configured: false, lastCheckedAt: FieldValue.serverTimestamp() }, { merge: true });
     return { processed: 0, delivered: 0, failed: 0, configured: false };
   }
+  const { limit, concurrency } = boundedPushOptions(options);
   const now = Timestamp.now();
   const abandoned = await db.collection("pushJobs")
     .where("status", "==", "processing")
     .where("leaseUntil", "<=", now)
     .orderBy("leaseUntil", "asc")
-    .limit(25)
+    .limit(limit)
     .get();
   if (!abandoned.empty) {
     const writer = db.bulkWriter();
@@ -294,18 +318,16 @@ export async function processPushJobs() {
     .where("status", "in", ["queued", "retry"])
     .where("nextAttemptAt", "<=", now)
     .orderBy("nextAttemptAt", "asc")
-    .limit(25)
+    .limit(limit)
     .get();
-  let processed = 0;
-  let delivered = 0;
-  let failed = 0;
-  for (const snapshot of jobs.docs) {
-    if (!(await claimPushJob(snapshot.ref))) continue;
+  const results = await mapWithConcurrency(jobs.docs, concurrency, async (snapshot) => {
+    if (!(await claimPushJob(snapshot.ref))) return { processed: 0, delivered: 0, failed: 0 };
     const result = await deliverPushJob(snapshot.id, snapshot.ref, snapshot.data() as PushJob);
-    processed += 1;
-    delivered += result.delivered;
-    failed += result.failed;
-  }
-  await db.doc("systemHealth/push").set({ configured: true, lastSuccessAt: FieldValue.serverTimestamp(), processed, delivered, failed, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    return { processed: 1, ...result };
+  });
+  const processed = results.reduce((sum, result) => sum + result.processed, 0);
+  const delivered = results.reduce((sum, result) => sum + result.delivered, 0);
+  const failed = results.reduce((sum, result) => sum + result.failed, 0);
+  await db.doc("systemHealth/push").set({ configured: true, lastSuccessAt: FieldValue.serverTimestamp(), lastSource: options.source ?? "scheduled", processed, delivered, failed, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   return { processed, delivered, failed, configured: true };
 }

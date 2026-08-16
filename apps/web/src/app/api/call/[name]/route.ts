@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,10 +20,20 @@ function errorStatus(code: string | undefined) {
 
 export async function POST(request: NextRequest, context: { params: Promise<{ name: string }> }) {
   try {
-    const { invokeSparkCallable } = await import("@mba/functions/spark-adapter");
+    const { invokeSparkCallable, runImmediatePushDelivery, shouldFlushPushAfterCallable } = await import("@mba/functions/spark-adapter");
     const { name } = await context.params;
     const body = await request.json() as { data?: unknown };
     const data = await invokeSparkCallable(name, body.data, bearerToken(request));
+    if (shouldFlushPushAfterCallable(name)) {
+      after(async () => {
+        try {
+          await runImmediatePushDelivery();
+        } catch (error) {
+          // The Cloudflare maintenance pulse remains the durable retry path.
+          console.error("Immediate push delivery failed; queued jobs remain available for scheduled retry", error);
+        }
+      });
+    }
     return NextResponse.json({ data });
   } catch (error) {
     const candidate = error as { code?: string; message?: string };

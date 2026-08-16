@@ -11,6 +11,7 @@ import { cancelTask, closeTask, createTask, previewTaskRecipients, publishTask, 
 import { assignPoc, getPocSetup, migrateWingIds, revokePoc, searchRoleCandidates } from "./governance.js";
 import { createCrTask, updateCrTask } from "./cr-tasks.js";
 import { mirrorNotificationPushJobs, processPushJobs, registerPushSubscription, removePushSubscription } from "./push.js";
+import { callableMayCreateNotifications, IMMEDIATE_PUSH_CONCURRENCY, IMMEDIATE_PUSH_JOB_LIMIT } from "./push-policy.js";
 import { cancelAcademicEvent, commitTimetableImport, createAcademicEvent, updateAcademicEvent } from "./academics.js";
 import { cancelSessionIntimation, closeSessionIntimation, correctSessionResponse, createSessionIntimation, getSessionReport, publishSessionIntimation, setSessionResponse, updateSessionIntimation } from "./sessions.js";
 import { cancelGeneralPoll, closeGeneralPoll, createGeneralPoll, getPollReport, publishGeneralPoll, setPollResponse, updateGeneralPoll } from "./polls.js";
@@ -119,6 +120,20 @@ export async function invokeSparkCallable(name: string, data: unknown, idToken: 
     acceptsStreaming: false,
     rawRequest: {} as never,
   });
+}
+
+export function shouldFlushPushAfterCallable(name: string) {
+  return callableMayCreateNotifications(name);
+}
+
+export async function runImmediatePushDelivery() {
+  const mirroredPushJobs = await mirrorNotificationPushJobs(IMMEDIATE_PUSH_JOB_LIMIT);
+  const push = await processPushJobs({
+    limit: IMMEDIATE_PUSH_JOB_LIMIT,
+    concurrency: IMMEDIATE_PUSH_CONCURRENCY,
+    source: "immediate",
+  });
+  return { mirroredPushJobs, push };
 }
 
 async function claimPulse() {
@@ -602,7 +617,7 @@ export async function runSparkMaintenance(mode: "pulse" | "daily" = "pulse") {
   try {
     const reminderResult = await processDueReminderJobs();
     const mirroredPushJobs = await mirrorNotificationPushJobs();
-    const push = await processPushJobs();
+    const push = await processPushJobs({ source: "scheduled" });
     if (mode === "pulse") return { ...reminderResult, mirroredPushJobs, push };
     const [digests, reconciledTasks, reconciledOpportunities] = await Promise.all([createDailyDigests(), reconcileStats(), reconcileOpportunityStats()]);
     return { ...reminderResult, mirroredPushJobs, push, digests, reconciledTasks, reconciledOpportunities };
