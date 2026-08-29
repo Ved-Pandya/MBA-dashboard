@@ -10,6 +10,7 @@ export { validateRosterImport, commitRosterImport, updateRoleAssignments } from 
 export { getPlacementRoster, setPlacementStatus } from "./placements.js";
 export { previewTaskRecipients, createTask, updateTask, publishTask, syncTaskRecipients, closeTask, cancelTask } from "./tasks.js";
 export { setMyCompletion, reopenMyCompletion, setTaskExemption, markNotificationsRead, getComplianceExport } from "./completion.js";
+export { getCurrentTaskCompliance } from "./compliance.js";
 export { scanDueReminderJobs, fanOutReminder, deliverInAppNotification, dailyOverdueDigest, reconcileTaskStats } from "./alerts.js";
 export { getPocSetup, searchRoleCandidates, assignPoc, revokePoc, migrateWingIds } from "./governance.js";
 export { createCrTask, updateCrTask } from "./cr-tasks.js";
@@ -18,9 +19,7 @@ export { commitTimetableImport, createAcademicEvent, updateAcademicEvent, cancel
 export { createSessionIntimation, updateSessionIntimation, publishSessionIntimation, setSessionResponse, closeSessionIntimation, cancelSessionIntimation, correctSessionResponse, getSessionReport } from "./sessions.js";
 export { createGeneralPoll, updateGeneralPoll, publishGeneralPoll, setPollResponse, closeGeneralPoll, cancelGeneralPoll, getPollReport } from "./polls.js";
 export {
-  createCompetition, publishCompetition, updateCompetition, cancelCompetition, setCompetitionResponse,
-  createTeam, updateTeam, reportTeamMembership, deleteDraftTeam, registerTeam,
-  createNextRound, markRoundSubmitted, correctRoundSubmission, finalizeRound,
+  createCompetition, publishCompetition, updateCompetition, cancelCompetition,
   createInternship, publishInternship, updateInternship, cancelInternship, setInternshipResponse,
   getWingOpportunityReport, getCompetitionExport, setCompetitionConfirmation, reopenCompetitionConfirmation,
   correctCompetitionConfirmation, getCompetitionConfirmationReport, migrateCompetitionConfirmations,

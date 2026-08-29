@@ -5,6 +5,7 @@ import { createTestAccounts } from "./test-accounts.js";
 import { clearTestData, seedTestData } from "./test-data.js";
 import { initializeAppConfig, saveSubjectOffering } from "./catalog.js";
 import { getComplianceExport, markNotificationsRead, reopenMyCompletion, setMyCompletion, setTaskExemption } from "./completion.js";
+import { getCurrentTaskCompliance } from "./compliance.js";
 import { adminAuth, db, FieldValue, Timestamp } from "./firebase.js";
 import { commitRosterImport, updateRoleAssignments, validateRosterImport } from "./roster.js";
 import { getPlacementRoster, setPlacementStatus } from "./placements.js";
@@ -17,10 +18,10 @@ import { cancelAcademicEvent, commitTimetableImport, createAcademicEvent, update
 import { cancelSessionIntimation, closeSessionIntimation, correctSessionResponse, createSessionIntimation, getSessionReport, publishSessionIntimation, setSessionResponse, updateSessionIntimation } from "./sessions.js";
 import { cancelGeneralPoll, closeGeneralPoll, createGeneralPoll, getPollReport, publishGeneralPoll, setPollResponse, updateGeneralPoll } from "./polls.js";
 import {
-  cancelCompetition, cancelInternship, correctRoundSubmission, createCompetition, createInternship, createNextRound, createTeam,
-  deleteDraftTeam, finalizeRound, getCompetitionExport, getWingOpportunityReport,
-  markRoundSubmitted, publishCompetition, publishInternship, registerTeam,
-  reportTeamMembership, setCompetitionResponse, setInternshipResponse, updateCompetition, updateInternship, updateTeam,
+  cancelCompetition, cancelInternship, createCompetition, createInternship,
+  getCompetitionExport, getWingOpportunityReport,
+  publishCompetition, publishInternship,
+  setInternshipResponse, updateCompetition, updateInternship,
   setCompetitionConfirmation, reopenCompetitionConfirmation, correctCompetitionConfirmation, getCompetitionConfirmationReport, migrateCompetitionConfirmations,
 } from "./opportunities.js";
 
@@ -48,6 +49,7 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   setTaskExemption,
   markNotificationsRead,
   getComplianceExport,
+  getCurrentTaskCompliance,
   getPocSetup,
   searchRoleCandidates,
   assignPoc,
@@ -80,16 +82,6 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   publishCompetition,
   updateCompetition,
   cancelCompetition,
-  setCompetitionResponse,
-  createTeam,
-  updateTeam,
-  reportTeamMembership,
-  deleteDraftTeam,
-  registerTeam,
-  createNextRound,
-  markRoundSubmitted,
-  correctRoundSubmission,
-  finalizeRound,
   createInternship,
   publishInternship,
   updateInternship,

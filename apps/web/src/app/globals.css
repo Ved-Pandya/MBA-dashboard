@@ -89,6 +89,8 @@ a { color: inherit; }
 .stat-card { min-height: 132px; padding: 20px; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 17px; background: var(--card); box-shadow: 0 8px 25px rgba(31,48,40,.035); }.stat-card span { color: var(--muted); font-size: 12px; font-weight: 700; }.stat-card strong { margin: auto 0 3px; font-family: "Manrope"; font-size: 40px; letter-spacing: -2px; }.stat-card small { color: var(--muted); }.stat-card.danger strong { color: var(--red); }.stat-card.warning strong { color: var(--amber); }.stat-card.success strong { color: var(--green-2); }
 .panel { border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: 0 10px 34px rgba(31,48,40,.045); }.task-panel, .compliance-panel, .roster-panel { padding: 25px; }
 .wing-compliance-panel { margin-top: 20px; padding: 25px; }
+.current-task-panel { margin-bottom: 24px; }
+.danger-text { color: var(--red) !important; }
 .compliance-context { margin: 0 0 18px; display: flex; justify-content: space-between; gap: 14px; border-radius: 11px; padding: 13px 15px; background: #eef3e7; color: var(--green); font-size: 12px; }
 .compliance-context span { color: var(--muted); }
 .selected-wing-row { background: #f1f6e9; }

@@ -15,6 +15,7 @@ import { getFirebase } from "@/lib/firebase";
 import { useAuth } from "./auth-provider";
 import { callFunction, readableError } from "@/lib/callable";
 import { formatDeadline, urgency } from "@/lib/date";
+import { CurrentComplianceView } from "./current-compliance-view";
 
 type StatusFilter = "all" | "pending" | "completed" | "exempt";
 type WingFilter = "all" | (typeof WING_IDS)[number];
@@ -32,7 +33,7 @@ function complianceRate(records: AssignmentRecord[]) {
   return accountable ? Math.round((completed / accountable) * 100) : null;
 }
 
-export function ComplianceView() {
+function ScopedComplianceView() {
   const { profile } = useAuth();
   const scopes = useMemo(() => [
     ...Object.keys(profile?.scopes.subjectPocOfferings ?? {}).map((id) => `subject:${id}`),
@@ -350,4 +351,10 @@ export function ComplianceView() {
       )}
     </div>
   );
+}
+
+export function ComplianceView() {
+  const { profile } = useAuth();
+  if (profile?.roles.cr || profile?.roles.systemAdmin) return <CurrentComplianceView />;
+  return <ScopedComplianceView />;
 }
