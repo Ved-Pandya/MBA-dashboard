@@ -23,7 +23,8 @@ export function StudentView() {
   const [sessionResponses, setSessionResponses] = useState<SessionResponseRecord[]>([]);
   const [polls, setPolls] = useState<GeneralPollRecord[]>([]);
   const [pollResponses, setPollResponses] = useState<PollResponseRecord[]>([]);
-  const [competitionResponses, setCompetitionResponses] = useState<Array<{ status: string; externalRegistration?: { status: string }; internalForm?: { status: string } }>>([]);
+  const [competitionResponses, setCompetitionResponses] = useState<Array<{ opportunityId: string; status: string; externalRegistration?: { status: string }; internalForm?: { status: string } }>>([]);
+  const [activeCompetitionIds, setActiveCompetitionIds] = useState<string[]>([]);
   const [academicEvents, setAcademicEvents] = useState<AcademicEventRecord[]>([]);
   const [filter, setFilter] = useState<"active" | "completed" | "all">("active");
   const [busy, setBusy] = useState<string | null>(null);
@@ -45,7 +46,8 @@ export function StudentView() {
       onSnapshot(query(collection(db, "sessionResponses"), where("uid", "==", user.uid)), (snap) => setSessionResponses(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as SessionResponseRecord))),
       onSnapshot(query(collection(db, "generalPolls"), where("status", "==", "published")), (snap) => setPolls(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as GeneralPollRecord))),
       onSnapshot(query(collection(db, "pollResponses"), where("uid", "==", user.uid)), (snap) => setPollResponses(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as PollResponseRecord))),
-      onSnapshot(query(collection(db, "opportunityResponses"), where("uid", "==", user.uid)), (snap) => setCompetitionResponses(snap.docs.map((doc) => doc.data() as { status: string; externalRegistration?: { status: string }; internalForm?: { status: string } }))),
+      onSnapshot(query(collection(db, "competitions"), where("status", "==", "published")), (snap) => setActiveCompetitionIds(snap.docs.map((doc) => doc.id))),
+      onSnapshot(query(collection(db, "opportunityResponses"), where("uid", "==", user.uid)), (snap) => setCompetitionResponses(snap.docs.map((doc) => doc.data() as { opportunityId: string; status: string; externalRegistration?: { status: string }; internalForm?: { status: string } }))),
       onSnapshot(query(collection(db, "academicEvents"), where("sectionId", "==", profile.sectionId)), (snap) => setAcademicEvents(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as AcademicEventRecord))),
     ]; return () => unsubs.forEach((unsubscribe) => unsubscribe());
   }, [user, profile]);
@@ -71,9 +73,9 @@ export function StudentView() {
 
   const actionSummary = useMemo(() => {
     const now = Date.now(); const sessionIds = new Set(sessions.filter((item) => item.responseDeadline.toMillis() > now).map((item) => item.id)); const pollIds = new Set(polls.filter((item) => item.closesAt.toMillis() > now).map((item) => item.id));
-    const unansweredSessions = sessionResponses.filter((item) => sessionIds.has(item.sessionId) && item.status === "no_response").length; const unansweredPolls = pollResponses.filter((item) => pollIds.has(item.pollId) && item.status === "no_response").length; const missingCompetitionConfirmations = competitionResponses.filter((item) => item.status === "team_draft" && (item.externalRegistration?.status !== "confirmed" || item.internalForm?.status !== "confirmed")).length;
+    const activeCompetitions = new Set(activeCompetitionIds); const unansweredSessions = sessionResponses.filter((item) => sessionIds.has(item.sessionId) && item.status === "no_response").length; const unansweredPolls = pollResponses.filter((item) => pollIds.has(item.pollId) && item.status === "no_response").length; const missingCompetitionConfirmations = competitionResponses.filter((item) => activeCompetitions.has(item.opportunityId) && (item.externalRegistration?.status !== "confirmed" || item.internalForm?.status !== "confirmed")).length;
     const nextExam = academicEvents.filter((item) => item.status === "published" && ["midterm", "endterm"].includes(item.eventType) && item.occursAt.toMillis() >= now).sort((a, b) => a.occursAt.toMillis() - b.occursAt.toMillis())[0]; return { unansweredSessions, unansweredPolls, missingCompetitionConfirmations, nextExam };
-  }, [sessions, sessionResponses, polls, pollResponses, competitionResponses, academicEvents]);
+  }, [sessions, sessionResponses, polls, pollResponses, competitionResponses, activeCompetitionIds, academicEvents]);
 
   const sessionResponseById = useMemo(
     () => new Map(sessionResponses.map((response) => [response.sessionId, response])),

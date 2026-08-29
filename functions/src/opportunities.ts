@@ -375,14 +375,22 @@ async function setConfirmation(input: { competitionId: string; kind: "externalRe
   await db.runTransaction(async (tx) => {
     const [competition, response] = await Promise.all([tx.get(competitionRef), tx.get(responseRef)]);
     if (!competition.exists || (!correctionReason && competition.get("status") !== "published") || (correctionReason && !["published", "in_progress"].includes(String(competition.get("status"))))) throw new HttpsError("failed-precondition", "Competition is not accepting confirmations");
-    if (!response.exists || response.get("participationStatus") === "not_participating" || response.get("status") === "not_participating") throw new HttpsError("failed-precondition", "Join a draft team before confirming registration forms");
-    if (!correctionReason && response.get("confirmationsLocked") === true) throw new HttpsError("failed-precondition", "Registered-team confirmations are locked");
+    if (!correctionReason && (competition.get("registrationDeadline") as Timestamp).toMillis() <= Date.now()) throw new HttpsError("deadline-exceeded", "The confirmation deadline has passed");
+    if (!response.exists) throw new HttpsError("failed-precondition", "This competition was not assigned to the student");
     const field = `${input.kind}.status`;
     if (response.get(field) === status) return;
+    const externalStatus = input.kind === "externalRegistration" ? status : String(response.get("externalRegistration.status") ?? "pending");
+    const internalStatus = input.kind === "internalForm" ? status : String(response.get("internalForm.status") ?? "pending");
+    const bothConfirmed = externalStatus === "confirmed" && internalStatus === "confirmed";
+    const anyConfirmed = externalStatus === "confirmed" || internalStatus === "confirmed";
     tx.update(responseRef, {
       [field]: status,
       [`${input.kind}.confirmedAt`]: status === "confirmed" ? FieldValue.serverTimestamp() : FieldValue.delete(),
       [`${input.kind}.confirmedBy`]: status === "confirmed" ? actorUid : FieldValue.delete(),
+      status: bothConfirmed ? "registered" : "no_response",
+      participationStatus: bothConfirmed ? "registered" : "no_response",
+      confirmationStatus: bothConfirmed ? "completed" : anyConfirmed ? "partial" : "not_started",
+      confirmationsLocked: false,
       ...(correctionReason ? { lastConfirmationCorrectionBy: actorUid, lastConfirmationCorrectionReason: correctionReason } : {}),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -392,8 +400,6 @@ async function setConfirmation(input: { competitionId: string; kind: "externalRe
 export const setCompetitionConfirmation = onCall(callableOptions, async (request) => {
   try {
     const actor = await requireActor(request); const input = competitionConfirmationSchema.parse(request.data);
-    const membership = await db.doc(`competitionMemberships/${input.competitionId}_${actor.uid}`).get();
-    if (!membership.exists || membership.get("active") === false) throw new HttpsError("failed-precondition", "Join a team before confirming registration forms");
     await setConfirmation(input, actor.uid, "confirmed", actor.uid);
     await writeAudit({ actorUid: actor.uid, action: "competition.confirmation_set", resourceType: "competitionResponse", resourceId: `${input.competitionId}_${actor.uid}`, after: { kind: input.kind, status: "confirmed" } });
     return { kind: input.kind, status: "confirmed" };
@@ -660,7 +666,11 @@ export const setInternshipResponse = onCall(callableOptions, async (request) => 
   } catch (error) { asHttpsError(error); }
 });
 
-const wingReportSchema = z.object({ wingId: z.string().min(1).optional() });
+const wingReportSchema = z.object({
+  wingId: z.string().min(1).optional(),
+  opportunityKind: z.enum(["all", "competition", "internship"]).optional().default("all"),
+  opportunityId: z.string().min(1).max(200).optional(),
+});
 
 export const getWingOpportunityReport = onCall(callableOptions, async (request) => {
   try {
@@ -669,21 +679,23 @@ export const getWingOpportunityReport = onCall(callableOptions, async (request) 
     const wingId = input.wingId ?? actor.wingId;
     if (!actor.roles.systemAdmin && !actor.roles.cr && actor.scopes.wingPocWings[wingId] !== true) throw new HttpsError("permission-denied", "Wing report is outside your scope");
     const canSeePrivatePlacementStatus = actor.roles.systemAdmin || actor.roles.cr;
-    const [competitionResponses, internshipResponses, teams] = await Promise.all([
+    const [competitionResponses, internshipResponses, competitions, internships] = await Promise.all([
       db.collection("opportunityResponses").where("wingId", "==", wingId).limit(2_000).get(),
       db.collection("internshipResponses").where("wingId", "==", wingId).limit(2_000).get(),
-      db.collection("competitionTeams").where("status", "in", ["draft", "registered"]).limit(2_000).get(),
+      db.collection("competitions").limit(500).get(),
+      db.collection("internships").limit(500).get(),
     ]);
-    const wingTeamRows = teams.docs.flatMap((team) => {
-      const ownMembers = ((team.get("members") as Array<Record<string, unknown>>) ?? []).filter((member) => member.wingId === wingId);
-      if (!ownMembers.length) return [];
-      return [{ id: team.id, competitionId: team.get("competitionId"), name: team.get("name"), status: team.get("status"), ownWingMembers: ownMembers.map((member) => ({ uid: member.uid, displayName: member.displayName, rollNumber: member.rollNumber })), otherWingMemberCount: Number((team.get("members") as unknown[])?.length ?? 0) - ownMembers.length }];
-    });
+    const filterId = input.opportunityId;
+    const includeCompetitions = input.opportunityKind !== "internship";
+    const includeInternships = input.opportunityKind !== "competition";
     return {
       wingId,
-      competitionResponses: competitionResponses.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-      internshipResponses: internshipResponses.docs.filter((doc) => canSeePrivatePlacementStatus || doc.get("status") !== "not_applicable_placed").map((doc) => ({ id: doc.id, ...doc.data() })),
-      teams: wingTeamRows,
+      opportunityKind: input.opportunityKind,
+      opportunityId: filterId ?? null,
+      competitions: competitions.docs.map((doc) => ({ id: doc.id, title: doc.get("title"), status: doc.get("status") })),
+      internships: internships.docs.map((doc) => ({ id: doc.id, title: doc.get("title"), company: doc.get("company"), role: doc.get("role"), status: doc.get("status") })),
+      competitionResponses: includeCompetitions ? competitionResponses.docs.filter((doc) => !filterId || doc.get("opportunityId") === filterId).map((doc) => ({ id: doc.id, ...doc.data() })) : [],
+      internshipResponses: includeInternships ? internshipResponses.docs.filter((doc) => (!filterId || doc.get("internshipId") === filterId) && (canSeePrivatePlacementStatus || doc.get("status") !== "not_applicable_placed")).map((doc) => ({ id: doc.id, ...doc.data() })) : [],
     };
   } catch (error) { asHttpsError(error); }
 });
