@@ -99,7 +99,7 @@ export const createTestAccounts = onCall(callableOptions, async (request) => {
       const previousUser = previousUid && previousUid !== poc.uid ? await tx.get(db.doc(`users/${previousUid}`)) : null;
       if (previousUser?.exists) tx.update(previousUser.ref, { "scopes.subjectPocOfferings.TEST-A": FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
       tx.update(db.doc(`users/${poc.uid}`), { "scopes.subjectPocOfferings.TEST-A": true, updatedAt: FieldValue.serverTimestamp() });
-      tx.set(assignmentRef, { kind: "subject", scopeId: "TEST-A", uid: poc.uid, active: true, isTestData: true, assignedBy: actor.uid, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      tx.set(assignmentRef, { kind: "subject", scopeId: "TEST-A", uid: poc.uid, seat: 1, active: true, isTestData: true, assignedBy: actor.uid, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     });
     await db.doc("appConfig/current").set({ rosterVersion: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     await writeAudit({ actorUid: actor.uid, action: "test_accounts.created_or_reset", resourceType: "testAccounts", resourceId: "default", after: { rollNumbers: accounts.map((account) => account.rollNumber) } });

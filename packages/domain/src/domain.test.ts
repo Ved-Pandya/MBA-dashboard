@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { academicEventSchema, buildCatchUpReminderSchedule, buildReminderSchedule, canManageTask, competitionDraftSchema, crTaskCreateSchema, crTaskUpdateSchema, isVapidPrivateKey, isVapidPublicKey, normalizeConfigValue, normalizeVapidKey, rollNumberToAuthEmail, rosterRowSchema, sessionIntimationSchema, taskDraftSchema, teamDraftSchema, type UserProfile } from "./index.js";
+import { academicEventSchema, buildCatchUpReminderSchedule, buildReminderSchedule, canManageTask, competitionDraftSchema, crTaskCreateSchema, crTaskUpdateSchema, isVapidPrivateKey, isVapidPublicKey, normalizeConfigValue, normalizeVapidKey, placementStatusUpdateSchema, pocAssignmentDocumentId, rollNumberToAuthEmail, rosterRowSchema, sessionIntimationSchema, taskDraftSchema, teamDraftSchema, type UserProfile } from "./index.js";
 
 const actor: UserProfile = {
   authEmail: "24m2001@users.deadlineos.app",
@@ -92,5 +92,16 @@ describe("domain invariants", () => {
     expect(isVapidPublicKey(publicKey)).toBe(true);
     expect(isVapidPrivateKey(privateKey)).toBe(true);
     expect(isVapidPublicKey(`${publicKey}=`)).toBe(false);
+  });
+
+  it("keeps two deterministic Subject POC seats while preserving the legacy first-seat ID", () => {
+    expect(pocAssignmentDocumentId("subject", "SOM606-A", 1)).toBe("subject_SOM606-A");
+    expect(pocAssignmentDocumentId("subject", "SOM606-A", 2)).toBe("subject_SOM606-A_2");
+    expect(pocAssignmentDocumentId("wing", "A", 1)).toBe("wing_A");
+  });
+
+  it("validates audited placement status changes and placement-form eligibility", () => {
+    expect(placementStatusUpdateSchema.safeParse({ uid: "student-1", status: "placed", reason: "Accepted final placement" }).success).toBe(true);
+    expect(placementStatusUpdateSchema.safeParse({ uid: "student-1", status: "unknown", reason: "Invalid" }).success).toBe(false);
   });
 });

@@ -12,6 +12,7 @@ export const CR_TASK_STATUSES = ["assigned", "in_progress", "completed"] as cons
 export const POC_KINDS = ["wing", "subject", "grooming", "case_competition", "attendance"] as const;
 export const SESSION_RESPONSE_STATUSES = ["no_response", "attending", "not_attending"] as const;
 export const COMPETITION_CONFIRMATION_KINDS = ["externalRegistration", "internalForm"] as const;
+export const PLACEMENT_STATUSES = ["seeking", "placed"] as const;
 
 export type TaskType = (typeof TASK_TYPES)[number];
 export type TaskStatus = "draft" | "publishing" | "published" | "closed" | "cancelled";
@@ -25,6 +26,7 @@ export type CrTaskStatus = (typeof CR_TASK_STATUSES)[number];
 export type PocKind = (typeof POC_KINDS)[number];
 export type SessionResponseStatus = (typeof SESSION_RESPONSE_STATUSES)[number];
 export type CompetitionConfirmationKind = (typeof COMPETITION_CONFIRMATION_KINDS)[number];
+export type PlacementStatus = (typeof PLACEMENT_STATUSES)[number];
 export type CompetitionStatus = "draft" | "published" | "registration_closed" | "in_progress" | "completed" | "cancelled";
 export type CompetitionTeamStatus = "draft" | "registered" | "withdrawn" | "disqualified";
 export type CompetitionRoundStatus = "draft" | "open" | "finalized" | "cancelled";

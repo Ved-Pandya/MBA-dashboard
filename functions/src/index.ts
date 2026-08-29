@@ -7,6 +7,7 @@ export { createTestAccounts } from "./test-accounts.js";
 export { seedTestData, clearTestData } from "./test-data.js";
 export { initializeAppConfig, saveSubjectOffering } from "./catalog.js";
 export { validateRosterImport, commitRosterImport, updateRoleAssignments } from "./roster.js";
+export { getPlacementRoster, setPlacementStatus } from "./placements.js";
 export { previewTaskRecipients, createTask, updateTask, publishTask, syncTaskRecipients, closeTask, cancelTask } from "./tasks.js";
 export { setMyCompletion, reopenMyCompletion, setTaskExemption, markNotificationsRead, getComplianceExport } from "./completion.js";
 export { scanDueReminderJobs, fanOutReminder, deliverInAppNotification, dailyOverdueDigest, reconcileTaskStats } from "./alerts.js";

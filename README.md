@@ -10,11 +10,12 @@ DeadlineOS is a mobile-first MBA deadline compliance platform built with Next.js
 - Scoped task preview, draft creation, publication, close/cancel, audience sync, and exemptions.
 - Named compliance reporting and CSV export for authorized POCs and CRs.
 - Admin batch initialization, subject offering management, and validate/commit roster import.
-- Dedicated, atomic POC Setup for exactly one Wing POC per Wing A–J and one Subject POC per offering.
+- Dedicated, atomic POC Setup for exactly one Wing POC per Wing A–J and two Subject POC seats per section-specific offering.
 - Browser-local timetable PDF extraction with an editable confirmation table and manual fallback.
 - Informational academic calendar for assignments, quizzes, midterms, and next-class pre-reads.
 - Batch-wide competitions, explicit student responses, draft team reservations, locked registration, rounds, advancement, team submissions, and membership disputes.
 - Internship registration/no-participation tracking and sanitized Wing POC reports.
+- Audited, server-private placed/seeking status visible only to CRs/Admins; it exempts placed students from placement registration forms and reminders without affecting academics, sessions, polls, or case competitions.
 - Deterministic T-24h, T-2h, T+15m reminder records, daily overdue digests, and reconciliation.
 - Installable Android/iPhone PWA with an offline-safe shell, guided Home Screen setup, and URL-aware notification navigation.
 - Consent-based standards Web Push with multiple-device subscriptions, endpoint ownership protection, retries, and dynamic lock-screen copy sanitized to remove roll numbers and control characters.

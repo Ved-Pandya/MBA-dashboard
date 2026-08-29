@@ -87,7 +87,7 @@ export const seedTestData = onCall({ ...callableOptions, timeoutSeconds: 120 }, 
       writer.set(db.doc(`subjectOfferings/${offering.id}`), { subjectCode: offering.subjectCode, subjectName: offering.subjectName, sectionId: "A", termId: "DEMO-TERM", active: true, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       const slotId = `demo_slot_${offering.id}`;
       writer.set(db.doc(`timetableSlots/${slotId}`), { offeringId: offering.id, termId: "DEMO-TERM", sectionId: "A", weekday: ((new Date().getDay() + index + 1) % 7) || 7, startTime: `${String(9 + index).padStart(2, "0")}:00`, endTime: `${String(10 + index).padStart(2, "0")}:00`, room: `Demo Room ${index + 1}`, active: true, source: "demo_seed", isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      writer.set(db.doc(`pocAssignments/subject_${offering.id}`), { kind: "subject", scopeId: offering.id, uid: poc.uid, active: true, assignedBy: actor.uid, assignedAt: FieldValue.serverTimestamp(), isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      writer.set(db.doc(`pocAssignments/subject_${offering.id}`), { kind: "subject", scopeId: offering.id, uid: poc.uid, seat: 1, active: true, assignedBy: actor.uid, assignedAt: FieldValue.serverTimestamp(), isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     });
     const demoPocScopes: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
     DEMO_OFFERINGS.forEach((offering) => { demoPocScopes[`scopes.subjectPocOfferings.${offering.id}`] = true; });

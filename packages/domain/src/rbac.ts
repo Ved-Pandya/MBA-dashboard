@@ -1,4 +1,8 @@
-import type { AuthorizationDecision, TaskAction, TaskTarget, TaskType, UserProfile } from "./types.js";
+import type { AuthorizationDecision, PocKind, TaskAction, TaskTarget, TaskType, UserProfile } from "./types.js";
+
+export function pocAssignmentDocumentId(kind: PocKind, scopeId: string, seat: 1 | 2 = 1) {
+  return kind === "subject" && seat === 2 ? `subject_${scopeId}_2` : `${kind}_${scopeId}`;
+}
 
 export function isSubjectTask(type: TaskType): boolean {
   return type === "subject_assignment" || type === "pre_read";
@@ -67,4 +71,8 @@ export function canManageSessions(actor: UserProfile): boolean {
     isWingPoc(actor) ||
     isAttendancePoc(actor)
   );
+}
+
+export function canManagePlacementStatus(actor: UserProfile): boolean {
+  return actor.status === "active" && (actor.roles.systemAdmin || actor.roles.cr);
 }

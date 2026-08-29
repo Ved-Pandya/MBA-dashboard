@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ACADEMIC_EVENT_TYPES, COMPETITION_CONFIRMATION_KINDS, CR_TASK_STATUSES, OPPORTUNITY_RESPONSE_STATUSES, SESSION_RESPONSE_STATUSES, TASK_TYPES, WING_IDS } from "./types.js";
+import { ACADEMIC_EVENT_TYPES, COMPETITION_CONFIRMATION_KINDS, CR_TASK_STATUSES, OPPORTUNITY_RESPONSE_STATUSES, PLACEMENT_STATUSES, SESSION_RESPONSE_STATUSES, TASK_TYPES, WING_IDS } from "./types.js";
 import { CURRENT_BATCH_ROLL_NUMBER_PATTERN, ROLL_NUMBER_PATTERN } from "./credentials.js";
 
 export const wingIdSchema = z.enum(WING_IDS);
@@ -158,6 +158,12 @@ export const internshipResponseSchema = z.object({
   internshipId: z.string().min(1),
   status: z.enum(["registered", "not_participating"]),
   confirmationReference: z.string().trim().max(300).optional().default(""),
+});
+
+export const placementStatusUpdateSchema = z.object({
+  uid: z.string().min(1).max(200),
+  status: z.enum(PLACEMENT_STATUSES),
+  reason: z.string().trim().min(3).max(500),
 });
 
 export const sessionIntimationFieldsSchema = z.object({

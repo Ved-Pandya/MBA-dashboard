@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
-import { POC_KINDS, WING_IDS, type PocKind, type UserProfile } from "@mba/domain";
+import { POC_KINDS, WING_IDS, pocAssignmentDocumentId, type PocKind, type UserProfile } from "@mba/domain";
 import { db, FieldValue } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, requireString, writeAudit } from "./helpers.js";
 
@@ -12,9 +12,11 @@ const assignmentSchema = z.object({
   kind: z.enum(POC_KINDS),
   scopeId: z.string().trim().min(1).max(80),
   uid: z.string().min(1),
+  seat: z.union([z.literal(1), z.literal(2)]).optional().default(1),
 }).superRefine((value, ctx) => {
   const batchKind = value.kind === "grooming" || value.kind === "case_competition" || value.kind === "attendance";
   if (batchKind && value.scopeId !== "batch") ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["scopeId"], message: "Batch POC roles must use the batch scope" });
+  if (value.kind !== "subject" && value.seat !== 1) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["seat"], message: "Only Subject POCs use numbered seats" });
 });
 
 function batchRoleKey(kind: Exclude<PocKind, "wing" | "subject">) {
@@ -47,7 +49,7 @@ export const getPocSetup = onCall(callableOptions, async (request) => {
     ]);
     return {
       users: users.docs.map((doc) => ({ uid: doc.id, displayName: doc.get("displayName"), rollNumber: doc.get("rollNumber"), sectionId: doc.get("sectionId"), wingId: doc.get("wingId") })),
-      assignments: assignments.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+      assignments: assignments.docs.map((doc) => ({ id: doc.id, ...doc.data(), seat: doc.get("kind") === "subject" ? Number(doc.get("seat") ?? 1) : 1 })),
       offerings: offerings.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
       wings: wings.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
     };
@@ -73,28 +75,36 @@ export const assignPoc = onCall(callableOptions, async (request) => {
     requireGovernance(actor);
     const input = assignmentSchema.parse(request.data);
     await validateScope(input.kind, input.scopeId);
-    const assignmentRef = db.doc(`pocAssignments/${input.kind}_${input.scopeId}`);
+    const assignmentRef = db.doc(`pocAssignments/${pocAssignmentDocumentId(input.kind, input.scopeId, input.seat)}`);
+    const counterpartRef = input.kind === "subject" ? db.doc(`pocAssignments/${pocAssignmentDocumentId(input.kind, input.scopeId, input.seat === 1 ? 2 : 1)}`) : null;
     const newUserRef = db.doc(`users/${input.uid}`);
     let replacedUid: string | null = null;
     await db.runTransaction(async (tx) => {
-      const [assignment, newUser] = await Promise.all([tx.get(assignmentRef), tx.get(newUserRef)]);
+      const [assignment, newUser, counterpart] = await Promise.all([
+        tx.get(assignmentRef),
+        tx.get(newUserRef),
+        counterpartRef ? tx.get(counterpartRef) : Promise.resolve(null),
+      ]);
       if (!newUser.exists || !["active", "invited"].includes(String(newUser.get("status")))) throw new HttpsError("not-found", "POC candidate is not active");
+      if (counterpart?.exists && counterpart.get("active") === true && counterpart.get("uid") === input.uid) throw new HttpsError("already-exists", "This student already occupies the other Subject POC seat");
       replacedUid = assignment.exists ? String(assignment.get("uid")) : null;
       if (replacedUid && replacedUid !== input.uid) {
-        tx.update(db.doc(`users/${replacedUid}`), { [scopePath(input.kind, input.scopeId)]: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
+        const stillAssignedInCounterpart = counterpart?.exists && counterpart.get("active") === true && counterpart.get("uid") === replacedUid;
+        if (!stillAssignedInCounterpart) tx.update(db.doc(`users/${replacedUid}`), { [scopePath(input.kind, input.scopeId)]: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
       }
       tx.update(newUserRef, { [scopePath(input.kind, input.scopeId)]: true, updatedAt: FieldValue.serverTimestamp() });
       tx.set(assignmentRef, {
-        kind: input.kind, scopeId: input.scopeId, uid: input.uid, active: true,
+        kind: input.kind, scopeId: input.scopeId, uid: input.uid, seat: input.kind === "subject" ? input.seat : 1, active: true,
         assignedBy: actor.uid, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       });
     });
+    const seatSuffix = input.kind === "subject" ? `_seat${input.seat}` : "";
     const writer = db.bulkWriter();
-    writer.set(db.doc(`users/${input.uid}/notifications/poc_assigned_${input.kind}_${input.scopeId}`), {
-      type: "poc_assigned", title: "POC responsibility assigned", body: `You now manage ${input.kind.replaceAll("_", " ")} ${input.scopeId === "batch" ? "for the batch" : input.scopeId}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
+    writer.set(db.doc(`users/${input.uid}/notifications/poc_assigned_${input.kind}_${input.scopeId}${seatSuffix}`), {
+      type: "poc_assigned", title: "POC responsibility assigned", body: `You now manage ${input.kind.replaceAll("_", " ")} ${input.scopeId === "batch" ? "for the batch" : input.scopeId}${input.kind === "subject" ? ` as POC ${input.seat}` : ""}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
     }, { merge: true });
-    if (replacedUid && replacedUid !== input.uid) writer.set(db.doc(`users/${replacedUid}/notifications/poc_replaced_${input.kind}_${input.scopeId}`), {
-      type: "poc_revoked", title: "POC responsibility updated", body: `You no longer manage ${input.kind.replaceAll("_", " ")} ${input.scopeId === "batch" ? "for the batch" : input.scopeId}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
+    if (replacedUid && replacedUid !== input.uid) writer.set(db.doc(`users/${replacedUid}/notifications/poc_replaced_${input.kind}_${input.scopeId}${seatSuffix}`), {
+      type: "poc_revoked", title: "POC responsibility updated", body: `You no longer occupy ${input.kind.replaceAll("_", " ")} ${input.scopeId === "batch" ? "for the batch" : input.scopeId}${input.kind === "subject" ? ` seat ${input.seat}` : ""}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
     }, { merge: true });
     await writer.close();
     await writeAudit({ actorUid: actor.uid, action: "poc.assigned", resourceType: "pocAssignment", resourceId: assignmentRef.id, before: { uid: replacedUid }, after: input });
@@ -106,19 +116,23 @@ export const revokePoc = onCall(callableOptions, async (request) => {
   try {
     const actor = await requireActor(request);
     requireGovernance(actor);
-    const input = z.object({ kind: z.enum(POC_KINDS), scopeId: z.string().trim().min(1).max(80) }).parse(request.data);
+    const input = z.object({ kind: z.enum(POC_KINDS), scopeId: z.string().trim().min(1).max(80), seat: z.union([z.literal(1), z.literal(2)]).optional().default(1) }).parse(request.data);
     if ((input.kind === "grooming" || input.kind === "case_competition" || input.kind === "attendance") && input.scopeId !== "batch") throw new HttpsError("invalid-argument", "Batch POC roles must use the batch scope");
-    const ref = db.doc(`pocAssignments/${input.kind}_${input.scopeId}`);
+    if (input.kind !== "subject" && input.seat !== 1) throw new HttpsError("invalid-argument", "Only Subject POCs use numbered seats");
+    const ref = db.doc(`pocAssignments/${pocAssignmentDocumentId(input.kind, input.scopeId, input.seat)}`);
+    const counterpartRef = input.kind === "subject" ? db.doc(`pocAssignments/${pocAssignmentDocumentId(input.kind, input.scopeId, input.seat === 1 ? 2 : 1)}`) : null;
     let revokedUid = "";
     await db.runTransaction(async (tx) => {
-      const assignment = await tx.get(ref);
+      const [assignment, counterpart] = await Promise.all([tx.get(ref), counterpartRef ? tx.get(counterpartRef) : Promise.resolve(null)]);
       if (!assignment.exists || assignment.get("active") !== true) return;
       revokedUid = String(assignment.get("uid"));
-      tx.update(db.doc(`users/${revokedUid}`), { [scopePath(input.kind, input.scopeId)]: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
+      const stillAssignedInCounterpart = counterpart?.exists && counterpart.get("active") === true && counterpart.get("uid") === revokedUid;
+      if (!stillAssignedInCounterpart) tx.update(db.doc(`users/${revokedUid}`), { [scopePath(input.kind, input.scopeId)]: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
       tx.update(ref, { active: false, revokedBy: actor.uid, revokedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     });
-    if (revokedUid) await db.doc(`users/${revokedUid}/notifications/poc_revoked_${input.kind}_${input.scopeId}`).set({
-      type: "poc_revoked", title: "POC responsibility removed", body: `You no longer manage ${input.kind.replaceAll("_", " ")} ${input.scopeId === "batch" ? "for the batch" : input.scopeId}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
+    const seatSuffix = input.kind === "subject" ? `_seat${input.seat}` : "";
+    if (revokedUid) await db.doc(`users/${revokedUid}/notifications/poc_revoked_${input.kind}_${input.scopeId}${seatSuffix}`).set({
+      type: "poc_revoked", title: "POC responsibility removed", body: `You no longer occupy ${input.kind.replaceAll("_", " ")} ${input.scopeId === "batch" ? "for the batch" : input.scopeId}${input.kind === "subject" ? ` seat ${input.seat}` : ""}.`, createdAt: FieldValue.serverTimestamp(), readAt: null,
     }, { merge: true });
     await writeAudit({ actorUid: actor.uid, action: "poc.revoked", resourceType: "pocAssignment", resourceId: ref.id, before: { uid: revokedUid }, after: input });
     return { ok: true };

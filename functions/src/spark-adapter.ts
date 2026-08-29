@@ -7,6 +7,7 @@ import { initializeAppConfig, saveSubjectOffering } from "./catalog.js";
 import { getComplianceExport, markNotificationsRead, reopenMyCompletion, setMyCompletion, setTaskExemption } from "./completion.js";
 import { adminAuth, db, FieldValue, Timestamp } from "./firebase.js";
 import { commitRosterImport, updateRoleAssignments, validateRosterImport } from "./roster.js";
+import { getPlacementRoster, setPlacementStatus } from "./placements.js";
 import { cancelTask, closeTask, createTask, previewTaskRecipients, publishTask, syncTaskRecipients, updateTask } from "./tasks.js";
 import { assignPoc, getPocSetup, migrateWingIds, revokePoc, searchRoleCandidates } from "./governance.js";
 import { createCrTask, updateCrTask } from "./cr-tasks.js";
@@ -33,6 +34,8 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   validateRosterImport,
   commitRosterImport,
   updateRoleAssignments,
+  getPlacementRoster,
+  setPlacementStatus,
   previewTaskRecipients,
   createTask,
   updateTask,
@@ -413,14 +416,15 @@ async function deliverOpportunityReminder(jobId: string, job: OpportunityJob) {
     const notificationRef = db.doc(`users/${uid}/notifications/${jobId}_${uid}`);
     const delivered = await db.runTransaction(async (tx) => {
       const checks = recipientChecks.get(uid) ?? [];
-      const [freshSource, user, previous, ...freshChecks] = await Promise.all([tx.get(sourceRef), tx.get(db.doc(`users/${uid}`)), tx.get(deliveryRef), ...checks.map((ref) => tx.get(ref))]);
+      const [freshSource, user, privatePlacement, previous, ...freshChecks] = await Promise.all([tx.get(sourceRef), tx.get(db.doc(`users/${uid}`)), tx.get(db.doc(`placementStatuses/${uid}`)), tx.get(deliveryRef), ...checks.map((ref) => tx.get(ref))]);
       if (previous.exists && ["sent", "skipped"].includes(String(previous.get("status")))) return false;
       const stillPending = job.kind === "competition_registration"
         ? freshChecks.some((check) => check.exists && ["no_response", "team_draft"].includes(String(check.get("status"))))
         : job.kind === "internship_registration"
           ? freshChecks.some((check) => check.exists && check.get("status") === "no_response")
           : freshChecks.some((check) => check.exists && check.get("submissionStatus") === "pending");
-      if (!stillPending || !freshSource.exists || freshSource.get("status") !== activeStatus || Number(freshSource.get("scheduleVersion") ?? 1) !== job.scheduleVersion || !user.exists || user.get("status") === "suspended") {
+      const placementIneligible = job.kind === "internship_registration" && (privatePlacement.get("status") === "placed" || user.get("placementStatus") === "placed");
+      if (!stillPending || placementIneligible || !freshSource.exists || freshSource.get("status") !== activeStatus || Number(freshSource.get("scheduleVersion") ?? 1) !== job.scheduleVersion || !user.exists || user.get("status") === "suspended") {
         tx.set(deliveryRef, { jobId, uid, status: "skipped", skipReason: "recipient_or_source_inactive", ...demoMetadata, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
         return false;
       }
@@ -600,9 +604,9 @@ async function reconcileOpportunityStats() {
   }
   for (const internship of internships.docs) {
     const responses = await db.collection("internshipResponses").where("internshipId", "==", internship.id).get();
-    const statuses = { no_response: 0, registered: 0, not_participating: 0, lateRegistered: 0 };
-    responses.docs.forEach((doc) => { const key = String(doc.get("status")); if (key === "no_response" || key === "registered" || key === "not_participating") statuses[key] += 1; if (doc.get("registeredLate") === true) statuses.lateRegistered += 1; });
-    writer.set(db.doc(`internshipStats/${internship.id}`), { ...statuses, responseCount: responses.size, reconciledAt: FieldValue.serverTimestamp() });
+    const statuses = { no_response: 0, registered: 0, not_participating: 0, notApplicablePlaced: 0, lateRegistered: 0 };
+    responses.docs.forEach((doc) => { const key = String(doc.get("status")); if (key === "no_response" || key === "registered" || key === "not_participating") statuses[key] += 1; if (key === "not_applicable_placed") statuses.notApplicablePlaced += 1; if (doc.get("registeredLate") === true) statuses.lateRegistered += 1; });
+    writer.set(db.doc(`internshipStats/${internship.id}`), { ...statuses, eligibleCount: responses.size - statuses.notApplicablePlaced, responseCount: responses.size, reconciledAt: FieldValue.serverTimestamp() });
   }
   for (const round of rounds.docs) {
     const entries = await db.collection("competitionRoundEntries").where("roundId", "==", round.id).get();

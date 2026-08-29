@@ -47,6 +47,9 @@ suite("Firestore RBAC rules", () => {
       await setDoc(doc(db, "generalPolls/poll1"), { question: "Question", status: "published" });
       await setDoc(doc(db, "pollResponses/poll1_student"), { pollId: "poll1", uid: "student", status: "no_response" });
       await setDoc(doc(db, "pollResponses/poll1_other"), { pollId: "poll1", uid: "other", status: "responded" });
+      await setDoc(doc(db, "placementStatuses/student"), { uid: "student", status: "placed" });
+      await setDoc(doc(db, "placementResponseHistory/internship_student"), { uid: "student", internshipId: "internship", responseData: { status: "registered" } });
+      await setDoc(doc(db, "internshipResponses/legacy_placed_student"), { internshipId: "legacy", uid: "student", wingId: "A", status: "not_applicable_placed" });
     });
   });
 
@@ -103,6 +106,17 @@ suite("Firestore RBAC rules", () => {
     await assertSucceeds(getDoc(doc(adminDb, "systemHealth/push")));
     await assertFails(getDoc(doc(studentDb, "systemHealth/push")));
     await assertFails(setDoc(doc(adminDb, "pushSubscriptions/admin_device"), { endpoint: "https://push.example/admin" }));
+  });
+
+  it("keeps placement status and archived responses server-only, including from the student", async () => {
+    for (const identity of ["student", "other", "wingPoc", "cr", "admin"]) {
+      const db = testEnv.authenticatedContext(identity).firestore();
+      await assertFails(getDoc(doc(db, "placementStatuses/student")));
+      await assertFails(getDoc(doc(db, "placementResponseHistory/internship_student")));
+    }
+    await assertFails(getDoc(doc(testEnv.authenticatedContext("student").firestore(), "internshipResponses/legacy_placed_student")));
+    await assertFails(getDoc(doc(testEnv.authenticatedContext("wingPoc").firestore(), "internshipResponses/legacy_placed_student")));
+    await assertSucceeds(getDoc(doc(testEnv.authenticatedContext("cr").firestore(), "internshipResponses/legacy_placed_student")));
   });
 
   it("keeps named session and poll responses private", async () => {

@@ -128,8 +128,21 @@ service cloud.firestore {
     }
 
     match /internshipResponses/{id} {
-      allow read: if active() && (admin() || cr() || resource.data.uid == request.auth.uid || wingPoc(resource.data.wingId));
+      allow read: if active() && (
+        admin() || cr() ||
+        (resource.data.status != "not_applicable_placed" && (resource.data.uid == request.auth.uid || wingPoc(resource.data.wingId)))
+      );
       allow write: if false;
+    }
+
+    // Placement eligibility and archived responses are intentionally server-only.
+    // CR/Admin access is provided through authenticated callables with auditing.
+    match /placementStatuses/{id} {
+      allow read, write: if false;
+    }
+
+    match /placementResponseHistory/{id} {
+      allow read, write: if false;
     }
 
     match /competitionTeams/{id} {

@@ -37,6 +37,13 @@ async function activeStudents() {
   return snap.docs.filter((doc) => doc.get("roles.student") === true);
 }
 
+async function privatePlacedUids(students: FirebaseFirestore.QueryDocumentSnapshot[]) {
+  const statuses = await db.collection("placementStatuses").where("status", "==", "placed").limit(2_000).get();
+  const placed = new Set(statuses.docs.map((status) => status.id));
+  students.filter((student) => student.get("placementStatus") === "placed").forEach((student) => placed.add(student.id));
+  return placed;
+}
+
 async function createOpportunityReminderJobs(input: {
   kind: "competition_registration" | "internship_registration" | "competition_round";
   opportunityId: string;
@@ -582,15 +589,19 @@ export const publishInternship = onCall({ ...callableOptions, timeoutSeconds: 12
     if (internship.get("status") === "published") return { internshipId, idempotent: true };
     if (internship.get("status") !== "draft") throw new HttpsError("failed-precondition", "Only draft internships can be published");
     const students = await activeStudents();
+    const placedUids = await privatePlacedUids(students);
     const writer = db.bulkWriter();
+    let eligibleCount = 0;
     students.forEach((student) => {
+      if (placedUids.has(student.id)) return;
+      eligibleCount += 1;
       writer.set(db.doc(`internshipResponses/${internshipId}_${student.id}`), { internshipId, uid: student.id, sectionId: student.get("sectionId"), wingId: student.get("wingId"), status: "no_response", studentSnapshot: { displayName: student.get("displayName"), rollNumber: student.get("rollNumber") }, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       writer.set(db.doc(`users/${student.id}/notifications/internship_published_${internshipId}`), { type: "internship_published", title: String(internship.get("title")), body: "Record whether you registered for this internship.", internshipId, createdAt: FieldValue.serverTimestamp(), readAt: null }, { merge: true });
     });
     writer.update(ref, { status: "published", publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     await writer.close();
     await createOpportunityReminderJobs({ kind: "internship_registration", opportunityId: internshipId, title: String(internship.get("title")), deadline: (internship.get("registrationDeadline") as Timestamp).toDate(), scheduleVersion: Number(internship.get("scheduleVersion") ?? 1) });
-    return { internshipId, recipientCount: students.length };
+    return { internshipId, recipientCount: eligibleCount, excludedPlacedCount: students.length - eligibleCount };
   } catch (error) { asHttpsError(error); }
 });
 
@@ -610,7 +621,7 @@ export const updateInternship = onCall(callableOptions, async (request) => {
     await ref.update({ company: input.company, role: input.role, title, description: input.description, registrationUrl: input.registrationUrl || null, registrationDeadline: deadline, version, scheduleVersion, updatedBy: actor.uid, updatedAt: FieldValue.serverTimestamp() });
     if (before.get("status") === "published") {
       const responses = await db.collection("internshipResponses").where("internshipId", "==", input.internshipId).get();
-      await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `internship_changed_${input.internshipId}_v${version}`, { type: "internship_changed", title, body: "Internship details or registration deadline changed.", internshipId: input.internshipId, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}) });
+      await notifyUsers(responses.docs.filter((doc) => doc.get("status") !== "not_applicable_placed").map((doc) => String(doc.get("uid"))), `internship_changed_${input.internshipId}_v${version}`, { type: "internship_changed", title, body: "Internship details or registration deadline changed.", internshipId: input.internshipId, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}) });
       await createOpportunityReminderJobs({ kind: "internship_registration", opportunityId: input.internshipId, title, deadline: deadline.toDate(), scheduleVersion, demoSeedId: before.get("demoSeedId") ? String(before.get("demoSeedId")) : undefined });
     }
     await writeAudit({ actorUid: actor.uid, action: "internship.updated", resourceType: "internship", resourceId: input.internshipId, before: before.data(), after: input });
@@ -628,7 +639,7 @@ export const cancelInternship = onCall(callableOptions, async (request) => {
     if (before.get("status") === "cancelled") return { idempotent: true };
     await ref.update({ status: "cancelled", cancellationReason: input.reason, scheduleVersion: FieldValue.increment(1), cancelledBy: actor.uid, cancelledAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     const responses = await db.collection("internshipResponses").where("internshipId", "==", input.internshipId).get();
-    await notifyUsers(responses.docs.map((doc) => String(doc.get("uid"))), `internship_cancelled_${input.internshipId}`, { type: "internship_cancelled", title: String(before.get("title")), body: `Cancelled: ${input.reason}`, internshipId: input.internshipId, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}) });
+    await notifyUsers(responses.docs.filter((doc) => doc.get("status") !== "not_applicable_placed").map((doc) => String(doc.get("uid"))), `internship_cancelled_${input.internshipId}`, { type: "internship_cancelled", title: String(before.get("title")), body: `Cancelled: ${input.reason}`, internshipId: input.internshipId, ...(before.get("demoSeedId") ? { isTestData: true, demoSeedId: before.get("demoSeedId") } : {}) });
     await writeAudit({ actorUid: actor.uid, action: "internship.cancelled", resourceType: "internship", resourceId: input.internshipId, before: before.data(), reason: input.reason });
     return { internshipId: input.internshipId };
   } catch (error) { asHttpsError(error); }
@@ -637,6 +648,8 @@ export const cancelInternship = onCall(callableOptions, async (request) => {
 export const setInternshipResponse = onCall(callableOptions, async (request) => {
   try {
     const actor = await requireActor(request);
+    const privateStatus = await db.doc(`placementStatuses/${actor.uid}`).get();
+    if (privateStatus.get("status") === "placed" || (actor as UserProfile & { placementStatus?: string }).placementStatus === "placed") throw new HttpsError("failed-precondition", "This placement form is not assigned to your account");
     const input = internshipResponseSchema.parse(request.data);
     const internship = await db.doc(`internships/${input.internshipId}`).get();
     if (!internship.exists || internship.get("status") !== "published") throw new HttpsError("failed-precondition", "Internship is not accepting responses");
@@ -655,6 +668,7 @@ export const getWingOpportunityReport = onCall(callableOptions, async (request) 
     const input = wingReportSchema.parse(request.data ?? {});
     const wingId = input.wingId ?? actor.wingId;
     if (!actor.roles.systemAdmin && !actor.roles.cr && actor.scopes.wingPocWings[wingId] !== true) throw new HttpsError("permission-denied", "Wing report is outside your scope");
+    const canSeePrivatePlacementStatus = actor.roles.systemAdmin || actor.roles.cr;
     const [competitionResponses, internshipResponses, teams] = await Promise.all([
       db.collection("opportunityResponses").where("wingId", "==", wingId).limit(2_000).get(),
       db.collection("internshipResponses").where("wingId", "==", wingId).limit(2_000).get(),
@@ -668,7 +682,7 @@ export const getWingOpportunityReport = onCall(callableOptions, async (request) 
     return {
       wingId,
       competitionResponses: competitionResponses.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-      internshipResponses: internshipResponses.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+      internshipResponses: internshipResponses.docs.filter((doc) => canSeePrivatePlacementStatus || doc.get("status") !== "not_applicable_placed").map((doc) => ({ id: doc.id, ...doc.data() })),
       teams: wingTeamRows,
     };
   } catch (error) { asHttpsError(error); }

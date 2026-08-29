@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canManageSessions, canManageTask, canMutateCrBoard, isAttendancePoc, isCaseCompetitionPoc, isGroomingPoc, type UserProfile } from "@mba/domain";
+import { canManagePlacementStatus, canManageSessions, canManageTask, canMutateCrBoard, isAttendancePoc, isCaseCompetitionPoc, isGroomingPoc, type UserProfile } from "@mba/domain";
 
 const wingPoc: UserProfile = {
   authEmail: "24m2001@users.deadlineos.app",
@@ -40,5 +40,14 @@ describe("RBAC contract", () => {
     expect(isCaseCompetitionPoc(attendancePoc)).toBe(false);
     expect(isAttendancePoc({ ...attendancePoc, status: "suspended" })).toBe(false);
     expect(canManageSessions({ ...attendancePoc, scopes: { ...attendancePoc.scopes, batchPocRoles: { grooming: true } } })).toBe(false);
+  });
+
+  it("keeps private placement status limited to active CRs and Admins", () => {
+    const cr = { ...wingPoc, roles: { student: true as const, cr: true, systemAdmin: false } };
+    const admin = { ...wingPoc, roles: { student: true as const, cr: false, systemAdmin: true } };
+    expect(canManagePlacementStatus(cr)).toBe(true);
+    expect(canManagePlacementStatus(admin)).toBe(true);
+    expect(canManagePlacementStatus(wingPoc)).toBe(false);
+    expect(canManagePlacementStatus({ ...cr, status: "suspended" })).toBe(false);
   });
 });
