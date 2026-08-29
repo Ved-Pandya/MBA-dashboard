@@ -4,7 +4,7 @@
  * fan-out for the scheduled recovery worker.
  */
 export const IMMEDIATE_PUSH_JOB_LIMIT = 150;
-export const IMMEDIATE_PUSH_CONCURRENCY = 8;
+export const IMMEDIATE_PUSH_CONCURRENCY = 10;
 export const SCHEDULED_PUSH_JOB_LIMIT = 25;
 
 function cleanPushText(value: unknown, fallback: string, maxLength: number) {

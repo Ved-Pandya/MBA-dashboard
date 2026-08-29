@@ -135,6 +135,7 @@ export async function mirrorNotificationPushJobs(limit = 250) {
   if (notifications.empty) return 0;
 
   let created = 0;
+  const jobWrites: Array<Promise<void>> = [];
   for (const notification of notifications.docs) {
     const uid = notification.ref.parent.parent?.id;
     if (!uid) continue;
@@ -143,8 +144,8 @@ export async function mirrorNotificationPushJobs(limit = 250) {
     const demoMetadata = notification.get("demoSeedId")
       ? { isTestData: true, demoSeedId: notification.get("demoSeedId") }
       : {};
-    try {
-      await jobRef.create({
+    jobWrites.push(
+      jobRef.create({
         uid,
         notificationId: notification.id,
         notificationPath: notification.ref.path,
@@ -161,12 +162,14 @@ export async function mirrorNotificationPushJobs(limit = 250) {
         ...demoMetadata,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
-      });
-      created += 1;
-    } catch (error) {
-      if ((error as { code?: number | string }).code !== 6 && (error as { code?: number | string }).code !== "already-exists") throw error;
-    }
+      })
+        .then(() => { created += 1; })
+        .catch((error: { code?: number | string }) => {
+          if (error.code !== 6 && error.code !== "already-exists") throw error;
+        }),
+    );
   }
+  await Promise.all(jobWrites);
   const last = notifications.docs.at(-1)!;
   await mirrorRef.set({
     cursorAt: last.get("createdAt"),

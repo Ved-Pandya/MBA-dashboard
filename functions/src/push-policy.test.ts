@@ -11,7 +11,7 @@ describe("immediate push policy", () => {
   it("covers a 114-student broadcast plus manager recipients in one bounded flush", () => {
     expect(IMMEDIATE_PUSH_JOB_LIMIT).toBe(150);
     expect(IMMEDIATE_PUSH_JOB_LIMIT).toBeGreaterThanOrEqual(114);
-    expect(IMMEDIATE_PUSH_CONCURRENCY).toBe(8);
+    expect(IMMEDIATE_PUSH_CONCURRENCY).toBe(10);
   });
 
   it("flushes notification-producing mutations but not read or high-volume response calls", () => {

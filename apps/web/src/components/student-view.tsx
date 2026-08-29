@@ -75,11 +75,56 @@ export function StudentView() {
     const nextExam = academicEvents.filter((item) => item.status === "published" && ["midterm", "endterm"].includes(item.eventType) && item.occursAt.toMillis() >= now).sort((a, b) => a.occursAt.toMillis() - b.occursAt.toMillis())[0]; return { unansweredSessions, unansweredPolls, missingCompetitionConfirmations, nextExam };
   }, [sessions, sessionResponses, polls, pollResponses, competitionResponses, academicEvents]);
 
+  const sessionResponseById = useMemo(
+    () => new Map(sessionResponses.map((response) => [response.sessionId, response])),
+    [sessionResponses],
+  );
+  const pollResponseById = useMemo(
+    () => new Map(pollResponses.map((response) => [response.pollId, response])),
+    [pollResponses],
+  );
+  const openSessions = useMemo(() => {
+    const now = Date.now();
+    return sessions
+      .filter((session) => session.status === "published" && session.responseDeadline.toMillis() > now)
+      .sort((a, b) => {
+        const aAnswered = Boolean(sessionResponseById.get(a.id) && sessionResponseById.get(a.id)?.status !== "no_response");
+        const bAnswered = Boolean(sessionResponseById.get(b.id) && sessionResponseById.get(b.id)?.status !== "no_response");
+        return Number(aAnswered) - Number(bAnswered) || a.responseDeadline.toMillis() - b.responseDeadline.toMillis();
+      });
+  }, [sessions, sessionResponseById]);
+  const openPolls = useMemo(() => {
+    const now = Date.now();
+    return polls
+      .filter((poll) => poll.status === "published" && poll.closesAt.toMillis() > now)
+      .sort((a, b) => {
+        const aAnswered = pollResponseById.get(a.id)?.status === "responded";
+        const bAnswered = pollResponseById.get(b.id)?.status === "responded";
+        return Number(aAnswered) - Number(bAnswered) || a.closesAt.toMillis() - b.closesAt.toMillis();
+      });
+  }, [polls, pollResponseById]);
+
   async function toggle(item: AssignmentRecord) {
-    setBusy(item.id); setError(null);
+    setBusy(`task:${item.id}`); setError(null);
     try {
       await callFunction(item.status === "completed" ? "reopenMyCompletion" : "setMyCompletion", { taskId: item.taskId, idempotencyKey: crypto.randomUUID() });
     } catch (toggleError) { setError(readableError(toggleError)); }
+    finally { setBusy(null); }
+  }
+
+  async function setSessionAnswer(sessionId: string, status: "attending" | "not_attending") {
+    setBusy(`session:${sessionId}`); setError(null);
+    try {
+      await callFunction("setSessionResponse", { sessionId, status });
+    } catch (responseError) { setError(readableError(responseError)); }
+    finally { setBusy(null); }
+  }
+
+  async function setPollAnswer(pollId: string, optionId: string) {
+    setBusy(`poll:${pollId}`); setError(null);
+    try {
+      await callFunction("setPollResponse", { pollId, optionId });
+    } catch (responseError) { setError(readableError(responseError)); }
     finally { setBusy(null); }
   }
 
@@ -96,11 +141,68 @@ export function StudentView() {
 
       <GuidedAppSetupCard />
 
+      {error && <p className="form-error home-error" role="alert">{error}</p>}
+
       <section className="home-actions" aria-label="Required actions">
-        {actionSummary.unansweredSessions > 0 && <a className="panel action-card" href="?view=sessions"><span className="status-pill warning">Action needed</span><h2>Session attendance</h2><p>{actionSummary.unansweredSessions} response{actionSummary.unansweredSessions === 1 ? "" : "s"} waiting.</p></a>}
         {actionSummary.missingCompetitionConfirmations > 0 && <a className="panel action-card" href="?view=opportunities"><span className="status-pill warning">Action needed</span><h2>Competition forms</h2><p>Confirm both external and internal registration.</p></a>}
-        {actionSummary.unansweredPolls > 0 && <a className="panel action-card" href="?view=polls"><span className="status-pill">New poll</span><h2>General poll</h2><p>{actionSummary.unansweredPolls} poll{actionSummary.unansweredPolls === 1 ? "" : "s"} available.</p></a>}
         {actionSummary.nextExam && <a className="panel action-card" href="?view=academics"><span className="status-pill">Next exam</span><h2>{actionSummary.nextExam.title}</h2><p>{formatDeadline(actionSummary.nextExam.occursAt)}</p></a>}
+      </section>
+
+      <section className="home-response-grid" aria-label="Placement attendance and general polls">
+        <div className="panel home-response-panel">
+          <div className="panel-head">
+            <div><p className="eyebrow">PLACEMENT SESSIONS</p><h2>Attendance</h2></div>
+            <span className="count-badge">{actionSummary.unansweredSessions} pending</span>
+          </div>
+          <div className="home-response-list">
+            {!openSessions.length && <div className="home-response-empty"><strong>No attendance response needed</strong><span>New placement sessions will appear here.</span></div>}
+            {openSessions.map((session) => {
+              const response = sessionResponseById.get(session.id);
+              const answered = Boolean(response && response.status !== "no_response");
+              const busyKey = `session:${session.id}`;
+              return <article className="home-response-card" key={session.id}>
+                <div className="home-response-copy">
+                  <span className={`status-pill ${answered ? "done" : "urgent"}`}>{answered ? "Answered" : "Action needed"}</span>
+                  <h3>{session.title}</h3>
+                  {session.details && <p>{session.details}</p>}
+                  <small>{formatDeadline(session.sessionStartsAt)}{session.venue ? ` · ${session.venue}` : ""}<br />Respond by {formatDeadline(session.responseDeadline)}</small>
+                </div>
+                {response ? <div className="home-choice-actions" aria-label={`Attendance response for ${session.title}`}>
+                  <button className={response.status === "attending" ? "primary-button" : "secondary-button"} onClick={() => void setSessionAnswer(session.id, "attending")} disabled={busy === busyKey}>Attending</button>
+                  <button className={response.status === "not_attending" ? "primary-button" : "secondary-button"} onClick={() => void setSessionAnswer(session.id, "not_attending")} disabled={busy === busyKey}>Not attending</button>
+                </div> : <small className="home-response-warning">Your response record is still being prepared. Refresh shortly.</small>}
+              </article>;
+            })}
+          </div>
+          <a className="home-response-link" href="?view=sessions">View session history →</a>
+        </div>
+
+        <div className="panel home-response-panel">
+          <div className="panel-head">
+            <div><p className="eyebrow">GENERAL AREA</p><h2>Open polls</h2></div>
+            <span className="count-badge">{actionSummary.unansweredPolls} pending</span>
+          </div>
+          <div className="home-response-list">
+            {!openPolls.length && <div className="home-response-empty"><strong>No open polls</strong><span>New batch polls will appear here.</span></div>}
+            {openPolls.map((poll) => {
+              const response = pollResponseById.get(poll.id);
+              const answered = response?.status === "responded";
+              const busyKey = `poll:${poll.id}`;
+              return <article className="home-response-card" key={poll.id}>
+                <div className="home-response-copy">
+                  <span className={`status-pill ${answered ? "done" : "urgent"}`}>{answered ? "Answered" : "Action needed"}</span>
+                  <h3>{poll.question}</h3>
+                  {poll.details && <p>{poll.details}</p>}
+                  <small>Closes {formatDeadline(poll.closesAt)}</small>
+                </div>
+                {response ? <div className="home-choice-actions poll-options" aria-label={`Answer ${poll.question}`}>
+                  {poll.options.map((option) => <button key={option.id} className={response.optionId === option.id ? "primary-button" : "secondary-button"} onClick={() => void setPollAnswer(poll.id, option.id)} disabled={busy === busyKey}>{option.label}</button>)}
+                </div> : <small className="home-response-warning">Your response record is still being prepared. Refresh shortly.</small>}
+              </article>;
+            })}
+          </div>
+          <a className="home-response-link" href="?view=polls">View poll history →</a>
+        </div>
       </section>
 
       <section className="stats-grid" aria-label="Task summary">
@@ -117,14 +219,13 @@ export function StudentView() {
             {(["active", "completed", "all"] as const).map((value) => <button key={value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{value}</button>)}
           </div>
         </div>
-        {error && <p className="form-error" role="alert">{error}</p>}
         <div className="task-list">
           {!sorted.length && <div className="empty-state"><span>✓</span><h3>Nothing in this lane</h3><p>Your queue is clear for the selected filter.</p></div>}
           {sorted.map((item) => {
             const level = urgency(item.taskSnapshot.dueAt, item.status);
             return (
               <article className={`task-row ${level}`} key={item.id}>
-                <button className={`check ${item.status === "completed" ? "checked" : ""}`} onClick={() => toggle(item)} disabled={busy === item.id || item.status === "exempt"} aria-label={item.status === "completed" ? "Reopen task" : "Mark complete"}>{item.status === "completed" ? "✓" : ""}</button>
+                <button className={`check ${item.status === "completed" ? "checked" : ""}`} onClick={() => toggle(item)} disabled={busy === `task:${item.id}` || item.status === "exempt"} aria-label={item.status === "completed" ? "Reopen task" : "Mark complete"}>{item.status === "completed" ? "✓" : ""}</button>
                 <div className="task-main">
                   <div className="task-meta"><span className={`category ${item.taskType}`}>{labels[item.taskType]}</span><span>{item.scopeKey.replace(":", " · ")}</span></div>
                   <h3>{item.taskSnapshot.title}</h3>
