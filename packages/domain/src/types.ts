@@ -9,7 +9,7 @@ export const WING_IDS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"] as co
 export const ACADEMIC_EVENT_TYPES = ["assignment_deadline", "quiz", "midterm", "endterm", "pre_read"] as const;
 export const OPPORTUNITY_RESPONSE_STATUSES = ["no_response", "team_draft", "registered", "not_participating"] as const;
 export const CR_TASK_STATUSES = ["assigned", "in_progress", "completed"] as const;
-export const POC_KINDS = ["wing", "subject", "grooming", "case_competition"] as const;
+export const POC_KINDS = ["wing", "subject", "grooming", "case_competition", "attendance"] as const;
 export const SESSION_RESPONSE_STATUSES = ["no_response", "attending", "not_attending"] as const;
 export const COMPETITION_CONFIRMATION_KINDS = ["externalRegistration", "internalForm"] as const;
 
@@ -43,6 +43,7 @@ export interface RoleScopes {
   batchPocRoles: {
     grooming?: true;
     caseCompetition?: true;
+    attendance?: true;
   };
 }
 

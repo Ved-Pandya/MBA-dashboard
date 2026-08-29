@@ -6,7 +6,7 @@ import { z, ZodError } from "zod";
 import { isVapidPrivateKey, isVapidPublicKey, normalizeConfigValue, normalizeVapidKey } from "@mba/domain";
 import { db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor } from "./helpers.js";
-import { boundedPushOptions } from "./push-policy.js";
+import { boundedPushOptions, buildPushPayload } from "./push-policy.js";
 
 const deviceIdSchema = z.string().uuid();
 const base64UrlKey = z.string().regex(/^[A-Za-z0-9_-]+$/, "Push keys must use base64url encoding");
@@ -36,25 +36,6 @@ function endpointHash(endpoint: string) {
 
 function pushJobId(notificationPath: string) {
   return createHash("sha256").update(notificationPath).digest("hex");
-}
-
-function safePushPayload(type: string, jobId: string) {
-  let title = "DeadlineOS update";
-  let view = "today";
-  if (type.includes("academic") || type.includes("pre_read")) { title = "Academic update"; view = "academics"; }
-  else if (type.includes("cr_task")) { title = "CR Board update"; view = "crBoard"; }
-  else if (type.includes("session")) { title = "Placement session update"; view = "sessions"; }
-  else if (type.includes("poll")) { title = "New batch poll"; view = "polls"; }
-  else if (type.includes("team") || type.includes("round") || type.includes("membership")) { title = "Team update"; view = "opportunities"; }
-  else if (type.includes("competition") || type.includes("internship") || type.includes("opportunity")) { title = "Opportunity update"; view = "opportunities"; }
-  else if (type.includes("poc")) { title = "POC responsibility update"; view = "poc"; }
-  else if (type.includes("deadline") || type.includes("overdue") || type.includes("reminder")) title = "Deadline alert";
-  return {
-    title,
-    body: "Open DeadlineOS to view the details.",
-    url: `/?view=${view}&notifications=1`,
-    tag: jobId,
-  };
 }
 
 export const registerPushSubscription = onCall(callableOptions, async (request) => {
@@ -168,7 +149,12 @@ export async function mirrorNotificationPushJobs(limit = 250) {
         notificationId: notification.id,
         notificationPath: notification.ref.path,
         notificationType: String(notification.get("type") ?? "general"),
-        payload: safePushPayload(String(notification.get("type") ?? "general"), jobId),
+        payload: buildPushPayload({
+          type: String(notification.get("type") ?? "general"),
+          jobId,
+          title: notification.get("title"),
+          body: notification.get("body"),
+        }),
         status: "queued",
         attempts: 0,
         nextAttemptAt: Timestamp.now(),
@@ -194,11 +180,26 @@ export async function mirrorNotificationPushJobs(limit = 250) {
 
 type PushJob = {
   uid: string;
+  notificationPath?: string;
+  notificationType?: string;
   payload: { title: string; body: string; url: string; tag: string };
   attempts: number;
   isTestData?: boolean;
   demoSeedId?: string;
 };
+
+async function resolvedPushPayload(jobId: string, job: PushJob) {
+  const isLegacyGenericPayload = job.payload.body === "Open DeadlineOS to view the details.";
+  if (!isLegacyGenericPayload || !job.notificationPath) return job.payload;
+  const notification = await db.doc(job.notificationPath).get();
+  if (!notification.exists) return job.payload;
+  return buildPushPayload({
+    type: job.notificationType ?? String(notification.get("type") ?? "general"),
+    jobId,
+    title: notification.get("title"),
+    body: notification.get("body"),
+  });
+}
 
 function configureWebPush() {
   const publicKey = normalizeVapidKey(process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY);
@@ -222,9 +223,10 @@ async function claimPushJob(jobRef: FirebaseFirestore.DocumentReference) {
 }
 
 async function deliverPushJob(jobId: string, jobRef: FirebaseFirestore.DocumentReference, job: PushJob) {
-  const [user, subscriptions] = await Promise.all([
+  const [user, subscriptions, payload] = await Promise.all([
     db.doc(`users/${job.uid}`).get(),
     db.collection("pushSubscriptions").where("uid", "==", job.uid).where("status", "==", "active").get(),
+    resolvedPushPayload(jobId, job),
   ]);
   if (!user.exists || user.get("status") !== "active" || subscriptions.empty) {
     await jobRef.set({ status: "skipped", skipReason: !user.exists || user.get("status") !== "active" ? "user_inactive" : "no_active_subscription", completedAt: FieldValue.serverTimestamp(), leaseUntil: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -247,7 +249,7 @@ async function deliverPushJob(jobId: string, jobRef: FirebaseFirestore.DocumentR
         endpoint: String(subscription.get("endpoint")),
         expirationTime: subscription.get("expirationTime") as number | null,
         keys: subscription.get("keys") as { p256dh: string; auth: string },
-      }, JSON.stringify(job.payload), { TTL: 60 * 60 * 24, urgency: "high" });
+      }, JSON.stringify(payload), { TTL: 60 * 60 * 24, urgency: "high" });
       const writes: Array<Promise<FirebaseFirestore.WriteResult>> = [
         deliveryRef.set({ status: "sent", sentAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }),
       ];

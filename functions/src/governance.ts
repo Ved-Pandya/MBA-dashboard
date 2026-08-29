@@ -13,18 +13,23 @@ const assignmentSchema = z.object({
   scopeId: z.string().trim().min(1).max(80),
   uid: z.string().min(1),
 }).superRefine((value, ctx) => {
-  const batchKind = value.kind === "grooming" || value.kind === "case_competition";
+  const batchKind = value.kind === "grooming" || value.kind === "case_competition" || value.kind === "attendance";
   if (batchKind && value.scopeId !== "batch") ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["scopeId"], message: "Batch POC roles must use the batch scope" });
 });
+
+function batchRoleKey(kind: Exclude<PocKind, "wing" | "subject">) {
+  if (kind === "case_competition") return "caseCompetition";
+  return kind;
+}
 
 function scopePath(kind: PocKind, scopeId: string) {
   if (kind === "wing") return `scopes.wingPocWings.${scopeId}`;
   if (kind === "subject") return `scopes.subjectPocOfferings.${scopeId}`;
-  return `scopes.batchPocRoles.${kind === "grooming" ? "grooming" : "caseCompetition"}`;
+  return `scopes.batchPocRoles.${batchRoleKey(kind)}`;
 }
 
 async function validateScope(kind: PocKind, scopeId: string) {
-  if (kind === "grooming" || kind === "case_competition") return;
+  if (kind === "grooming" || kind === "case_competition" || kind === "attendance") return;
   const ref = kind === "wing" ? db.doc(`wings/${scopeId}`) : db.doc(`subjectOfferings/${scopeId}`);
   const snap = await ref.get();
   if (!snap.exists || snap.get("active") !== true) throw new HttpsError("failed-precondition", `${kind === "wing" ? "Wing" : "Subject"} scope is not active`);
@@ -102,7 +107,7 @@ export const revokePoc = onCall(callableOptions, async (request) => {
     const actor = await requireActor(request);
     requireGovernance(actor);
     const input = z.object({ kind: z.enum(POC_KINDS), scopeId: z.string().trim().min(1).max(80) }).parse(request.data);
-    if ((input.kind === "grooming" || input.kind === "case_competition") && input.scopeId !== "batch") throw new HttpsError("invalid-argument", "Batch POC roles must use the batch scope");
+    if ((input.kind === "grooming" || input.kind === "case_competition" || input.kind === "attendance") && input.scopeId !== "batch") throw new HttpsError("invalid-argument", "Batch POC roles must use the batch scope");
     const ref = db.doc(`pocAssignments/${input.kind}_${input.scopeId}`);
     let revokedUid = "";
     await db.runTransaction(async (tx) => {

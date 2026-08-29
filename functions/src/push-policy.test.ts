@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   boundedPushOptions,
+  buildPushPayload,
   callableMayCreateNotifications,
   IMMEDIATE_PUSH_CONCURRENCY,
   IMMEDIATE_PUSH_JOB_LIMIT,
@@ -43,5 +44,19 @@ describe("immediate push policy", () => {
     expect(boundedPushOptions({ limit: 10_000, concurrency: 100 })).toEqual({ limit: 250, concurrency: 10 });
     expect(boundedPushOptions({ limit: 0, concurrency: 0 })).toEqual({ limit: 1, concurrency: 1 });
     expect(boundedPushOptions()).toEqual({ limit: 25, concurrency: 1 });
+  });
+
+  it("builds dynamic lock-screen copy while removing roll numbers and control characters", () => {
+    expect(buildPushPayload({
+      type: "competition_round_open",
+      jobId: "job-1",
+      title: "Round 2 announced",
+      body: "26M2301 advanced.\nSubmit the deck by 18:00.",
+    })).toEqual({
+      title: "Round 2 announced",
+      body: "a student advanced. Submit the deck by 18:00.",
+      url: "/?view=opportunities&notifications=1",
+      tag: "job-1",
+    });
   });
 });

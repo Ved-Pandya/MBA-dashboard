@@ -25,6 +25,7 @@ suite("Firestore RBAC rules", () => {
       await setDoc(doc(db, "users/wingPoc"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes({ A: true }) });
       await setDoc(doc(db, "users/groomingPoc"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes({}, {}, { grooming: true }) });
       await setDoc(doc(db, "users/casePoc"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes({}, {}, { caseCompetition: true }) });
+      await setDoc(doc(db, "users/attendancePoc"), { status: "active", sectionId: "A", wingId: "E", roles: { student: true, cr: false, systemAdmin: false }, scopes: scopes({}, {}, { attendance: true }) });
       await setDoc(doc(db, "users/cr"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: true, systemAdmin: false }, scopes: scopes() });
       await setDoc(doc(db, "users/admin"), { status: "active", sectionId: "A", wingId: "A", roles: { student: true, cr: false, systemAdmin: true }, scopes: scopes() });
       await setDoc(doc(db, "users/suspendedCr"), { status: "suspended", sectionId: "B", wingId: "B", roles: { student: true, cr: true, systemAdmin: false }, scopes: scopes() });
@@ -40,6 +41,7 @@ suite("Firestore RBAC rules", () => {
       await setDoc(doc(db, "pushDeliveries/job1_device"), { uid: "student", status: "sent" });
       await setDoc(doc(db, "systemHealth/push"), { configured: true, delivered: 1 });
       await setDoc(doc(db, "sessionIntimations/session1"), { title: "Session", status: "published" });
+      await setDoc(doc(db, "sessionIntimations/draftSession"), { title: "Draft Session", status: "draft" });
       await setDoc(doc(db, "sessionResponses/session1_student"), { sessionId: "session1", uid: "student", status: "no_response" });
       await setDoc(doc(db, "sessionResponses/session1_other"), { sessionId: "session1", uid: "other", status: "attending" });
       await setDoc(doc(db, "generalPolls/poll1"), { question: "Question", status: "published" });
@@ -107,10 +109,13 @@ suite("Firestore RBAC rules", () => {
     const studentDb = testEnv.authenticatedContext("student").firestore();
     const wingDb = testEnv.authenticatedContext("wingPoc").firestore();
     const groomingDb = testEnv.authenticatedContext("groomingPoc").firestore();
+    const attendanceDb = testEnv.authenticatedContext("attendancePoc").firestore();
     await assertSucceeds(getDoc(doc(studentDb, "sessionIntimations/session1")));
     await assertSucceeds(getDoc(doc(studentDb, "sessionResponses/session1_student")));
     await assertFails(getDoc(doc(studentDb, "sessionResponses/session1_other")));
     await assertFails(getDoc(doc(wingDb, "sessionResponses/session1_other")));
+    await assertSucceeds(getDoc(doc(attendanceDb, "sessionIntimations/draftSession")));
+    await assertFails(getDoc(doc(attendanceDb, "sessionResponses/session1_other")));
     await assertSucceeds(getDoc(doc(studentDb, "generalPolls/poll1")));
     await assertSucceeds(getDoc(doc(studentDb, "pollResponses/poll1_student")));
     await assertFails(getDoc(doc(groomingDb, "pollResponses/poll1_other")));

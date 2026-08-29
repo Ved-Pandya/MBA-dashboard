@@ -56,19 +56,23 @@ describe("domain invariants", () => {
   });
 
   it("maps roll numbers to internal Auth identities without exposing an email login", () => {
-    expect(rollNumberToAuthEmail("  24m2001 ")).toBe("24m2001@users.deadlineos.app");
+    expect(rollNumberToAuthEmail("  26m2301 ")).toBe("26m2301@users.deadlineos.app");
     expect(rosterRowSchema.safeParse({
-      password: "StrongPass123!", displayName: "Aarav Shah", rollNumber: "24M2001",
+      password: "StrongPass123!", displayName: "Aarav Shah", rollNumber: "26M2301",
       sectionId: "A", wingId: "A", cr: false, wingPocWings: [], subjectPocOfferings: [],
     }).success).toBe(true);
     expect(rosterRowSchema.safeParse({
-      password: "StrongPass123!", displayName: "Legacy Wing", rollNumber: "24M2002",
+      password: "StrongPass123!", displayName: "Legacy Admin", rollNumber: "24M2000",
+      sectionId: "A", wingId: "A", cr: false, wingPocWings: [], subjectPocOfferings: [],
+    }).success).toBe(false);
+    expect(rosterRowSchema.safeParse({
+      password: "StrongPass123!", displayName: "Legacy Wing", rollNumber: "26M2302",
       sectionId: "A", wingId: "W01", cr: false, wingPocWings: [], subjectPocOfferings: [],
     }).success).toBe(false);
   });
 
   it("validates team uniqueness and informational academic events", () => {
-    expect(teamDraftSchema.safeParse({ competitionId: "comp-1", name: "North Stars", memberRollNumbers: ["24M2001", "24M2001"] }).success).toBe(false);
+    expect(teamDraftSchema.safeParse({ competitionId: "comp-1", name: "North Stars", memberRollNumbers: ["26M2301", "26M2301"] }).success).toBe(false);
     expect(academicEventSchema.safeParse({ offeringId: "FIN-A", eventType: "pre_read", title: "Read Chapter 4", details: "", occursAtIso: "2027-01-01T09:00:00+05:30" }).success).toBe(true);
   });
 

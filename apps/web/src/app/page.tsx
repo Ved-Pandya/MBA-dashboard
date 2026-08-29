@@ -42,7 +42,7 @@ function Login() {
           <h2>Enter your command center</h2>
           <p>Use your roll number and the password issued by your system administrator.</p>
           <form className="login-form" onSubmit={submit}>
-            <label>Roll number<input value={rollNumber} onChange={(event) => setRollNumber(event.target.value.toUpperCase())} autoComplete="username" autoCapitalize="characters" spellCheck={false} pattern="24M2[0-9]{3}" placeholder="24M2001" required /></label>
+            <label>Roll number<input value={rollNumber} onChange={(event) => setRollNumber(event.target.value.toUpperCase())} autoComplete="username" autoCapitalize="characters" spellCheck={false} pattern="(?:24|26)M2[0-9]{3}" placeholder="26M2301" required /></label>
             <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" minLength={8} required /></label>
             <button className="sign-in-button" disabled={loading}>{loading ? "Checking access…" : "Sign in"}</button>
           </form>

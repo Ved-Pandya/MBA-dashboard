@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ACADEMIC_EVENT_TYPES, COMPETITION_CONFIRMATION_KINDS, CR_TASK_STATUSES, OPPORTUNITY_RESPONSE_STATUSES, SESSION_RESPONSE_STATUSES, TASK_TYPES, WING_IDS } from "./types.js";
-import { ROLL_NUMBER_PATTERN } from "./credentials.js";
+import { CURRENT_BATCH_ROLL_NUMBER_PATTERN, ROLL_NUMBER_PATTERN } from "./credentials.js";
 
 export const wingIdSchema = z.enum(WING_IDS);
 
@@ -42,7 +42,7 @@ export const taskDraftSchema = z
 export const rosterRowSchema = z.object({
   password: z.string().min(8).max(128),
   displayName: z.string().trim().min(2).max(100),
-  rollNumber: z.string().trim().toUpperCase().regex(ROLL_NUMBER_PATTERN, "Roll number must match 24M2xxx"),
+  rollNumber: z.string().trim().toUpperCase().regex(CURRENT_BATCH_ROLL_NUMBER_PATTERN, "Roll number must match 26M2xxx"),
   sectionId: z.enum(["A", "B"]),
   wingId: wingIdSchema,
   cr: z.boolean().default(false),

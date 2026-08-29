@@ -4,8 +4,8 @@ DeadlineOS is a mobile-first MBA deadline compliance platform built with Next.js
 
 ## What is implemented
 
-- Administrator-issued `24M2xxx` roll-number/password sign-in.
-- Additive Student, Subject POC, Wing POC, CR, and System Admin permissions.
+- Administrator-issued `26M2xxx` roll-number/password sign-in, with legacy `24M2xxx` bootstrap/test identities retained for recovery compatibility.
+- Additive Student, Subject POC, Wing POC, Grooming POC, Case Competition POC, Attendance POC, CR, and System Admin permissions.
 - Student urgency dashboard, completion/reopen controls, late status, and realtime notifications.
 - Scoped task preview, draft creation, publication, close/cancel, audience sync, and exemptions.
 - Named compliance reporting and CSV export for authorized POCs and CRs.
@@ -17,7 +17,7 @@ DeadlineOS is a mobile-first MBA deadline compliance platform built with Next.js
 - Internship registration/no-participation tracking and sanitized Wing POC reports.
 - Deterministic T-24h, T-2h, T+15m reminder records, daily overdue digests, and reconciliation.
 - Installable Android/iPhone PWA with an offline-safe shell, guided Home Screen setup, and URL-aware notification navigation.
-- Consent-based standards Web Push with multiple-device subscriptions, endpoint ownership protection, retries, and sanitized lock-screen copy.
+- Consent-based standards Web Push with multiple-device subscriptions, endpoint ownership protection, retries, and dynamic lock-screen copy sanitized to remove roll numbers and control characters.
 - Immediate, bounded background Web Push after notification-producing mutations, with a free Cloudflare Cron Trigger as the retry and recovery path.
 - Default-deny Firestore Security Rules, required indexes, audit events, and operation records.
 
@@ -136,7 +136,7 @@ The server private key is mandatory on Vercel and must never be committed, logge
 3. On iPhone Safari, use **Share > Add to Home Screen**, enable **Open as Web App**, and launch DeadlineOS from the new Home Screen icon. Web Push requires iOS/iPadOS 16.4 or later and the installed Home Screen app.
 4. In the installed app, open **Notifications > App setup** and press **Enable**. DeadlineOS never asks for notification permission without this user action.
 5. From another role, create an event that generates an inbox notification. Keep the recipient app closed. Immediate delivery normally starts within seconds; allow the Cloudflare recovery path a few minutes if the immediate attempt fails.
-6. Confirm the notification uses generic lock-screen text and opens the correct authenticated DeadlineOS view. Confirm the full private detail exists only in the in-app inbox.
+6. Confirm the notification uses the inbox event's title and message, removes roll numbers, and opens the correct authenticated DeadlineOS view. Longer/private supporting detail remains inside the app.
 7. Sign out on that device, create another notification, and confirm the signed-out device no longer receives private alerts.
 
 ## Alert behavior on free plans

@@ -7,6 +7,37 @@ export const IMMEDIATE_PUSH_JOB_LIMIT = 150;
 export const IMMEDIATE_PUSH_CONCURRENCY = 8;
 export const SCHEDULED_PUSH_JOB_LIMIT = 25;
 
+function cleanPushText(value: unknown, fallback: string, maxLength: number) {
+  const normalized = typeof value === "string"
+    ? value
+      .replace(/\b(?:24|26)M2\d{3}\b/gi, "a student")
+      .replace(/[\u0000-\u001F\u007F]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+    : "";
+  return (normalized || fallback).slice(0, maxLength);
+}
+
+function notificationView(type: string) {
+  if (type.includes("academic") || type.includes("pre_read")) return "academics";
+  if (type.includes("cr_task")) return "crBoard";
+  if (type.includes("session")) return "sessions";
+  if (type.includes("poll")) return "polls";
+  if (type.includes("team") || type.includes("round") || type.includes("membership")) return "opportunities";
+  if (type.includes("competition") || type.includes("internship") || type.includes("opportunity")) return "opportunities";
+  if (type.includes("poc")) return "poc";
+  return "today";
+}
+
+export function buildPushPayload(input: { type: string; jobId: string; title?: unknown; body?: unknown }) {
+  return {
+    title: cleanPushText(input.title, "DeadlineOS update", 100),
+    body: cleanPushText(input.body, "Open DeadlineOS to view the details.", 220),
+    url: `/?view=${notificationView(input.type)}&notifications=1`,
+    tag: input.jobId,
+  };
+}
+
 const notificationProducingCallables = new Set([
   "createTestAccounts",
   "seedTestData",

@@ -92,9 +92,11 @@ export const seedTestData = onCall({ ...callableOptions, timeoutSeconds: 120 }, 
     const demoPocScopes: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
     DEMO_OFFERINGS.forEach((offering) => { demoPocScopes[`scopes.subjectPocOfferings.${offering.id}`] = true; });
     demoPocScopes["scopes.batchPocRoles.grooming"] = true;
+    demoPocScopes["scopes.batchPocRoles.attendance"] = true;
     demoPocScopes["scopes.batchPocRoles.caseCompetition"] = true;
     writer.update(db.doc(`users/${poc.uid}`), demoPocScopes);
     writer.set(db.doc("pocAssignments/grooming_batch"), { kind: "grooming", scopeId: "batch", uid: poc.uid, active: true, assignedBy: actor.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    writer.set(db.doc("pocAssignments/attendance_batch"), { kind: "attendance", scopeId: "batch", uid: poc.uid, active: true, assignedBy: actor.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     writer.set(db.doc("pocAssignments/case_competition_batch"), { kind: "case_competition", scopeId: "batch", uid: poc.uid, active: true, assignedBy: actor.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 
     const academicEvents = [
@@ -196,6 +198,7 @@ async function deleteDemoSeedRecords() {
     const scopeDeletes: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
     DEMO_OFFERINGS.forEach((offering) => { scopeDeletes[`scopes.subjectPocOfferings.${offering.id}`] = FieldValue.delete(); });
     scopeDeletes["scopes.batchPocRoles.grooming"] = FieldValue.delete();
+    scopeDeletes["scopes.batchPocRoles.attendance"] = FieldValue.delete();
     scopeDeletes["scopes.batchPocRoles.caseCompetition"] = FieldValue.delete();
     writer.update(user.ref, scopeDeletes);
   }

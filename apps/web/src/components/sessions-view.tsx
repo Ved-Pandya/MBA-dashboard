@@ -13,7 +13,7 @@ function localInput(date: Date) { return new Date(date.getTime() + 330 * 60_000)
 
 export function SessionsView() {
   const { user, profile } = useAuth();
-  const manager = Boolean(profile?.roles.cr || profile?.roles.systemAdmin || Object.keys(profile?.scopes.wingPocWings ?? {}).length);
+  const manager = Boolean(profile?.roles.cr || profile?.roles.systemAdmin || profile?.scopes.batchPocRoles?.attendance || Object.keys(profile?.scopes.wingPocWings ?? {}).length);
   const [sessions, setSessions] = useState<SessionIntimationRecord[]>([]);
   const [responses, setResponses] = useState<SessionResponseRecord[]>([]);
   const [form, setForm] = useState({ title: "", details: "", venue: "", sessionStartsAt: "", responseDeadline: "" });

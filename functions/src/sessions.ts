@@ -1,11 +1,11 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
-import { buildCatchUpReminderSchedule, isWingPoc, sessionCorrectionSchema, sessionIntimationFieldsSchema, sessionIntimationSchema, sessionResponseSchema, type UserProfile } from "@mba/domain";
+import { buildCatchUpReminderSchedule, canManageSessions, sessionCorrectionSchema, sessionIntimationFieldsSchema, sessionIntimationSchema, sessionResponseSchema, type UserProfile } from "@mba/domain";
 import { db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, writeAudit } from "./helpers.js";
 
 function requireSessionManager(actor: UserProfile) {
-  if (!actor.roles.systemAdmin && !actor.roles.cr && !isWingPoc(actor)) throw new HttpsError("permission-denied", "CR, Admin, or Wing POC access required");
+  if (!canManageSessions(actor)) throw new HttpsError("permission-denied", "Attendance POC, CR, Admin, or Wing POC access required");
 }
 
 async function activeStudents() {

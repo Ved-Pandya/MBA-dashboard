@@ -1,6 +1,9 @@
 export const INTERNAL_AUTH_DOMAIN = "users.deadlineos.app";
 
-export const ROLL_NUMBER_PATTERN = /^24M2\d{3}$/;
+// The live batch uses 26M2xxx. The legacy 24M2xxx form remains valid only for
+// existing bootstrap/test identities so production administrators are not locked out.
+export const ROLL_NUMBER_PATTERN = /^(?:24|26)M2\d{3}$/;
+export const CURRENT_BATCH_ROLL_NUMBER_PATTERN = /^26M2\d{3}$/;
 
 export function normalizeRollNumber(value: string) {
   return value.trim().toUpperCase();

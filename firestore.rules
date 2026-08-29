@@ -42,6 +42,10 @@ service cloud.firestore {
       return active() && me().scopes.get("batchPocRoles", {}).get("caseCompetition", false) == true;
     }
 
+    function attendancePoc() {
+      return active() && me().scopes.get("batchPocRoles", {}).get("attendance", false) == true;
+    }
+
     function managesTask(data) {
       return active() && (
         (data.target.kind == "wing" && me().scopes.wingPocWings[data.target.wingId] == true) ||
@@ -168,7 +172,7 @@ service cloud.firestore {
     }
 
     match /sessionIntimations/{id} {
-      allow read: if active() && (resource.data.status in ["published", "closed", "cancelled"] || admin() || cr() || anyWingPoc());
+      allow read: if active() && (resource.data.status in ["published", "closed", "cancelled"] || admin() || cr() || anyWingPoc() || attendancePoc());
       allow write: if false;
     }
 

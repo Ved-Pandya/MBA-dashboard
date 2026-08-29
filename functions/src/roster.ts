@@ -123,6 +123,7 @@ export const updateRoleAssignments = onCall(callableOptions, async (request) => 
       crSections: input.crSections,
       wingPocWings: before.get("scopes.wingPocWings") ?? {},
       subjectPocOfferings: before.get("scopes.subjectPocOfferings") ?? {},
+      batchPocRoles: before.get("scopes.batchPocRoles") ?? {},
     };
     await ref.update({ roles, scopes, updatedAt: FieldValue.serverTimestamp() });
     await writeAudit({ actorUid: actor.uid, action: "roles.updated", resourceType: "user", resourceId: input.uid, before: before.data(), after: { roles, scopes } });

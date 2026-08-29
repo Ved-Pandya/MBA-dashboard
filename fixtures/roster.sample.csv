@@ -1,6 +1,6 @@
 rollNumber,password,displayName,sectionId,wingId,cr
-24M2000,AdminPass123!,System Admin,A,A,false
-24M2001,AaravPass123!,Aarav Shah,A,A,false
-24M2002,DiyaPass123!,Diya Mehta,A,B,false
-24M2003,KabirPass123!,Kabir Rao,B,A,true
-24M2004,MeeraPass123!,Meera Iyer,A,C,true
+26M2300,AdminPass123!,Sample Student,A,A,false
+26M2301,AaravPass123!,Aarav Shah,A,A,false
+26M2302,DiyaPass123!,Diya Mehta,A,B,false
+26M2303,KabirPass123!,Kabir Rao,B,A,true
+26M2304,MeeraPass123!,Meera Iyer,A,C,true

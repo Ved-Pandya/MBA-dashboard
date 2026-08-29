@@ -52,6 +52,19 @@ export function isCaseCompetitionPoc(actor: UserProfile): boolean {
   return actor.status === "active" && actor.scopes.batchPocRoles?.caseCompetition === true;
 }
 
+export function isAttendancePoc(actor: UserProfile): boolean {
+  return actor.status === "active" && actor.scopes.batchPocRoles?.attendance === true;
+}
+
 export function isWingPoc(actor: UserProfile): boolean {
   return actor.status === "active" && Object.keys(actor.scopes.wingPocWings ?? {}).length > 0;
+}
+
+export function canManageSessions(actor: UserProfile): boolean {
+  return actor.status === "active" && (
+    actor.roles.systemAdmin ||
+    actor.roles.cr ||
+    isWingPoc(actor) ||
+    isAttendancePoc(actor)
+  );
 }

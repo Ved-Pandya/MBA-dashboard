@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canManageTask, canMutateCrBoard, type UserProfile } from "@mba/domain";
+import { canManageSessions, canManageTask, canMutateCrBoard, isAttendancePoc, isCaseCompetitionPoc, isGroomingPoc, type UserProfile } from "@mba/domain";
 
 const wingPoc: UserProfile = {
   authEmail: "24m2001@users.deadlineos.app",
@@ -30,5 +30,15 @@ describe("RBAC contract", () => {
     expect(canMutateCrBoard(cr)).toBe(true);
     expect(canMutateCrBoard(admin)).toBe(false);
     expect(canMutateCrBoard({ ...cr, status: "suspended" })).toBe(false);
+  });
+
+  it("keeps the Attendance POC isolated from other batch POC powers", () => {
+    const attendancePoc: UserProfile = { ...wingPoc, scopes: { ...wingPoc.scopes, wingPocWings: {}, batchPocRoles: { attendance: true } } };
+    expect(isAttendancePoc(attendancePoc)).toBe(true);
+    expect(canManageSessions(attendancePoc)).toBe(true);
+    expect(isGroomingPoc(attendancePoc)).toBe(false);
+    expect(isCaseCompetitionPoc(attendancePoc)).toBe(false);
+    expect(isAttendancePoc({ ...attendancePoc, status: "suspended" })).toBe(false);
+    expect(canManageSessions({ ...attendancePoc, scopes: { ...attendancePoc.scopes, batchPocRoles: { grooming: true } } })).toBe(false);
   });
 });
