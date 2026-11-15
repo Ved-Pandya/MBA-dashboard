@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { WING_IDS } from "@mba/domain";
 import { callFunction, readableError } from "@/lib/callable";
 
@@ -62,20 +62,23 @@ export function CurrentComplianceView() {
   const [status, setStatus] = useState<StatusFilter>("non_responder");
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
+  const latestRequest = useRef(0);
   type Request = { itemKey?: string; cursor?: string; rowsOnly?: boolean; catalogCursors?: Record<string, string> };
   async function load(input: Request = {}, appendRows = false, appendCatalog = false) {
+    const request = ++latestRequest.current;
     setBusy(true); setError("");
     try {
       const result = await callFunction<Request, CompliancePayload>("getCurrentTaskCompliance", input);
+      if (request !== latestRequest.current) return;
       setPayload((previous) => ({ ...result,
         items: input.rowsOnly ? previous.items : appendCatalog ? [...new Map([...previous.items, ...result.items].map((item) => [item.key, item])).values()] : result.items,
         rows: appendRows ? [...new Map([...previous.rows, ...result.rows].map((row) => [row.id, row])).values()] : result.rows,
         nextCatalogCursors: input.rowsOnly ? previous.nextCatalogCursors : appendCatalog ? { ...previous.nextCatalogCursors, ...result.nextCatalogCursors } : result.nextCatalogCursors,
       }));
-    } catch (err) { setError(readableError(err)); }
-    finally { setBusy(false); }
+    } catch (err) { if (request === latestRequest.current) setError(readableError(err)); }
+    finally { if (request === latestRequest.current) setBusy(false); }
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); return () => { latestRequest.current += 1; }; }, []);
   const selected = payload.items.find((item) => item.key === payload.selectedItemKey);
   const rows = useMemo(() => payload.rows.filter((row) => wing === "all" || row.wingId === wing), [payload.rows, wing]);
   const filtered = useMemo(() => rows.filter((row) => status === "all" || row.status === status).sort((a, b) => a.wingId.localeCompare(b.wingId) || a.rollNumber.localeCompare(b.rollNumber)), [rows, status]);

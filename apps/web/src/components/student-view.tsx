@@ -9,6 +9,7 @@ import { asDate, formatDeadline, relativeDeadline, urgency, indiaDayStart, isOpe
 import { useClock } from "@/lib/use-clock";
 import { callFunction, readableError } from "@/lib/callable";
 import { AppIcon } from "./app-icon";
+import { DateStamp } from "./date-stamp";
 
 const labels = {
   subject_assignment: "Assignment",
@@ -157,7 +158,7 @@ export function StudentView({ onNavigate }: { onNavigate: (view: "forms" | "acad
   };
   const showManagement = Boolean(profile?.roles.cr || profile?.roles.systemAdmin || Object.keys(profile?.scopes.wingPocWings ?? {}).length || Object.keys(profile?.scopes.subjectPocOfferings ?? {}).length);
   return <div className="page-wrap today-page">
-    <header className="day-heading"><div><h1>Today<span className="heading-dot">.</span></h1><p>{date}</p></div><div className="day-note"><span>Hello, {profile?.displayName.split(" ")[0]}.</span><strong>{pendingCount ? `${pendingCount} ${pendingCount === 1 ? "deadline" : "deadlines"} to keep in view.` : "Your deadlines are clear."}</strong></div></header>
+    <header className="day-heading"><div><h1>Today<span className="heading-dot">.</span></h1><p>{date}</p><div className="day-note"><span>Hello, {profile?.displayName.split(" ")[0]}.</span><strong>{pendingCount ? `${pendingCount} ${pendingCount === 1 ? "deadline" : "deadlines"} to keep in view.` : "Your deadlines are clear."}</strong></div></div><DateStamp /></header>
     {showManagement && <nav className="responsibility-bar" aria-label="Your responsibilities"><span>Your workspace</span>{Boolean(Object.keys(profile?.scopes.wingPocWings ?? {}).length) && <button onClick={() => onNavigate("forms")}><AppIcon name="form" />Manage wing forms<AppIcon name="arrow" /></button>}{Boolean(Object.keys(profile?.scopes.subjectPocOfferings ?? {}).length) && <button onClick={() => onNavigate("academics")}><AppIcon name="book" />Manage academic dates<AppIcon name="arrow" /></button>}<button onClick={() => onNavigate("compliance")}><AppIcon name="report" />Check responses<AppIcon name="arrow" /></button></nav>}
     {error && <p className="form-error" role="alert">{error}</p>}
     <div className="daybook-layout">

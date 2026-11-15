@@ -205,11 +205,30 @@ test("admin edits and cancels internships and preserves a failed competition for
 });
 
 test("CR loads all response pages before exporting exact totals", async ({ page }, info) => {
-  await login(page, "cr"); await page.goto("/?view=compliance");
+  await login(page, "cr");
+  // Dev Strict Mode starts two initial loads. Hold the first response until
+  // the representative has selected a report, reproducing a slow-network race.
+  let firstLoad = true;
+  let releaseStale: (() => Promise<void>) | undefined;
+  await page.route("**/api/call/getCurrentTaskCompliance", async (route) => {
+    if (firstLoad) {
+      firstLoad = false;
+      releaseStale = () => route.fulfill({ json: { data: { items: [{ key: "deadline:stale", id: "stale", kind: "deadline", title: "Stale initial report", dueAtIso: "2027-01-01T00:00:00Z", scopeLabel: "Wing A" }], rows: [], generatedAtIso: "2026-11-15T00:00:00Z", selectedItemKey: "deadline:stale", nextCursor: null, nextCatalogCursors: {} } } });
+      return;
+    }
+    await route.continue();
+  });
+  await page.goto("/?view=compliance");
   await expect(page.getByRole("heading", { name: "Current task compliance", exact: true })).toBeVisible();
   await page.getByRole("combobox", { name: "Current task", exact: true }).selectOption(`deadline:${prefix}_open`);
   await expect(page.getByRole("button", { name: "Load more students", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Export filtered CSV", exact: true })).toBeDisabled();
+  expect(releaseStale).toBeDefined();
+  const staleResponse = page.waitForResponse(async (response) => response.url().endsWith("/api/call/getCurrentTaskCompliance") && (await response.json()).data?.selectedItemKey === "deadline:stale");
+  await releaseStale!();
+  await staleResponse;
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect(page.getByRole("combobox", { name: "Current task", exact: true })).toHaveValue(`deadline:${prefix}_open`);
   await page.getByRole("button", { name: "Load more students", exact: true }).click();
   await expect(page.getByRole("button", { name: "Load more students", exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Wing breakdown", exact: true })).toBeVisible();

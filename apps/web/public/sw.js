@@ -1,4 +1,4 @@
-const CACHE_NAME = "deadlineos-static-v1";
+const CACHE_NAME = "deadlineos-static-v2";
 const OFFLINE_ASSETS = [
   "/offline.html",
   "/icons/icon-192.png",

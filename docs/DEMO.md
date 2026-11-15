@@ -54,7 +54,7 @@ These captures are generated from the local emulator browser smoke tests using s
 
 ## Interface direction
 
-The campus daybook uses ruled deadline rows, a navy identity rail, self-hosted IBM Plex Sans and restrained orange accents. Students begin with obligations; managers begin with current records and open editors deliberately. The same vocabulary and role permissions apply on mobile. See [the design system](../DESIGN.md).
+The academic register uses cream pages, a deep vermilion identity rail, expressive Fraunces headings, IBM Plex Sans for interface data and a live India-date stamp. Students begin with obligations; managers begin with current records and open editors deliberately. Completing a deadline changes its outlined control to a filled check, with reduced-motion support. The same vocabulary and role permissions apply on mobile. See [the design system](../DESIGN.md).
 
 ![Wing forms on desktop](screenshots/wing-forms-desktop.png)
 ![Wing editor on mobile](screenshots/wing-editor-mobile.png)

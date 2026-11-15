@@ -27,5 +27,5 @@ export function AppIcon({ name, ...props }: SVGProps<SVGSVGElement> & { name: Ic
 }
 
 export function Brand() {
-  return <div className="brand"><span className="brand-mark"><AppIcon name="today" /></span><span>Deadline<span className="brand-suffix">OS</span></span></div>;
+  return <div className="brand"><span className="brand-mark"><AppIcon name="today" /></span><span className="brand-word">Deadline<span className="brand-suffix">OS</span></span></div>;
 }

@@ -1,36 +1,40 @@
 ---
 name: DeadlineOS
-description: A clear, ruled workspace for the MBA day.
+description: An academic register in cream and vermilion.
 colors:
-  ink: "#142b3b"
-  blue: "#244d6d"
-  accent: "#b44629"
-  paper: "#f4f6f8"
-  card: "#ffffff"
-  surface-subtle: "#edf1f5"
-  muted: "#536574"
-  line: "#d8e0e6"
-  red: "#a33423"
-  amber: "#83531b"
+  ink: "#302a25"
+  link: "#963b2b"
+  accent: "#a53a2a"
+  paper: "#f5f0e5"
+  card: "#fbf8f0"
+  surface-subtle: "#eee6d7"
+  muted: "#6f6256"
+  line: "#d7cdbc"
+  control-border: "#93816a"
+  rail: "#9d3829"
+  rail-text: "#fff4df"
+  on-accent: "#fff9ed"
+  red: "#a12e24"
+  amber: "#80511d"
 typography:
   display:
-    fontFamily: "IBM Plex Sans, sans-serif"
-    fontSize: "clamp(46px, 5.7vw, 78px)"
-    fontWeight: 500
-    lineHeight: 1.04
-    letterSpacing: "-0.035em"
+    fontFamily: "Fraunces, Georgia, serif"
+    fontSize: "clamp(66px, 7vw, 88px)"
+    fontWeight: 450
+    lineHeight: 0.98
+    letterSpacing: "-0.04em"
   headline:
-    fontFamily: "IBM Plex Sans, sans-serif"
-    fontSize: "34px"
-    fontWeight: 500
-    lineHeight: 1.2
-    letterSpacing: "-0.035em"
+    fontFamily: "Fraunces, Georgia, serif"
+    fontSize: "clamp(38px, 4vw, 54px)"
+    fontWeight: 450
+    lineHeight: 1.07
+    letterSpacing: "-0.04em"
   title:
-    fontFamily: "IBM Plex Sans, sans-serif"
-    fontSize: "19px"
-    fontWeight: 600
-    lineHeight: 1.2
-    letterSpacing: "-0.015em"
+    fontFamily: "Fraunces, Georgia, serif"
+    fontSize: "24px"
+    fontWeight: 500
+    lineHeight: 1.15
+    letterSpacing: "-0.025em"
   body:
     fontFamily: "IBM Plex Sans, sans-serif"
     fontSize: "15px"
@@ -42,7 +46,8 @@ typography:
     fontWeight: 500
 rounded:
   field: "3px"
-  control: "4px"
+  control: "3px"
+  flat: "0px"
 spacing:
   compact: "8px"
   group: "16px"
@@ -51,13 +56,13 @@ spacing:
   page: "38px"
 components:
   button-primary:
-    backgroundColor: "{colors.ink}"
-    textColor: "{colors.card}"
+    backgroundColor: "{colors.accent}"
+    textColor: "{colors.on-accent}"
     rounded: "{rounded.control}"
     padding: "10px 16px"
     typography: "{typography.label}"
   button-secondary:
-    backgroundColor: "{colors.card}"
+    backgroundColor: "transparent"
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
     padding: "10px 16px"
@@ -69,11 +74,11 @@ components:
     padding: "10px 12px"
   panel:
     backgroundColor: "{colors.card}"
-    rounded: "{rounded.control}"
+    rounded: "{rounded.flat}"
   navigation-item:
-    textColor: "#e3ebf1"
-    rounded: "{rounded.control}"
-    padding: "11px 12px"
+    textColor: "{colors.rail-text}"
+    rounded: "{rounded.flat}"
+    padding: "12px"
   status:
     textColor: "{colors.muted}"
 ---
@@ -82,119 +87,122 @@ components:
 
 ## Overview
 
-**Creative North Star: "The Campus Daybook"**
+**Creative North Star: "The Academic Register"**
 
-DeadlineOS uses the visual language of a working campus record: cool paper, dark ink, readable rows and precise dates. Students and coordinators share the same vocabulary and controls. The interface makes actual work visible through typography and alignment, with restrained color for state.
+DeadlineOS uses the character of an academic register: warm cream pages, deep vermilion navigation, expressive Fraunces headings and precise IBM Plex Sans interface data. Actual work remains visible through readable records, aligned dates and direct actions.
 
-The implementation is intentionally flat and compact. The identity comes from IBM Plex Sans, a calendar mark, ruled content and a navy navigation rail. Photographic or decorative illustration is not part of this system. The source of truth is `apps/web/src/app/daybook.css`; the surface-specific composition is recorded separately in `.impeccable/surfaces/dashboard.md`.
+The implementation is flat and practical. Fine rules structure records; darker boundaries identify controls. The user rejected the earlier generic blue/sans-serif appearance and asked mainly for a visual-style change, so established workflows and information layout remain intact. The source of truth is `apps/web/src/app/daybook.css`; surface composition is recorded separately in `.impeccable/surfaces/dashboard.md`.
 
 **Key Characteristics:**
 
-- Readable records with clear rules and consistent alignment.
-- Small corners, solid surfaces and restrained state color.
-- One self-hosted type family and authored outline SVG icons.
-- Accessible native controls and deliberate editor disclosure.
+- Expressive Fraunces headings paired with readable Plex data.
+- Vermilion identity surfaces, cream fields and dark warm ink.
+- Flat records with fine rules and stronger interactive boundaries.
+- Live India-date stamps and consistent authored outline SVG icons.
 
 ## Colors
 
-Dark ink and cool light paper carry most of the interface; burnt orange is a sparse identity accent.
+Warm cream and dark ink carry working content; committed vermilion identity surfaces and action states give the system its character. Frontmatter values are normative.
 
 ### Primary
 
-- **Ink:** headings, primary actions and the navigation rail.
-- **Working Blue:** links, editor disclosure and keyboard focus.
-
-### Secondary
-
-- **Burnt Orange:** the calendar mark and punctuation in large headings.
+- **Vermilion Accent:** primary actions, active tabs, calendar details and prominent date numerals.
+- **Deep Vermilion Rail:** navigation and the sign-in cover.
+- **Working Red:** links and shared keyboard focus.
 
 ### Neutral
 
-- **Paper:** the cool light gray application canvas.
-- **Card:** white fields, record containers and utility surfaces.
-- **Subtle Surface:** quiet secondary states and hover backgrounds.
+- **Ink:** primary text and headings.
+- **Paper:** the cream canvas and utility header.
+- **Card:** light cream fields, dialogs and editors.
+- **Subtle Surface:** quiet tonal states and hover backgrounds.
 - **Muted Ink:** supporting dates, labels and explanations.
-- **Rule:** thin separators and container edges.
+- **Rule:** thin decorative separators.
+- **Control Boundary:** darker field, task-toggle and outlined-action strokes.
+- **Rail Text / On Accent:** light foregrounds on vermilion surfaces.
 
-### Named Rules
+Red and amber support explicit error, overdue and warning text. Published and completed labels retain the implemented green treatment.
 
 **The State Has Words Rule.** Overdue, cancelled and other states retain visible text. Red and amber support those labels; color alone does not communicate status.
 
+**The Control Boundary Rule.** Use the darker control-boundary token for outlined controls; the lighter line token belongs to decorative separators.
+
 ## Typography
 
-**Display Font:** IBM Plex Sans, with sans-serif fallback.
+**Display Font:** Fraunces, with Georgia and serif fallback.
 **Body Font:** IBM Plex Sans, with sans-serif fallback.
 
-The Latin variable font is self-hosted under `apps/web/public/fonts`, with its OFL license and provenance. Medium weight makes the interface direct without heavy display typography. Monospace is reserved for actual CSV/code content.
+Both Latin variable fonts are self-hosted with their OFL licenses and provenance. Headings use the implemented SOFT 25 and WONK 1 variation settings. The contrast between expressive serif headings and precise sans-serif data carries the identity. Monospace is reserved for actual CSV/code.
 
 ### Hierarchy
 
-- **Display:** the responsive login headline; the Today heading uses a compact operational display (54px desktop, 44px phone).
-- **Headline:** page titles; reduced to 30px on phones.
-- **Title:** section headings; individual records use medium weight at 15–16px.
-- **Body:** ordinary content; working screens also use 13–14px supporting copy with generous line height.
-- **Label:** sentence-case controls and form labels. Small date metadata uses 11–12px. Mobile form values become 16px.
+- **Display:** Today uses the frontmatter display role, reduced to 64px on phones. The sign-in cover has its own responsive display (58?92px, 52px on phones).
+- **Headline:** page titles; reduced to 39px on phones.
+- **Title:** section headings; day-view sections use 24?25px. Management record titles and reply questions use Fraunces at 23px, weight 450. Student task titles remain Plex at 16px.
+- **Body:** ordinary content; supporting copy also uses 13?14px with generous line height. Explanatory heading copy is constrained to 68ch.
+- **Label:** sentence-case controls and form labels. Small metadata uses 11?12px; phone field values enlarge to 16px.
+- **Calendar numerals:** Fraunces lining numerals, weight 400, 64px in the main stamp and 46px on phones.
 
-**The One Family Rule.** Use Plex weight and scale to separate roles. Use tabular numerals where dates, counts and table values must align.
+**The Two Voices Rule.** Use Fraunces for headings, prominent dates and management record titles. Use Plex for actions, field values, student task details and dense tables.
 
 ## Layout
 
-The desktop shell has a sticky identity rail (224px), a white utility header (66px minimum) and a constrained working area (1370px maximum). Page padding is generous horizontally and content groups are separated by consistent 16–34px gaps. Containers use internal padding around the panel spacing token.
+The established shell has a sticky desktop rail (224px), a cream utility header (66px minimum) and a constrained work area (1370px maximum). Generous page gutters and 16?34px group spacing keep working records aligned. Editors remain deliberate disclosures beside their records.
 
-At 1180px the rail narrows to 202px and page gutters to 28px. At 900px the rail becomes a mobile directory plus four-item bottom navigation, with safe-area padding. At 680px content and forms become one column, gutters shrink to 16px, editor content comes before its record list, and form values enlarge for touch use. Preserve scrollable tables when their data cannot usefully collapse.
+At 1180px the rail narrows to 202px and gutters to 28px. At 900px the rail becomes a mobile directory and labelled four-item bottom navigation with safe-area padding. The day view becomes one main column with adjacent reply/date sections. At 680px those sections and forms stack, gutters shrink to 16px and contextual editors precede records. Preserve scrollable tables when the data cannot usefully collapse.
 
 ## Elevation & Depth
 
-Pages, records and fields are flat. White surfaces, subtle tonal differences and thin borders establish hierarchy. A soft downward shadow is reserved for floating row-action menus. Modal drawers use a dimmed backdrop and scrolling content, with focus managed by the native dialog implementation.
+Pages, records and fields are flat. Cream tonal differences, spacing and rules establish hierarchy. Management lists remove side boundaries and keep separated records; contained editors have light solid surfaces. Modal drawers use a dimmed warm-ink backdrop and native focus management.
 
 ### Shadow Vocabulary
 
-- **Menu:** `0 6px 18px rgb(20 43 59 / .12)`; floating actions only.
+- **Menu:** 0 6px 18px rgb(48 42 37 / .12); floating row actions only.
 
-**The Flat Records Rule.** Give a record its rule and spacing before adding a container. Do not add ornamental shadows to ordinary lists.
+**The Flat Records Rule.** Give a record its rule and spacing before adding a container. Reserve the soft downward shadow for floating action menus.
 
 ## Shapes
 
-Controls and panels have small square-feeling corners, with slightly tighter fields. One-pixel boundaries define record groups; two-pixel horizontal ink rules establish major daybook sections. The calendar mark and application icons are authored SVG geometry with rounded stroke ends. Status dots and the loading spinner use circular geometry for specific meanings.
+Flat panels and navigation have square corners. Principal actions and fields have small control corners; some secondary menus retain four-pixel corners. One-pixel rules structure records. The task toggle begins as an outlined circle and becomes a filled checked square, retaining a 44px hit target. The date stamp is a narrow outlined rectangle. Calendar and interface icons use authored SVG geometry with consistent rounded stroke ends. Status dots and unread counts use circular geometry for meaningful states.
 
 ## Components
 
 ### Buttons
 
-Solid ink primary actions contrast with white secondary actions. Both have a 44px minimum height, compact padding and a visible border. Hover changes surface tone; keyboard focus uses the shared two-pixel blue outline with three-pixel offset. Disabled controls reduce opacity and reject interaction. Text actions retain generous vertical targets and underline on hover.
+Primary actions are vermilion with light text, compact padding and a 44px minimum height. Secondary actions are transparent with dark text and the control boundary. Hover changes tone; keyboard focus uses the shared two-pixel working-red outline with three-pixel offset. Rail focus is light against vermilion. Disabled controls reduce opacity and reject interaction. Text actions retain vertical targets and underline on hover.
 
 ### Cards / Containers
 
-White panels group related records or a working editor. Headers and rows separate with thin rules; nested promotional cards are outside this visual vocabulary. Shared panel headers use horizontal spacing and a quiet count. Existing statistical reports use a contiguous ruled strip rather than floating metric cards.
+Light cream panels group editors or fields. Headers and rows separate with fine rules; management lists are flat and unboxed. Serif headings pair with quiet Plex counts. Reports retain contiguous ruled summaries instead of floating statistic cards.
 
 ### Inputs / Fields
 
-White fields have a muted blue-gray stroke, visible external labels and no decorative fill. Textareas resize vertically. Errors use readable red text on a pale red surface, alongside the actionable message. Selection and caret colors belong to the ink palette. Mobile values enlarge without shrinking labels or targets.
+Light cream fields have strong warm strokes, visible external labels and small corners. The control-boundary token contrasts at least 3:1 with both paper and card. Textareas resize vertically. Errors use readable red text on pale red surfaces alongside the recovery message. Warm peach selection and ink carets belong to the palette. Phone values enlarge without shrinking labels or targets.
 
 ### Navigation
 
-The navy rail shows full labels with consistent outline icons. The active destination has a pale blue surface and ink text. Mobile navigation has Today, Academics, Opportunities and My desk; the directory contains the remaining role-appropriate destinations. The utility header carries App setup and Inbox.
+The deep vermilion rail has full Plex labels and outline icons. Hover darkens it; selected destinations use cream and dark red. Mobile navigation keeps Today, Academics, Opportunities and My desk, with a vermilion selected indicator. The directory contains remaining role-appropriate tools. App setup and Inbox remain in the cream utility header.
 
 ### Status Labels
 
-Compact text and a small dot communicate state without a rounded badge container. Published/completed are green; overdue/cancelled are red; warning/urgent are amber. Keep the words present.
+Compact text and a small dot communicate state without a badge container. Keep the words visible. Tabs underline selected views in vermilion instead of enclosing them in pills.
 
-### Ruled Records and Editors
+### Date Stamp and Brand
 
-Deadline rows align completion, title, context, due time and the actual resource action. Completion remains reversible when the lifecycle allows it. Management records show current state first. A labelled create/edit action reveals a contextual editor, retaining values when saving fails. Tabs underline the selected view instead of enclosing it in a pill.
+The live India-date stamp pairs a small month/year with large Fraunces numerals in a fine vermilion frame. It is hidden from assistive technology when the day heading already provides date context. The wordmark pairs Fraunces Deadline with a compact outlined Plex OS suffix and the authored calendar icon. Application icons follow the warm palette.
 
-### Motion and Browser States
+### Completion and Motion
 
-The current authored motion is a one-second linear loading spinner, disabled by reduced-motion preference. Other states change directly. Preserve visible focus, themed text selection, caret, underline offset and tabular data. Do not introduce entrance effects as a substitute for useful feedback.
+A task toggle changes from an outlined circle to a vermilion square with a check over 250ms using exponential ease-out. Its pressed state and completed view remain explicit and reversible. Reduced motion removes that transition and the loading spinner animation. No entrance effect delays working content.
 
 ## Do's and Don'ts
 
 ### Do:
 
 - **Do** place the real title, state, date and action in a readable record.
-- **Do** use the same outline SVG vocabulary and self-hosted Plex family.
+- **Do** use Fraunces headings and Plex data according to their roles.
 - **Do** retain visible labels, keyboard focus and explicit failure recovery.
-- **Do** use border and tonal layering for ordinary surfaces.
+- **Do** keep control boundaries stronger than decorative row rules.
 
 ### Don't:
 

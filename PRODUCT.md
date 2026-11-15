@@ -26,6 +26,8 @@ Preserve Firebase authentication, additive role permissions, server-only mutatio
 
 Keep the product name DeadlineOS. The user rejects a generic AI-looking interface and requests a more differentiated and intuitive design. No particular palette or typeface is binding.
 
+The user rejected the first navy/sans-serif redesign as still generic and clarified that the visual style was the main concern. Preserve the working information layout while giving headings, colours, calendar details and shared surfaces a stronger identity.
+
 ## Product Principles
 
 - Put required work before summaries and setup prompts.
