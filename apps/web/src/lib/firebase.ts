@@ -3,7 +3,7 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore, type Firestore } from "firebase/firestore";
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from "firebase/app-check";
 
 const config = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,7 +16,7 @@ const config = {
 
 export const firebaseConfigured = Boolean(config.apiKey && config.projectId && config.appId);
 
-let services: { app: FirebaseApp; auth: Auth; db: Firestore } | null = null;
+let services: { app: FirebaseApp; auth: Auth; db: Firestore; appCheck?: AppCheck } | null = null;
 let emulatorsConnected = false;
 let appCheckInitialized = false;
 
@@ -33,10 +33,11 @@ export function getFirebase() {
     emulatorsConnected = true;
   }
   const siteKey = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY;
+  let appCheck: AppCheck | undefined;
   if (siteKey && typeof window !== "undefined" && !appCheckInitialized) {
-    initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(siteKey), isTokenAutoRefreshEnabled: true });
+    appCheck = initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(siteKey), isTokenAutoRefreshEnabled: true });
     appCheckInitialized = true;
   }
-  services = { app, auth, db };
+  services = { app, auth, db, appCheck };
   return services;
 }

@@ -195,8 +195,8 @@ function ScopedComplianceView() {
     <div className="page-wrap">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">COMPLIANCE DESK</p>
-          <h1>Know exactly what&apos;s pending.</h1>
+
+          <h1>Task compliance</h1>
           <p>Filter by task, compare Wings A–J, and follow up with the right students.</p>
         </div>
         <button className="secondary-button" onClick={downloadCsv}>Export current view ↓</button>
@@ -309,8 +309,7 @@ function ScopedComplianceView() {
           </table>
         </div>
         {!filtered.length && (
-          <div className="empty-state">
-            <span>◎</span><h3>No matching records</h3><p>Try another task, wing, scope, or status.</p>
+          <div className="empty-state"><h3>No matching records</h3><p>Try another task, wing, scope, or status.</p>
           </div>
         )}
       </section>
@@ -319,7 +318,7 @@ function ScopedComplianceView() {
         <section className="panel wing-compliance-panel">
           <div className="panel-head">
             <div>
-              <p className="eyebrow">WING BREAKDOWN</p>
+
               <h2>{selectedTask ? selectedTask.title : "All tasks"}</h2>
               <p className="helper">Exempt students are excluded from the compliance percentage.</p>
             </div>

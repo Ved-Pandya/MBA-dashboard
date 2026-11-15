@@ -1,4 +1,6 @@
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { z } from "zod";
+import { FieldPath } from "firebase-admin/firestore";
 import { db, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor } from "./helpers.js";
 
@@ -56,21 +58,29 @@ export const getCurrentTaskCompliance = onCall({ ...callableOptions, timeoutSeco
       throw new HttpsError("permission-denied", "CR or System Admin access required");
     }
 
-    const [
-      tasks, competitions, internships, sessions, polls,
-      assignments, competitionResponses, internshipResponses, sessionResponses, pollResponses,
-    ] = await Promise.all([
-      db.collection("tasks").limit(500).get(),
-      db.collection("competitions").limit(500).get(),
-      db.collection("internships").limit(500).get(),
-      db.collection("sessionIntimations").limit(500).get(),
-      db.collection("generalPolls").limit(500).get(),
-      db.collection("taskAssignments").limit(10_000).get(),
-      db.collection("opportunityResponses").limit(10_000).get(),
-      db.collection("internshipResponses").limit(10_000).get(),
-      db.collection("sessionResponses").limit(10_000).get(),
-      db.collection("pollResponses").limit(10_000).get(),
-    ]);
+    const input = z.object({
+      itemKey: z.string().max(250).optional(), cursor: z.string().max(1500).optional(),
+      catalogCursors: z.record(z.string().max(1500)).optional(), rowsOnly: z.boolean().optional().default(false),
+    }).parse(request.data ?? {});
+    const definitions = [
+      { kind: "deadline", collection: "tasks", statuses: ["published"], responseCollection: "taskAssignments", foreignKey: "taskId" },
+      { kind: "competition", collection: "competitions", statuses: ["published", "in_progress", "needs_configuration"], responseCollection: "opportunityResponses", foreignKey: "opportunityId" },
+      { kind: "internship", collection: "internships", statuses: ["published"], responseCollection: "internshipResponses", foreignKey: "internshipId" },
+      { kind: "session", collection: "sessionIntimations", statuses: ["published"], responseCollection: "sessionResponses", foreignKey: "sessionId" },
+      { kind: "poll", collection: "generalPolls", statuses: ["published"], responseCollection: "pollResponses", foreignKey: "pollId" },
+    ] as const;
+    const nextCatalogCursors: Record<string, string> = {};
+    const catalogs = await Promise.all(definitions.map(async (definition) => {
+      if (input.rowsOnly || input.catalogCursors?.[definition.kind] === "") return { docs: [] as FirebaseFirestore.QueryDocumentSnapshot[] };
+      let query = db.collection(definition.collection).where("status", "in", [...definition.statuses]).orderBy(FieldPath.documentId()).limit(51);
+      const cursor = input.catalogCursors?.[definition.kind];
+      if (cursor) query = query.startAfter(cursor);
+      const snapshot = await query.get();
+      const docs = snapshot.docs.slice(0, 50);
+      nextCatalogCursors[definition.kind] = snapshot.size > 50 ? docs.at(-1)!.id : "";
+      return { docs };
+    }));
+    const [tasks = { docs: [] }, competitions = { docs: [] }, internships = { docs: [] }, sessions = { docs: [] }, polls = { docs: [] }] = catalogs;
 
     const items: ComplianceItem[] = [];
     const itemKeys = new Set<string>();
@@ -101,6 +111,24 @@ export const getCurrentTaskCompliance = onCall({ ...callableOptions, timeoutSeco
       title: String(doc.get("question")), dueAtIso: iso(doc.get("closesAt")), scopeLabel: "Batch",
     }));
 
+    items.sort((a, b) => new Date(a.dueAtIso).getTime() - new Date(b.dueAtIso).getTime());
+    const selectedKey = input.itemKey ?? items[0]?.key;
+    const definition = definitions.find((item) => selectedKey?.startsWith(item.kind + ":"));
+    const id = definition && selectedKey ? selectedKey.slice(definition.kind.length + 1) : undefined;
+    if (input.itemKey && (!definition || !id || id.includes("/"))) throw new HttpsError("invalid-argument", "Select a valid compliance item");
+    let responseDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    let nextCursor: string | null = null;
+    if (definition && id) {
+      const selected = await db.collection(definition.collection).doc(id).get();
+      if (!selected.exists || !(definition.statuses as readonly string[]).includes(String(selected.get("status")))) throw new HttpsError("failed-precondition", "This item is no longer ongoing. Refresh the current task list.");
+      let query = db.collection(definition.responseCollection).where(definition.foreignKey, "==", id).orderBy(FieldPath.documentId()).limit(101);
+      if (input.cursor) query = query.startAfter(input.cursor);
+      const snapshot = await query.get();
+      responseDocs = snapshot.docs.slice(0, 100);
+      if (snapshot.size > 100) nextCursor = responseDocs.at(-1)!.id;
+      itemKeys.add(selectedKey!);
+    }
+    const [assignments = { docs: [] }, competitionResponses = { docs: [] }, internshipResponses = { docs: [] }, sessionResponses = { docs: [] }, pollResponses = { docs: [] }] = definitions.map((item) => ({ docs: item.kind === definition?.kind ? responseDocs : [] }));
     const rows: ComplianceRow[] = [];
     assignments.docs.forEach((doc) => {
       const data = doc.data();
@@ -174,6 +202,6 @@ export const getCurrentTaskCompliance = onCall({ ...callableOptions, timeoutSeco
     });
 
     items.sort((a, b) => new Date(a.dueAtIso).getTime() - new Date(b.dueAtIso).getTime());
-    return { items, rows, generatedAtIso: new Date().toISOString() };
+    return { items, rows, selectedItemKey: selectedKey ?? "", nextCursor, nextCatalogCursors, generatedAtIso: new Date().toISOString() };
   } catch (error) { asHttpsError(error); }
 });

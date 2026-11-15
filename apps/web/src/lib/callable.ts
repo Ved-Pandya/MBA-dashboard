@@ -2,16 +2,27 @@
 
 import { getFirebase } from "./firebase";
 
-export async function callFunction<TInput, TOutput>(name: string, input: TInput): Promise<TOutput> {
+export async function authenticatedHeaders() {
   const user = getFirebase().auth.currentUser;
   if (!user) throw new Error("Sign in is required");
   const idToken = await user.getIdToken();
-  const response = await fetch(`/api/call/${encodeURIComponent(name)}`, {
-    method: "POST",
-    headers: {
+  let appCheckToken: string | undefined;
+  if (process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY) {
+    const { getToken } = await import("firebase/app-check");
+    const appCheck = getFirebase().appCheck;
+    if (appCheck) appCheckToken = (await getToken(appCheck)).token;
+  }
+  return {
       authorization: `Bearer ${idToken}`,
       "content-type": "application/json",
-    },
+      ...(appCheckToken ? { "x-firebase-appcheck": appCheckToken } : {}),
+  };
+}
+
+export async function callFunction<TInput, TOutput>(name: string, input: TInput): Promise<TOutput> {
+  const response = await fetch(`/api/call/${encodeURIComponent(name)}`, {
+    method: "POST",
+    headers: await authenticatedHeaders(),
     body: JSON.stringify({ data: input }),
   });
   const responseText = await response.text();

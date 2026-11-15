@@ -6,7 +6,8 @@ import { clearTestData, seedTestData } from "./test-data.js";
 import { initializeAppConfig, saveSubjectOffering } from "./catalog.js";
 import { getComplianceExport, markNotificationsRead, reopenMyCompletion, setMyCompletion, setTaskExemption } from "./completion.js";
 import { getCurrentTaskCompliance } from "./compliance.js";
-import { adminAuth, db, FieldValue, Timestamp } from "./firebase.js";
+import { adminAuth, adminAppCheck, db, FieldValue, Timestamp } from "./firebase.js";
+import { HttpsError } from "firebase-functions/v2/https";
 import { commitRosterImport, updateRoleAssignments, validateRosterImport } from "./roster.js";
 import { getPlacementRoster, setPlacementStatus } from "./placements.js";
 import { cancelTask, closeTask, createTask, previewTaskRecipients, publishTask, syncTaskRecipients, updateTask } from "./tasks.js";
@@ -97,11 +98,25 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
 };
 
 export async function verifySparkIdToken(idToken: string) {
-  if (!idToken) throw new Error("Authentication token is required");
+  if (!idToken) throw new HttpsError("unauthenticated", "Sign in is required");
   return adminAuth.verifyIdToken(idToken, true);
 }
 
-export async function invokeSparkCallable(name: string, data: unknown, idToken: string) {
+export async function verifySparkAppCheck(token?: string) {
+  if (process.env.ENFORCE_APP_CHECK !== "true" || process.env.FIREBASE_AUTH_EMULATOR_HOST) return;
+  if (!token) throw new HttpsError("unauthenticated", "App verification is required. Reload the app and try again.");
+  try { await adminAppCheck.verifyToken(token); }
+  catch { throw new HttpsError("unauthenticated", "App verification expired. Reload the app and try again."); }
+}
+
+export async function verifySparkMaintenanceUser(idToken: string, appCheckToken?: string) {
+  const token = await verifySparkIdToken(idToken);
+  await verifySparkAppCheck(appCheckToken);
+  const user = await db.doc(`users/${token.uid}`).get();
+  if (user.get("status") !== "active") throw new HttpsError("permission-denied", "Active roster access is required");
+}
+
+export async function invokeSparkCallable(name: string, data: unknown, idToken: string, appCheckToken?: string) {
   const handler = callableHandlers[name];
   if (!handler) {
     const error = new Error("Unknown operation") as Error & { code?: string };
@@ -109,6 +124,16 @@ export async function invokeSparkCallable(name: string, data: unknown, idToken: 
     throw error;
   }
   const token = await verifySparkIdToken(idToken);
+  await verifySparkAppCheck(appCheckToken);
+  // Shared across server instances. Limit repeated expensive calls without trusting client state.
+  const minute = Math.floor(Date.now() / 60_000);
+  const rateRef = db.doc(`apiRateLimits/${token.uid}`);
+  await db.runTransaction(async (tx) => {
+    const state = await tx.get(rateRef);
+    const count = state.get("minute") === minute ? Number(state.get("count") ?? 0) : 0;
+    if (count >= 60) throw new HttpsError("resource-exhausted", "Too many requests. Wait a minute and try again.");
+    tx.set(rateRef, { minute, count: count + 1 });
+  });
   return handler.run({
     data,
     auth: { uid: token.uid, token, rawToken: idToken },

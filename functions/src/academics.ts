@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { createHash } from "node:crypto";
+import { planTimetable } from "./timetable-plan.js";
 import { academicEventFieldsSchema, academicEventSchema, timetableImportSchema, type UserProfile } from "@mba/domain";
 import { db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, writeAudit } from "./helpers.js";
@@ -41,61 +42,40 @@ export const commitTimetableImport = onCall({ ...callableOptions, timeoutSeconds
     const actor = await requireActor(request);
     if (!canGovernAcademics(actor)) throw new HttpsError("permission-denied", "Admin or CR access required");
     const input = timetableImportSchema.parse(request.data);
-    const importHash = createHash("sha256").update(JSON.stringify(input)).digest("hex").slice(0, 16);
-    const operationId = `timetable_${normalizeId(input.termId)}_${importHash}`;
-    const operationRef = db.doc(`operations/${operationId}`);
-    const existing = await operationRef.get();
-    if (existing.get("status") === "complete") return { ...existing.data(), idempotent: true };
-
-    const offeringMap = new Map<string, { subjectCode: string; subjectName: string; sectionId: "A" | "B" }>();
-    input.rows.forEach((row) => {
-      const offeringId = `${normalizeId(row.subjectCode)}-${row.sectionId}`;
-      offeringMap.set(offeringId, { subjectCode: row.subjectCode, subjectName: row.subjectName, sectionId: row.sectionId });
+    const termRef = db.doc(`academicTerms/${input.termId}`);
+    const result = await db.runTransaction(async (tx) => {
+      const [term, oldOfferings, oldSlots] = await Promise.all([
+        tx.get(termRef),
+        tx.get(db.collection("subjectOfferings").where("termId", "==", input.termId)),
+        tx.get(db.collection("timetableSlots").where("termId", "==", input.termId)),
+      ]);
+      let plan;
+      try {
+        plan = planTimetable(input.termId, input.rows, oldOfferings.docs.map((doc) => ({ id: doc.id, subjectCode: String(doc.get("subjectCode")), sectionId: String(doc.get("sectionId")) })));
+      } catch (error) { throw new HttpsError("invalid-argument", (error as Error).message); }
+      const canonicalRows = [...input.rows].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+      const importHash = createHash("sha256").update(JSON.stringify({ ...input, rows: canonicalRows })).digest("hex").slice(0, 20);
+      const operationId = `timetable_${normalizeId(input.termId)}_${importHash}`;
+      if (term.get("importHash") === importHash) return { offeringCount: plan.offerings.length, slotCount: plan.slots.length, operationId, idempotent: true };
+      const offeringIds = new Set(plan.offerings.map((item) => item.id));
+      const slotIds = new Set(plan.slots.map((item) => item.id));
+      const removedOfferings = oldOfferings.docs.filter((doc) => doc.get("active") !== false && !offeringIds.has(doc.id));
+      const removedSlots = oldSlots.docs.filter((doc) => doc.get("active") !== false && !slotIds.has(doc.id));
+      if (plan.offerings.length + plan.slots.length + removedOfferings.length + removedSlots.length + 3 > 500) {
+        throw new HttpsError("invalid-argument", "This timetable exceeds the atomic import limit of 500 changed records. Use separate academic terms for separate timetables.");
+      }
+      const updatedAt = FieldValue.serverTimestamp();
+      tx.set(termRef, { name: input.termId, startDate: input.termStartIso, endDate: input.termEndIso, active: true, importHash, updatedAt }, { merge: true });
+      removedSlots.forEach((doc) => tx.update(doc.ref, { active: false, updatedAt }));
+      removedOfferings.forEach((doc) => tx.update(doc.ref, { active: false, updatedAt }));
+      plan.offerings.forEach(({ id, ...offering }) => tx.set(db.doc(`subjectOfferings/${id}`), { ...offering, termId: input.termId, active: true, updatedAt }, { merge: true }));
+      plan.slots.forEach(({ id, ...slot }) => tx.set(db.doc(`timetableSlots/${id}`), { ...slot, termId: input.termId, active: true, source: "confirmed_pdf_or_manual", updatedAt }));
+      const summary = { offeringCount: plan.offerings.length, slotCount: plan.slots.length, operationId };
+      tx.set(db.doc(`operations/${operationId}`), { ...summary, type: "timetable_import", status: "complete", actorUid: actor.uid, termId: input.termId, completedAt: updatedAt });
+      tx.create(db.collection("auditEvents").doc(), { actorUid: actor.uid, action: "timetable.imported", resourceType: "academicTerm", resourceId: input.termId, after: summary, createdAt: updatedAt });
+      return summary;
     });
-    const writer = db.bulkWriter();
-    writer.set(db.doc(`academicTerms/${input.termId}`), {
-      name: input.termId,
-      startDate: input.termStartIso,
-      endDate: input.termEndIso,
-      active: true,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-    for (const [offeringId, offering] of offeringMap) {
-      writer.set(db.doc(`subjectOfferings/${offeringId}`), {
-        ...offering,
-        termId: input.termId,
-        active: true,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
-    input.rows.forEach((row, index) => {
-      const offeringId = `${normalizeId(row.subjectCode)}-${row.sectionId}`;
-      const slotId = `${normalizeId(input.termId)}_${offeringId}_${row.weekday}_${row.startTime.replace(":", "")}_${index}`;
-      writer.set(db.doc(`timetableSlots/${slotId}`), {
-        offeringId,
-        termId: input.termId,
-        sectionId: row.sectionId,
-        weekday: row.weekday,
-        startTime: row.startTime,
-        endTime: row.endTime,
-        room: row.room ?? "",
-        active: true,
-        source: "confirmed_pdf_or_manual",
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    });
-    writer.set(operationRef, {
-      type: "timetable_import",
-      status: "complete",
-      actorUid: actor.uid,
-      termId: input.termId,
-      offeringCount: offeringMap.size,
-      slotCount: input.rows.length,
-      completedAt: FieldValue.serverTimestamp(),
-    });
-    await writer.close();
-    await writeAudit({ actorUid: actor.uid, action: "timetable.imported", resourceType: "academicTerm", resourceId: input.termId, after: { rows: input.rows.length, offerings: offeringMap.size } });
-    return { offeringCount: offeringMap.size, slotCount: input.rows.length, operationId };
+    return result;
   } catch (error) { asHttpsError(error); }
 });
 

@@ -51,7 +51,7 @@ export function PlacementStatusView() {
   }
 
   return <div className="page-wrap">
-    <header className="page-heading"><div><p className="eyebrow">PLACEMENT ELIGIBILITY</p><h1>Placed students</h1><p>Placed students remain in academic and community modules but are excluded from placement registration compliance.</p></div></header>
+    <header className="page-heading"><div><h1>Placed students</h1><p>Placed students remain in academic and community modules but are excluded from placement registration compliance.</p></div></header>
     {message && <div className="success-banner">{message}</div>}{error && <p className="form-error">{error}</p>}
     <div className="stats-grid stats-three"><div className="stat-card"><span>Batch</span><strong>{students.length}</strong><small>Active and invited students</small></div><div className="stat-card success"><span>Placed</span><strong>{placedCount}</strong><small>Excluded from placement forms</small></div><div className="stat-card warning"><span>Seeking</span><strong>{students.length - placedCount}</strong><small>Included in placement forms</small></div></div>
     <section className="panel compliance-panel">

@@ -14,6 +14,9 @@ function errorStatus(code: string | undefined) {
   if (code?.includes("permission-denied")) return 403;
   if (code?.includes("not-found")) return 404;
   if (code?.includes("aborted")) return 409;
+  if (code?.includes("already-exists")) return 409;
+  if (code?.includes("resource-exhausted")) return 429;
+  if (code?.includes("deadline-exceeded")) return 408;
   if (code?.includes("invalid-argument") || code?.includes("failed-precondition")) return 400;
   return 500;
 }
@@ -22,8 +25,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ na
   try {
     const { invokeSparkCallable, runImmediatePushDelivery, shouldFlushPushAfterCallable } = await import("@mba/functions/spark-adapter");
     const { name } = await context.params;
-    const body = await request.json() as { data?: unknown };
-    const data = await invokeSparkCallable(name, body.data, bearerToken(request));
+    const rawBody = await request.text();
+    if (rawBody.length > 1_000_000) return NextResponse.json({ error: { message: "Request is too large" } }, { status: 413 });
+    let body: { data?: unknown };
+    try { body = JSON.parse(rawBody); }
+    catch { return NextResponse.json({ error: { message: "Request must contain valid JSON" } }, { status: 400 }); }
+    const data = await invokeSparkCallable(name, body?.data, bearerToken(request), request.headers.get("x-firebase-appcheck") ?? undefined);
     if (shouldFlushPushAfterCallable(name)) {
       after(async () => {
         try {
@@ -37,8 +44,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ na
     return NextResponse.json({ data });
   } catch (error) {
     const candidate = error as { code?: string; message?: string };
+    if (errorStatus(candidate.code) === 500) console.error("Callable operation failed", error);
     return NextResponse.json(
-      { error: { code: candidate.code ?? "internal", message: candidate.message ?? "Unexpected server error" } },
+      { error: { code: candidate.code ?? "internal", message: errorStatus(candidate.code) === 500 ? "The server could not complete this request. Try again shortly." : candidate.message ?? "Unexpected server error" } },
       { status: errorStatus(candidate.code) },
     );
   }

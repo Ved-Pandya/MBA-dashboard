@@ -13,7 +13,7 @@ DeadlineOS is a mobile-first MBA deadline compliance platform built with Next.js
 - Dedicated, atomic POC Setup for exactly one Wing POC per Wing A–J and two Subject POC seats per section-specific offering.
 - Browser-local timetable PDF extraction with an editable confirmation table and manual fallback.
 - Informational academic calendar for assignments, quizzes, midterms, and next-class pre-reads.
-- Batch-wide competitions, explicit student responses, draft team reservations, locked registration, rounds, advancement, team submissions, and membership disputes.
+- Batch-wide competitions with separate external-registration and internal-form confirmations, manager corrections, and named reporting. Legacy team/round code is retained outside the current UI/API surface.
 - Internship registration/no-participation tracking and sanitized Wing POC reports.
 - Audited, server-private placed/seeking status visible only to CRs/Admins; it exempts placed students from placement registration forms and reminders without affecting academics, sessions, polls, or case competitions.
 - Deterministic T-24h, T-2h, T+15m reminder records, daily overdue digests, and reconciliation.
@@ -76,7 +76,7 @@ Prerequisites: Node 24, npm, and Java 21 if you want to run the Firestore Emulat
 
 For role testing, System Admins can use **Admin → Test identities → Create or reset test accounts**. This creates `24M2901` (Student), `24M2902` (Subject POC for the isolated `TEST-A` offering), and `24M2903` (CR). Secure passwords are generated on demand and displayed only in the administrator's browser.
 
-After creating the identities, click **Seed complete mock data** to reset a tagged demo dataset containing four subjects and timetable slots, four academic events, two competitions, one registered team, one open competition round, one internship, one wing form, mixed response/completion states, reminder jobs, and notifications. **Clear mock data** removes only records tagged with the `mock_v1` seed and leaves the three test login accounts intact.
+After creating the identities, click **Seed complete mock data** to reset a tagged demo dataset containing four subjects and timetable slots, four academic events, two competitions with individual confirmation states, one internship, one wing form, mixed response/completion states, reminder jobs, and notifications. **Clear mock data** removes only records tagged with the `mock_v1` seed and leaves the three test login accounts intact.
 
 The roster contains each roll number and its administrator-chosen password. Passwords are sent only to the privileged Vercel route and are handed to Firebase Authentication; they are never stored in Firestore or audit events. Re-importing an existing roll number deliberately resets its password.
 
@@ -126,7 +126,7 @@ npm run deploy:firebase
    npx wrangler deploy
    ```
 
-   Enter the production Vercel origin, such as `https://mba-dashboard-web.vercel.app`, for `DEADLINEOS_URL`. Enter exactly the same `CRON_SECRET` stored in Vercel. Cloudflare invokes the protected maintenance route every five minutes.
+   Enter the production Vercel origin, such as `https://mba-dashboard-web.vercel.app`, for `DEADLINEOS_URL`. Enter exactly the same `CRON_SECRET` stored in Vercel. Cloudflare invokes the protected maintenance route every minute; the server throttle allows one maintenance pass per two-minute window.
 
 The server private key is mandatory on Vercel and must never be committed, logged, or exposed through a `NEXT_PUBLIC_*` variable.
 
@@ -166,7 +166,7 @@ Monitor:
 - `systemHealth/sparkRuntime` for pulse throttling.
 - Failed `operations` and pending `reminderJobs`.
 - `reminderDeliveries` and `taskStats.reconciledAt`.
-- `operations` entries for timetable imports and membership disputes.
+- `operations` entries for timetable imports and recoverable roster imports.
 - Vercel Function and Cron logs.
 
 ## Current MVP constraints
@@ -180,3 +180,9 @@ Monitor:
 - Vercel Hobby is intended for personal/non-commercial use; confirm that its plan terms fit the intended deployment.
 
 Before a real batch launch, run the emulator rule suite, load-test with the actual roster size, keep an offline roster backup, export essential data manually, and rehearse account recovery.
+
+## Project walkthrough and verification
+
+See [the presentation walkthrough and screenshots](docs/DEMO.md) for a repeatable demonstration, architecture diagram, and current feature boundaries. See [launch and recovery procedures](docs/OPERATIONS.md) for App Check configuration, timetable replacement, complete paginated reporting, roster recovery, and real-device checks.
+
+The browser and integration suite uses synthetic demo projects only. Install its Chromium browser once with `npx playwright install chromium`; `npm run test:emulators` then runs Firestore access rules, real privileged business handlers, and desktop/mobile role workflows. CI uses Node 24 and Java 21.

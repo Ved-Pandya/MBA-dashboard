@@ -5,7 +5,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } fr
 import { rollNumberToAuthEmail } from "@mba/domain";
 import { doc, onSnapshot } from "firebase/firestore";
 import type { Profile } from "@/lib/models";
-import { callFunction, readableError } from "@/lib/callable";
+import { callFunction, readableError, authenticatedHeaders } from "@/lib/callable";
 import { firebaseConfigured, getFirebase } from "@/lib/firebase";
 
 interface AuthContextValue {
@@ -29,7 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!firebaseConfigured) return;
     const { auth, db } = getFirebase();
     let unsubscribeProfile: (() => void) | undefined;
-    return onAuthStateChanged(auth, async (nextUser) => {
+    let generation = 0;
+    const unsubscribeAuth = onAuthStateChanged(auth, async (nextUser) => {
+      const current = ++generation;
       unsubscribeProfile?.();
       setUser(nextUser);
       setProfile(null);
@@ -38,8 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
+      setLoading(true);
       try {
         await callFunction("activateMyAccount", {});
+        if (current !== generation) return;
         unsubscribeProfile = onSnapshot(
           doc(db, "users", nextUser.uid),
           (snap) => {
@@ -52,10 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           },
         );
       } catch (activationError) {
+        if (current !== generation) return;
         setError(readableError(activationError));
         setLoading(false);
       }
     });
+    return () => { generation++; unsubscribeAuth(); unsubscribeProfile?.(); };
   }, []);
 
   useEffect(() => {
@@ -64,10 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const pulse = async () => {
       if (stopped || document.visibilityState === "hidden") return;
       try {
-        const idToken = await user.getIdToken();
         await fetch("/api/maintenance/pulse", {
           method: "POST",
-          headers: { authorization: `Bearer ${idToken}` },
+          headers: await authenticatedHeaders(),
           keepalive: true,
         });
       } catch {

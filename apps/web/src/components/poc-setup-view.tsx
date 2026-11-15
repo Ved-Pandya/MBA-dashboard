@@ -53,11 +53,11 @@ export function PocSetupView() {
   }
 
   return <div className="page-wrap">
-    <header className="page-heading"><div><p className="eyebrow">GOVERNANCE</p><h1>POC Setup</h1><p>Two active POCs per subject-section offering; one active owner for every other scope.</p></div></header>
+    <header className="page-heading"><div><h1>POC Setup</h1><p>Two active POCs per subject-section offering; one active owner for every other scope.</p></div></header>
     {message && <div className="success-banner">{message}</div>}{error && <p className="form-error">{error}</p>}
     <div className="two-column">
       <section className="panel create-form">
-        <div className="panel-head"><div><p className="eyebrow">ASSIGN RESPONSIBILITY</p><h2>Choose scope and student</h2></div></div>
+        <div className="panel-head"><div><h2>Choose scope and student</h2></div></div>
         <label>POC type<select value={kind} onChange={(event) => { const next = event.target.value as PocKind; setKind(next); setSeat(1); setScopeId(next === "wing" ? "A" : next === "subject" ? setup?.offerings[0]?.id ?? "" : "batch"); }}><option value="wing">Wing POC</option><option value="subject">Subject POC</option><option value="grooming">Grooming POC</option><option value="case_competition">Case Competition POC</option><option value="attendance">Attendance POC</option></select></label>
         <label>Scope<select value={scopeId} onChange={(event) => setScopeId(event.target.value)}>{scopes.map((scope) => <option key={scope.id} value={scope.id}>{scope.name}</option>)}</select></label>
         {kind === "subject" && <label>Subject POC seat<select value={seat} onChange={(event) => setSeat(Number(event.target.value) as 1 | 2)}><option value={1}>POC 1</option><option value={2}>POC 2</option></select></label>}
@@ -66,7 +66,7 @@ export function PocSetupView() {
         <button className="primary-button" onClick={assign} disabled={busy || !uid || !scopeId}>Assign or replace POC</button>
       </section>
       <section className="panel managed-list">
-        <div className="panel-head"><div><p className="eyebrow">ACTIVE OWNERS</p><h2>Governance directory</h2></div><span className="count-badge">{assigned.size}</span></div>
+        <div className="panel-head"><div><h2>Governance directory</h2></div><span className="count-badge">{assigned.size}</span></div>
         {scopes.flatMap((scope) => (kind === "subject" ? [1, 2] : [1]).map((scopeSeat) => {
           const assignment = assigned.get(assignmentKey(kind, scope.id, scopeSeat));
           return <article className="managed-task" key={`${scope.id}_${scopeSeat}`}><div><span className="category">{kind === "subject" ? `subject · POC ${scopeSeat}` : kind}</span><h3>{scope.name}</h3><p>{assignment ? names.get(assignment.uid) ?? assignment.uid : "No POC assigned"}</p></div>{assignment && <button className="danger-link text-button" onClick={() => revoke(assignment)} disabled={busy}>Revoke</button>}</article>;

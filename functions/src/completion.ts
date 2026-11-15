@@ -9,12 +9,12 @@ async function setCompletion(uid: string, taskId: string, status: "completed" | 
   const statsRef = db.doc(`taskStats/${taskId}`);
   const auditRef = db.collection("auditEvents").doc();
   return db.runTransaction(async (tx) => {
-    const assignment = await tx.get(assignmentRef);
+    const [assignment, task] = await Promise.all([tx.get(assignmentRef), tx.get(db.doc(`tasks/${taskId}`))]);
     if (!assignment.exists) throw new HttpsError("not-found", "Task assignment not found");
     const beforeStatus = assignment.get("status") as string;
     if (beforeStatus === "exempt") throw new HttpsError("failed-precondition", "Exempt assignments cannot be changed by students");
     if (beforeStatus === status) return { idempotent: true };
-    const taskStatus = assignment.get("taskSnapshot.taskStatus");
+    const taskStatus = task.get("status");
     if (taskStatus !== "published") throw new HttpsError("failed-precondition", "This task is not open");
     const now = Timestamp.now();
     const completed = status === "completed";

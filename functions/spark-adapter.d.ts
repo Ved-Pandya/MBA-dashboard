@@ -10,7 +10,11 @@ export declare function invokeSparkCallable(
   name: string,
   data: unknown,
   idToken: string,
+  appCheckToken?: string,
 ): Promise<unknown>;
+
+export declare function verifySparkAppCheck(token?: string): Promise<void>;
+export declare function verifySparkMaintenanceUser(idToken: string, appCheckToken?: string): Promise<void>;
 
 export declare function verifySparkIdToken(idToken: string): Promise<{ uid: string }>;
 

@@ -1,5 +1,7 @@
 # Dependencies and package-manager caches
 node_modules/
+.tools/
+.test-runtime/
 .npm/
 .npm-cache/
 .yarn/cache/

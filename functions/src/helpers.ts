@@ -1,8 +1,10 @@
 import type { CallableRequest } from "firebase-functions/v2/https";
 import { HttpsError } from "firebase-functions/v2/https";
+import { ZodError } from "zod";
 import type { TaskTarget, TaskType, UserProfile } from "@mba/domain";
 import { authEmailToRollNumber, canManageTask, ROLL_NUMBER_PATTERN } from "@mba/domain";
 import { db, FieldValue } from "./firebase.js";
+import { auditData } from "./audit-data.js";
 
 export interface Actor extends UserProfile {
   uid: string;
@@ -71,11 +73,12 @@ export async function writeAudit(input: {
   after?: unknown;
   reason?: string;
 }) {
-  await db.collection("auditEvents").add({ ...input, createdAt: FieldValue.serverTimestamp() });
+  await db.collection("auditEvents").add(auditData({ ...input, createdAt: FieldValue.serverTimestamp() }) as FirebaseFirestore.DocumentData);
 }
 
 export function asHttpsError(error: unknown): never {
   if (error instanceof HttpsError) throw error;
+  if (error instanceof ZodError) throw new HttpsError("invalid-argument", error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; "));
   const message = error instanceof Error ? error.message : "Unexpected server error";
   throw new HttpsError("internal", message);
 }

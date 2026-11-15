@@ -130,7 +130,7 @@ service cloud.firestore {
     match /internshipResponses/{id} {
       allow read: if active() && (
         admin() || cr() ||
-        (resource.data.status != "not_applicable_placed" && (resource.data.uid == request.auth.uid || wingPoc(resource.data.wingId)))
+        (resource.data.status in ["no_response", "registered", "not_participating"] && (resource.data.uid == request.auth.uid || wingPoc(resource.data.wingId)))
       );
       allow write: if false;
     }

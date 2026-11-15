@@ -76,20 +76,20 @@ export function TimetableView() {
   }
 
   return <div className="page-wrap">
-    <header className="page-heading"><div><p className="eyebrow">ACADEMIC CATALOG</p><h1>Timetable import</h1><p>The PDF stays in this browser. Nothing is uploaded until you confirm the structured rows.</p></div></header>
+    <header className="page-heading"><div><h1>Timetable import</h1><p>The PDF stays in this browser. Confirm every row before saving. Saving replaces the timetable for the selected term.</p></div></header>
     {message && <div className="success-banner">{message}</div>}{error && <p className="form-error">{error}</p>}
     <section className="panel create-form timetable-import">
       <div className="form-row"><label>Term ID<input value={termId} onChange={(event) => setTermId(event.target.value)} /></label><label>Weekly timetable PDF<input type="file" accept="application/pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void readPdf(file); }} /></label></div>
       <div className="form-row"><label>Term starts<input type="date" value={start} onChange={(event) => setStart(event.target.value)} /></label><label>Term ends<input type="date" value={end} onChange={(event) => setEnd(event.target.value)} /></label></div>
       {rawText && <details><summary>Extracted PDF text</summary><pre className="pdf-text">{rawText}</pre></details>}
       <div className="table-scroll"><table><thead><tr><th>Code</th><th>Subject</th><th>Section</th><th>Day</th><th>Start</th><th>End</th><th>Room</th><th /></tr></thead><tbody>{rows.map((row, index) => <tr key={index}>
-        <td><input value={row.subjectCode} onChange={(event) => update(index, { subjectCode: event.target.value })} /></td><td><input value={row.subjectName} onChange={(event) => update(index, { subjectName: event.target.value })} /></td>
-        <td><select value={row.sectionId} onChange={(event) => update(index, { sectionId: event.target.value as "A" | "B" })}><option>A</option><option>B</option></select></td>
-        <td><select value={row.weekday} onChange={(event) => update(index, { weekday: Number(event.target.value) })}>{weekdays.map((day, dayIndex) => <option key={day} value={dayIndex + 1}>{day}</option>)}</select></td>
-        <td><input type="time" value={row.startTime} onChange={(event) => update(index, { startTime: event.target.value })} /></td><td><input type="time" value={row.endTime} onChange={(event) => update(index, { endTime: event.target.value })} /></td>
-        <td><input value={row.room ?? ""} onChange={(event) => update(index, { room: event.target.value })} /></td><td><button className="danger-link text-button" onClick={() => setRows((current) => current.filter((_, rowIndex) => rowIndex !== index))}>Remove</button></td>
+        <td><input aria-label={`Row ${index + 1} subject code`} value={row.subjectCode} onChange={(event) => update(index, { subjectCode: event.target.value })} /></td><td><input aria-label={`Row ${index + 1} subject name`} value={row.subjectName} onChange={(event) => update(index, { subjectName: event.target.value })} /></td>
+        <td><select aria-label={`Row ${index + 1} section`} value={row.sectionId} onChange={(event) => update(index, { sectionId: event.target.value as "A" | "B" })}><option>A</option><option>B</option></select></td>
+        <td><select aria-label={`Row ${index + 1} weekday`} value={row.weekday} onChange={(event) => update(index, { weekday: Number(event.target.value) })}>{weekdays.map((day, dayIndex) => <option key={day} value={dayIndex + 1}>{day}</option>)}</select></td>
+        <td><input aria-label={`Row ${index + 1} start time`} type="time" value={row.startTime} onChange={(event) => update(index, { startTime: event.target.value })} /></td><td><input aria-label={`Row ${index + 1} end time`} type="time" value={row.endTime} onChange={(event) => update(index, { endTime: event.target.value })} /></td>
+        <td><input aria-label={`Row ${index + 1} room`} value={row.room ?? ""} onChange={(event) => update(index, { room: event.target.value })} /></td><td><button className="danger-link text-button" aria-label={`Remove row ${index + 1}`} onClick={() => setRows((current) => current.filter((_, rowIndex) => rowIndex !== index))}>Remove</button></td>
       </tr>)}</tbody></table></div>
-      <div className="form-actions"><button className="secondary-button" onClick={() => setRows((current) => [...current, emptyRow()])}>Add row</button><button className="primary-button" onClick={commit} disabled={busy || !termId || !start || !end || !rows.length}>Confirm and create timetable</button></div>
+      <div className="form-actions"><button className="secondary-button" onClick={() => setRows((current) => [...current, emptyRow()])}>Add row</button><button className="primary-button" onClick={commit} disabled={busy || !termId || !start || !end || !rows.length}>Save term timetable</button></div>
     </section>
   </div>;
 }

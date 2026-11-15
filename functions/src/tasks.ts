@@ -138,6 +138,7 @@ export const updateTask = onCall(callableOptions, async (request) => {
     input.target = await validateCatalogTarget(input.target);
     const { ref, data: task } = await loadTask(taskId);
     requireTaskManager(actor, task.taskType, task.target);
+    requireTaskManager(actor, input.taskType, input.target);
     if (["closed", "cancelled", "publishing"].includes(task.status)) {
       throw new HttpsError("failed-precondition", `Cannot edit a ${task.status} task`);
     }
@@ -212,83 +213,47 @@ async function propagatePublishedTask(taskId: string, task: StoredTask) {
   await writer.close();
 }
 
-export const publishTask = onCall({ ...callableOptions, timeoutSeconds: 540 }, async (request) => {
-  const actor = await requireActor(request);
-  const taskId = requireString((request.data as Record<string, unknown>)?.taskId, "taskId");
-  const operationRef = db.doc(`operations/publish_${taskId}`);
+export const publishTask = onCall({ ...callableOptions, timeoutSeconds: 120 }, async (request) => {
   try {
-    const { ref, data: task } = await loadTask(taskId);
-    requireTaskManager(actor, task.taskType, task.target);
-    if (task.status === "published") return { taskId, idempotent: true };
-    if (task.status !== "draft" && task.status !== "publishing") {
-      throw new HttpsError("failed-precondition", "Only draft tasks can be published");
-    }
-    const recipients = await eligibleRecipients(task.target);
-    if (!recipients.length) throw new HttpsError("failed-precondition", "Task has no eligible recipients");
-
-    const audienceVersion = Math.max(1, task.audienceVersion + 1);
-    const scheduleVersion = Math.max(1, task.scheduleVersion + 1);
-    await ref.update({ status: "publishing", audienceSyncStatus: "processing", updatedAt: FieldValue.serverTimestamp() });
-    await operationRef.set({ type: "publish", taskId, status: "processing", total: recipients.length, actorUid: actor.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-
-    const existingAssignments = await db.collection("taskAssignments").where("taskId", "==", taskId).get();
-    const existingUids = new Set(existingAssignments.docs.map((doc) => String(doc.get("uid"))));
-    const writer = db.bulkWriter();
-    for (const student of recipients) {
-      const assignmentId = `${taskId}_${student.uid}`;
-      if (!existingUids.has(student.uid)) {
-        writer.create(db.doc(`taskAssignments/${assignmentId}`), {
-          taskId,
-          uid: student.uid,
-          taskType: task.taskType,
-          scopeKey: task.target.scopeKey,
-          sectionId: student.sectionId,
-          wingId: student.wingId,
-          subjectOfferingId: task.target.subjectOfferingId ?? null,
-          status: "pending",
-          taskSnapshot: { title: task.title, dueAt: task.dueAt, resourceUrl: task.resourceUrl ?? null, taskStatus: "published" },
-          studentSnapshot: { displayName: student.displayName, rollNumber: student.rollNumber },
-          taskVersion: task.version,
-          audienceVersion,
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        });
+    const actor = await requireActor(request);
+    const taskId = requireString((request.data as Record<string, unknown>)?.taskId, "taskId");
+    const ref = db.doc(`tasks/${taskId}`);
+    return await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new HttpsError("not-found", "Task not found");
+      const task = snap.data() as StoredTask;
+      requireTaskManager(actor, task.taskType, task.target);
+      if (task.status === "published") return { taskId, idempotent: true };
+      if (!["draft", "publishing"].includes(task.status)) throw new HttpsError("failed-precondition", "Only draft tasks can be published");
+      let recipientQuery = db.collection("users").where("status", "in", ["active", "invited"]);
+      recipientQuery = task.target.kind === "wing" ? recipientQuery.where("wingId", "==", task.target.wingId) : recipientQuery.where("sectionId", "==", task.target.sectionId);
+      const [recipients, assignments] = await Promise.all([tx.get(recipientQuery), tx.get(db.collection("taskAssignments").where("taskId", "==", taskId))]);
+      if (!recipients.size) throw new HttpsError("failed-precondition", "Task has no eligible recipients");
+      if (recipients.size * 2 + 7 > 500) throw new HttpsError("failed-precondition", "Audience exceeds the atomic publication limit");
+      const prior = new Map(assignments.docs.map((doc) => [String(doc.get("uid")), doc]));
+      const audienceVersion = task.audienceVersion + 1; const scheduleVersion = task.scheduleVersion + 1;
+      let pendingCount = 0; let completedCount = 0; let exemptCount = 0;
+      for (const student of recipients.docs) {
+        const uid = student.id; const existing = prior.get(uid); const status = existing?.get("status") ?? "pending";
+        if (status === "completed") completedCount++; else if (status === "exempt") exemptCount++; else pendingCount++;
+        tx.set(db.doc(`taskAssignments/${taskId}_${uid}`), {
+          taskId, uid, taskType: task.taskType, scopeKey: task.target.scopeKey,
+          sectionId: student.get("sectionId"), wingId: student.get("wingId"), subjectOfferingId: task.target.subjectOfferingId ?? null,
+          status, taskSnapshot: { title: task.title, dueAt: task.dueAt, resourceUrl: task.resourceUrl ?? null, taskStatus: "published" },
+          studentSnapshot: { displayName: student.get("displayName"), rollNumber: student.get("rollNumber") },
+          taskVersion: task.version, audienceVersion, updatedAt: FieldValue.serverTimestamp(),
+          ...(!existing ? { createdAt: FieldValue.serverTimestamp() } : {}),
+        }, { merge: true });
+        tx.set(db.doc(`users/${uid}/notifications/publish_${taskId}_${uid}`), { type: "task_published", title: "New deadline assigned", body: `${task.title} has been added to your dashboard.`, taskId, readAt: null, createdAt: FieldValue.serverTimestamp() });
       }
-      writer.set(db.doc(`users/${student.uid}/notifications/publish_${assignmentId}`), {
-        type: "task_published",
-        title: "New deadline assigned",
-        body: `${task.title} has been added to your dashboard.`,
-        taskId,
-        createdAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
-    await writer.close();
-    await createReminderJobs(taskId, task.dueAt.toDate(), scheduleVersion);
-    await db.runTransaction(async (tx) => {
-      tx.set(db.doc(`taskStats/${taskId}`), {
-        eligibleCount: recipients.length,
-        pendingCount: recipients.length,
-        completedCount: 0,
-        exemptCount: 0,
-        updatedAt: FieldValue.serverTimestamp(),
-        reconciledAt: FieldValue.serverTimestamp(),
-      });
-      tx.update(ref, {
-        status: "published",
-        audienceSyncStatus: "ready",
-        audienceVersion,
-        scheduleVersion,
-        publishedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      tx.set(operationRef, { status: "complete", processed: recipients.length, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      for (const job of buildReminderSchedule(task.dueAt.toDate())) tx.set(db.doc(`reminderJobs/${taskId}_v${scheduleVersion}_${job.stage}`), { taskId, scheduleVersion, stage: job.stage, fireAt: Timestamp.fromDate(job.fireAt), status: "scheduled", attempts: 0, createdAt: FieldValue.serverTimestamp() });
+      tx.set(db.doc(`taskStats/${taskId}`), { eligibleCount: recipients.size, pendingCount, completedCount, exemptCount, updatedAt: FieldValue.serverTimestamp(), reconciledAt: FieldValue.serverTimestamp() });
+      tx.update(ref, { status: "published", audienceSyncStatus: "ready", audienceVersion, scheduleVersion, publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      tx.set(db.doc(`operations/publish_${taskId}`), { type: "publish", actorUid: actor.uid, taskId, status: "complete", processed: recipients.size, updatedAt: FieldValue.serverTimestamp() });
+      tx.create(db.collection("auditEvents").doc(), { actorUid: actor.uid, action: "task.published", resourceType: "task", resourceId: taskId, after: { recipients: recipients.size }, createdAt: FieldValue.serverTimestamp() });
+      return { taskId, recipients: recipients.size };
     });
-    await writeAudit({ actorUid: actor.uid, action: "task.published", resourceType: "task", resourceId: taskId, after: { recipients: recipients.length, audienceVersion, scheduleVersion } });
-    return { taskId, recipients: recipients.length };
-  } catch (error) {
-    await operationRef.set({ status: "failed", error: error instanceof Error ? error.message : "Unknown error", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    asHttpsError(error);
-  }
+  } catch (error) { asHttpsError(error); }
 });
 
 async function transitionTask(actor: Actor, taskId: string, status: "closed" | "cancelled", reason?: string) {

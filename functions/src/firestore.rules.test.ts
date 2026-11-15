@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
-import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, query, where } from "firebase/firestore";
 
 const runRules = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 const suite = runRules ? describe : describe.skip;
@@ -134,6 +134,18 @@ suite("Firestore RBAC rules", () => {
     await assertSucceeds(getDoc(doc(studentDb, "pollResponses/poll1_student")));
     await assertFails(getDoc(doc(groomingDb, "pollResponses/poll1_other")));
     await assertFails(setDoc(doc(studentDb, "pollResponses/poll1_student"), { optionId: "option_1" }, { merge: true }));
+  });
+
+  it("allows the student internship query while excluding private legacy responses", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "internshipResponses/open_student"), { uid: "student", wingId: "A", status: "no_response" });
+      await setDoc(doc(context.firestore(), "internshipResponses/open_other"), { uid: "other", wingId: "B", status: "registered" });
+    });
+    const db = testEnv.authenticatedContext("student").firestore();
+    const snapshot = await assertSucceeds(getDocs(query(collection(db, "internshipResponses"), where("uid", "==", "student"), where("status", "in", ["no_response", "registered", "not_participating"]))));
+    expect(snapshot.docs.map((doc) => doc.id)).toEqual(["open_student"]);
+    await assertFails(getDocs(query(collection(db, "internshipResponses"), where("uid", "==", "student"))));
+    await assertFails(getDocs(query(collection(db, "internshipResponses"), where("uid", "==", "other"), where("status", "in", ["no_response", "registered", "not_participating"]))));
   });
 
   it("lets the case competition POC read competition records but not private polls", async () => {

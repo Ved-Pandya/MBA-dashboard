@@ -95,7 +95,7 @@ export const timetableRowSchema = z.object({
 }).refine((row) => row.endTime > row.startTime, { message: "End time must be after start time", path: ["endTime"] });
 
 export const timetableImportSchema = z.object({
-  termId: z.string().trim().min(1).max(40),
+  termId: z.string().trim().min(1).max(40).regex(/^[A-Za-z0-9_-]+$/, "Use letters, numbers, hyphens or underscores for the term ID"),
   termStartIso: z.string().date(),
   termEndIso: z.string().date(),
   rows: z.array(timetableRowSchema).min(1).max(500),

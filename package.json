@@ -11,10 +11,12 @@
     "dev": "npm run dev -w @mba/web",
     "build": "npm run build -w @mba/domain && npm run build -w @mba/functions && npm run build -w @mba/web",
     "typecheck": "npm run build -w @mba/domain && npm run typecheck -w @mba/functions && npm run typecheck -w @mba/web",
-    "test": "npm run build -w @mba/domain && npm run test -w @mba/domain && npm run test -w @mba/functions",
+    "test": "npm run build -w @mba/domain && npm run test -w @mba/domain && npm run test -w @mba/functions && npm run test -w @mba/web",
     "test:rules": "firebase emulators:exec --project demo-deadlineos --only firestore \"npm run test:rules -w @mba/functions\"",
     "emulators": "firebase emulators:start",
-    "deploy:firebase": "npm run build -w @mba/domain && firebase deploy --only firestore"
+    "deploy:firebase": "npm run build -w @mba/domain && firebase deploy --only firestore",
+    "test:emulators": "firebase emulators:exec --config firebase.test.json --project demo-deadlineos --only auth,firestore \"node scripts/run-emulator-checks.mjs\"",
+    "pretest:emulators": "npm run build -w @mba/domain && npm run build -w @mba/functions"
   },
   "engines": {
     "node": "24.x"

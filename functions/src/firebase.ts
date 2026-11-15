@@ -2,6 +2,7 @@ import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
+import { getAppCheck } from "firebase-admin/app-check";
 
 function normalizePrivateKey(value: string | undefined) {
   const trimmed = value?.trim() ?? "";
@@ -41,5 +42,6 @@ if (!getApps().length) {
 
 export const db = getFirestore();
 export const adminAuth = getAuth();
+export const adminAppCheck = getAppCheck();
 export const adminFunctions = getFunctions();
 export { FieldValue, Timestamp };

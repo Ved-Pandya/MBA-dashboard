@@ -15,7 +15,8 @@
     "build": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run src",
-    "test:rules": "vitest run src/firestore.rules.test.ts"
+    "test:rules": "vitest run src/firestore.rules.test.ts",
+    "test:integration": "vitest run src/workflows.integration.test.ts"
   },
   "dependencies": {
     "firebase-admin": "^14.2.0",

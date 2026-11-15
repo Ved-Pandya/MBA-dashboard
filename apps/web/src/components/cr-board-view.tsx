@@ -165,7 +165,7 @@ export function CrBoardView() {
     <div className="page-wrap cr-board-page">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">PRIVATE CR WORKSPACE</p>
+
           <h1>CR Board</h1>
           <p>A shared operational board visible only to active CRs and read-only administrators.</p>
         </div>
@@ -249,7 +249,7 @@ export function CrBoardView() {
           <button className="cr-editor-backdrop" onClick={() => setEditorOpen(false)} aria-label="Close CR task editor" />
           <aside className="cr-editor" aria-label={editorTaskId ? "Edit CR task" : "Create CR task"}>
             <div className="drawer-head">
-              <div><p className="eyebrow">CR BOARD</p><h2>{editorTaskId ? "Edit task" : "Add task"}</h2></div>
+              <div><h2>{editorTaskId ? "Edit task" : "Add task"}</h2></div>
               <button className="icon-button" onClick={() => setEditorOpen(false)} aria-label="Close">x</button>
             </div>
             <form className="create-form" onSubmit={save}>

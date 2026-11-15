@@ -40,6 +40,8 @@ export const validateRosterImport = onCall(callableOptions, async (request) => {
 });
 
 export const commitRosterImport = onCall({ ...callableOptions, timeoutSeconds: 540, memory: "1GiB" }, async (request) => {
+  let operation: FirebaseFirestore.DocumentReference | undefined;
+  let completed = 0;
   try {
     const actor = await requireActor(request, true);
     requireAdmin(actor);
@@ -47,7 +49,8 @@ export const commitRosterImport = onCall({ ...callableOptions, timeoutSeconds: 5
     const errors = validateUniqueRows(rows);
     if (errors.length) throw new HttpsError("invalid-argument", errors.join("; "));
 
-    const writer = db.bulkWriter();
+    operation = db.collection("operations").doc();
+    await operation.set({ type: "roster_import", actorUid: actor.uid, status: "processing", total: rows.length, processed: 0, startedAt: FieldValue.serverTimestamp() });
     let created = 0;
     let updated = 0;
     for (const row of rows) {
@@ -66,37 +69,42 @@ export const commitRosterImport = onCall({ ...callableOptions, timeoutSeconds: 5
         created += 1;
       }
       const profileRef = db.doc(`users/${user.uid}`);
-      const existingProfile = await profileRef.get();
-      writer.set(
-        profileRef,
-        {
-          authEmail,
-          displayName: row.displayName,
-          rollNumber: row.rollNumber,
-          status: existingProfile.exists ? existingProfile.get("status") : "invited",
-          sectionId: row.sectionId,
-          wingId: row.wingId,
-          roles: { student: true, cr: row.cr, systemAdmin: row.rollNumber === actor.rollNumber },
-          scopes: {
-            crSections: row.cr ? { [row.sectionId]: true } : {},
-            wingPocWings: existingProfile.exists ? (existingProfile.get("scopes.wingPocWings") ?? {}) : {},
-            subjectPocOfferings: existingProfile.exists ? (existingProfile.get("scopes.subjectPocOfferings") ?? {}) : {},
-            batchPocRoles: existingProfile.exists ? (existingProfile.get("scopes.batchPocRoles") ?? {}) : {},
+      await db.runTransaction(async (tx) => {
+        const existingProfile = await tx.get(profileRef);
+        tx.set(
+          profileRef,
+          {
+            authEmail,
+            displayName: row.displayName,
+            rollNumber: row.rollNumber,
+            status: existingProfile.exists ? existingProfile.get("status") : "invited",
+            sectionId: row.sectionId,
+            wingId: row.wingId,
+            roles: { student: true, cr: row.cr, systemAdmin: existingProfile.get("roles.systemAdmin") === true || row.rollNumber === actor.rollNumber },
+            scopes: {
+              crSections: row.cr ? { [row.sectionId]: true } : {},
+              wingPocWings: existingProfile.exists ? (existingProfile.get("scopes.wingPocWings") ?? {}) : {},
+              subjectPocOfferings: existingProfile.exists ? (existingProfile.get("scopes.subjectPocOfferings") ?? {}) : {},
+              batchPocRoles: existingProfile.exists ? (existingProfile.get("scopes.batchPocRoles") ?? {}) : {},
+            },
+            updatedAt: FieldValue.serverTimestamp(),
+            ...(existingProfile.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
           },
-          updatedAt: FieldValue.serverTimestamp(),
-          ...(existingProfile.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
-        },
-        { merge: true },
-      );
+          { merge: true },
+        );
+      });
+      completed += 1;
+      await operation.update({ processed: completed, lastRollNumber: row.rollNumber, updatedAt: FieldValue.serverTimestamp() });
     }
-    await writer.close();
     await db.doc("appConfig/current").set(
       { rosterVersion: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() },
       { merge: true },
     );
     await writeAudit({ actorUid: actor.uid, action: "roster.imported", resourceType: "roster", resourceId: "current", after: { created, updated, total: rows.length } });
+    await operation.update({ status: "complete", completedAt: FieldValue.serverTimestamp() });
     return { created, updated, total: rows.length };
   } catch (error) {
+    if (operation) await operation.set({ status: "failed", processed: completed, recovery: "Re-import the same roster to finish; existing accounts are updated safely.", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     asHttpsError(error);
   }
 });

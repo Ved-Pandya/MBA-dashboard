@@ -162,8 +162,8 @@ export const seedTestData = onCall({ ...callableOptions, timeoutSeconds: 120 }, 
       notices.forEach((notice) => writer.set(notice.ref, notice.data, { merge: true }));
     }
     await writer.close();
-    await writeAudit({ actorUid: actor.uid, action: "test_data.seeded", resourceType: "demoSeed", resourceId: DEMO_SEED_ID, after: { subjects: DEMO_OFFERINGS.length, academicEvents: academicEvents.length, competitions: 2, internships: 1, sessions: 1, polls: 2, teams: 1, rounds: 1, wingForms: 1, crTasks: 3 } });
-    return { subjects: 4, academicEvents: academicEvents.length, competitions: 2, internships: 1, sessions: 1, polls: 2, teams: 1, rounds: 1, wingForms: 1, crTasks: 3, testUsers: 3 };
+    await writeAudit({ actorUid: actor.uid, action: "test_data.seeded", resourceType: "demoSeed", resourceId: DEMO_SEED_ID, after: { subjects: DEMO_OFFERINGS.length, academicEvents: academicEvents.length, competitions: 2, internships: 1, sessions: 1, polls: 2, teams: 0, rounds: 0, wingForms: 1, crTasks: 3 } });
+    return { subjects: 4, academicEvents: academicEvents.length, competitions: 2, internships: 1, sessions: 1, polls: 2, teams: 0, rounds: 0, wingForms: 1, crTasks: 3, testUsers: 3 };
   } catch (error) { asHttpsError(error); }
 });
 

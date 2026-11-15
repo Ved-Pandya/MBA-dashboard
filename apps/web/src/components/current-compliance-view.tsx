@@ -37,6 +37,9 @@ type CompliancePayload = {
   items: ComplianceItem[];
   rows: ComplianceRow[];
   generatedAtIso: string;
+  selectedItemKey: string;
+  nextCursor: string | null;
+  nextCatalogCursors: Record<string, string>;
 };
 
 function formatDate(value: string) {
@@ -54,108 +57,56 @@ function responseComplete(status: ComplianceStatus) {
 }
 
 export function CurrentComplianceView() {
-  const [payload, setPayload] = useState<CompliancePayload>({ items: [], rows: [], generatedAtIso: "" });
-  const [itemKey, setItemKey] = useState("all");
+  const [payload, setPayload] = useState<CompliancePayload>({ items: [], rows: [], generatedAtIso: "", selectedItemKey: "", nextCursor: null, nextCatalogCursors: {} });
   const [wing, setWing] = useState<WingFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("non_responder");
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
-
-  async function load() {
+  type Request = { itemKey?: string; cursor?: string; rowsOnly?: boolean; catalogCursors?: Record<string, string> };
+  async function load(input: Request = {}, appendRows = false, appendCatalog = false) {
     setBusy(true); setError("");
     try {
-      const result = await callFunction<Record<string, never>, CompliancePayload>("getCurrentTaskCompliance", {});
-      setPayload(result);
-      if (itemKey !== "all" && !result.items.some((item) => item.key === itemKey)) setItemKey("all");
-    } catch (loadError) { setError(readableError(loadError)); }
+      const result = await callFunction<Request, CompliancePayload>("getCurrentTaskCompliance", input);
+      setPayload((previous) => ({ ...result,
+        items: input.rowsOnly ? previous.items : appendCatalog ? [...new Map([...previous.items, ...result.items].map((item) => [item.key, item])).values()] : result.items,
+        rows: appendRows ? [...new Map([...previous.rows, ...result.rows].map((row) => [row.id, row])).values()] : result.rows,
+        nextCatalogCursors: input.rowsOnly ? previous.nextCatalogCursors : appendCatalog ? { ...previous.nextCatalogCursors, ...result.nextCatalogCursors } : result.nextCatalogCursors,
+      }));
+    } catch (err) { setError(readableError(err)); }
     finally { setBusy(false); }
   }
-
-  useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const selectedItem = payload.items.find((item) => item.key === itemKey);
-  const scopedRows = useMemo(() => payload.rows.filter((row) => (
-    (itemKey === "all" || row.itemKey === itemKey) && (wing === "all" || row.wingId === wing)
-  )), [payload.rows, itemKey, wing]);
-  const filteredRows = useMemo(() => scopedRows
-    .filter((row) => status === "all" || row.status === status)
-    .sort((a, b) => a.wingId.localeCompare(b.wingId) || a.rollNumber.localeCompare(b.rollNumber)), [scopedRows, status]);
-
-  const summaries = useMemo(() => payload.items.map((item) => {
-    const rows = payload.rows.filter((row) => row.itemKey === item.key);
-    const accountable = rows.filter((row) => row.status !== "exempt");
-    const complete = accountable.filter((row) => responseComplete(row.status)).length;
-    return {
-      ...item,
-      recipients: rows.length,
-      nonResponders: rows.filter((row) => row.status === "non_responder").length,
-      actionNeeded: rows.filter((row) => row.status === "action_needed").length,
-      complete,
-      rate: accountable.length ? Math.round((complete / accountable.length) * 100) : null,
-    };
-  }), [payload]);
-
-  const wingStats = useMemo(() => WING_IDS.map((wingId) => {
-    const rows = payload.rows.filter((row) => (itemKey === "all" || row.itemKey === itemKey) && row.wingId === wingId);
-    const accountable = rows.filter((row) => row.status !== "exempt");
-    const complete = accountable.filter((row) => responseComplete(row.status)).length;
-    return {
-      wingId, total: rows.length,
-      nonResponders: rows.filter((row) => row.status === "non_responder").length,
-      actionNeeded: rows.filter((row) => row.status === "action_needed").length,
-      complete,
-      rate: accountable.length ? Math.round((complete / accountable.length) * 100) : null,
-    };
-  }), [payload.rows, itemKey]);
-
-  const nonResponders = scopedRows.filter((row) => row.status === "non_responder").length;
-  const actionNeeded = scopedRows.filter((row) => row.status === "action_needed").length;
-  const accountable = scopedRows.filter((row) => row.status !== "exempt");
-  const complete = accountable.filter((row) => responseComplete(row.status)).length;
-  const compliance = accountable.length ? Math.round((complete / accountable.length) * 100) : null;
-
-  function selectItem(next: string) {
-    setItemKey(next); setWing("all");
-  }
-
+  useEffect(() => { void load(); }, []);
+  const selected = payload.items.find((item) => item.key === payload.selectedItemKey);
+  const rows = useMemo(() => payload.rows.filter((row) => wing === "all" || row.wingId === wing), [payload.rows, wing]);
+  const filtered = useMemo(() => rows.filter((row) => status === "all" || row.status === status).sort((a, b) => a.wingId.localeCompare(b.wingId) || a.rollNumber.localeCompare(b.rollNumber)), [rows, status]);
+  const complete = rows.filter((row) => responseComplete(row.status)).length;
+  const accountable = rows.filter((row) => row.status !== "exempt").length;
+  const partial = Boolean(payload.nextCursor);
+  const moreCatalog = Object.values(payload.nextCatalogCursors).some(Boolean);
   function downloadCsv() {
-    const headings = ["Task", "Type", "Student", "Roll number", "Section", "Wing", "Status", "Recorded response", "Deadline"];
-    const rows = filteredRows.map((row) => {
-      const item = payload.items.find((candidate) => candidate.key === row.itemKey);
-      return [item?.title, row.kind, row.displayName, row.rollNumber, row.sectionId, row.wingId, row.status, row.responseLabel, item?.dueAtIso];
-    });
-    const csv = [headings, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }));
-    link.download = `current-task-compliance-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click(); URL.revokeObjectURL(link.href);
+    const data = [["Task", "Type", "Student", "Roll number", "Section", "Wing", "Status", "Recorded response", "Deadline"], ...filtered.map((row) => [selected?.title, row.kind, row.displayName, row.rollNumber, row.sectionId, row.wingId, row.status, row.responseLabel, selected?.dueAtIso])];
+    const url = URL.createObjectURL(new Blob(["\ufeff", data.map((row) => row.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "current-task-compliance.csv"; link.click(); URL.revokeObjectURL(url);
   }
-
   return <div className="page-wrap">
-    <header className="page-heading"><div><p className="eyebrow">COMPLIANCE DESK</p><h1>Current task compliance</h1><p>All ongoing deadlines, opportunities, placement sessions, and polls in one response matrix.</p></div><div className="form-actions"><button className="secondary-button" onClick={() => void load()} disabled={busy}>{busy ? "Refreshing…" : "Refresh"}</button><button className="secondary-button" onClick={downloadCsv} disabled={!filteredRows.length}>Export CSV ↓</button></div></header>
+    <header className="page-heading"><div><h1>Current task compliance</h1><p>Select an ongoing item to review its students and response status.</p></div><div className="form-actions"><button className="secondary-button" disabled={busy} onClick={() => void load()}>Refresh current tasks</button><button className="secondary-button" disabled={busy || partial || !filtered.length} onClick={downloadCsv}>Export filtered CSV</button></div></header>
     {error && <p className="form-error" role="alert">{error}</p>}
-
-    <section className="panel compliance-panel current-task-panel">
-      <div className="panel-head"><div><p className="eyebrow">ONGOING TASKS</p><h2>Response status by task</h2><p className="helper">Published items stay here until a manager closes, completes, or cancels them.</p></div><span className="count-badge">{summaries.length} current</span></div>
-      <div className="table-scroll"><table><thead><tr><th>Task</th><th>Type</th><th>Deadline</th><th>Recipients</th><th>Non-responders</th><th>Action needed</th><th>Compliant</th><th /></tr></thead><tbody>
-        {summaries.map((item) => <tr key={item.key} className={itemKey === item.key ? "selected-wing-row" : undefined}><td><strong>{item.title}</strong><small>{item.scopeLabel.replace(":", " · ")}</small></td><td><span className="status-pill">{item.kind}</span></td><td>{formatDate(item.dueAtIso)}{new Date(item.dueAtIso).getTime() < Date.now() && <small className="danger-text">Deadline passed</small>}</td><td>{item.recipients}</td><td><strong>{item.nonResponders}</strong></td><td>{item.actionNeeded}</td><td><strong>{item.rate === null ? "—" : `${item.rate}%`}</strong></td><td><button className="text-button" onClick={() => { selectItem(item.key); setStatus("non_responder"); }}>View students</button></td></tr>)}
-      </tbody></table></div>
-      {!busy && !summaries.length && <div className="empty-state"><span>◌</span><h3>No ongoing tasks</h3><p>Publish a form, competition, internship, session, or poll and it will appear here.</p></div>}
-    </section>
-
-    <section className="stats-grid">
-      <article className="stat-card"><span>Recipients</span><strong>{scopedRows.length}</strong><small>{selectedItem?.title ?? "All ongoing tasks"}</small></article>
-      <article className="stat-card danger"><span>Non-responders</span><strong>{nonResponders}</strong><small>No response recorded</small></article>
-      <article className="stat-card warning"><span>Action needed</span><strong>{actionNeeded}</strong><small>Started but incomplete</small></article>
-      <article className="stat-card success"><span>Compliance</span><strong>{compliance === null ? "—" : `${compliance}%`}</strong><small>{complete} responded or completed</small></article>
-    </section>
-
     <section className="panel compliance-panel">
-      <div className="toolbar"><label>Task<select value={itemKey} onChange={(event) => selectItem(event.target.value)}><option value="all">All ongoing tasks</option>{payload.items.map((item) => <option key={item.key} value={item.key}>{item.title} · {item.kind}</option>)}</select></label><label>Wing<select value={wing} onChange={(event) => setWing(event.target.value as WingFilter)}><option value="all">All wings</option>{WING_IDS.map((wingId) => <option key={wingId} value={wingId}>Wing {wingId}</option>)}</select></label><label>Status<select value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}><option value="non_responder">Non-responders</option><option value="action_needed">Action needed</option><option value="responded">Responded</option><option value="completed">Completed</option><option value="exempt">Exempt</option><option value="all">All statuses</option></select></label><span className="result-count">{filteredRows.length} students</span></div>
-      <div className="table-scroll"><table><thead><tr><th>Student</th><th>Wing</th><th>Task</th><th>Type</th><th>Deadline</th><th>Status</th></tr></thead><tbody>{filteredRows.map((row) => { const item = payload.items.find((candidate) => candidate.key === row.itemKey); return <tr key={`${row.itemKey}_${row.id}`}><td><strong>{row.displayName}</strong><small>{row.rollNumber} · Section {row.sectionId}</small></td><td><strong>Wing {row.wingId}</strong></td><td>{item?.title}</td><td>{row.kind}</td><td>{item ? formatDate(item.dueAtIso) : "—"}</td><td><span className={`status-pill ${row.status === "non_responder" ? "overdue" : row.status === "action_needed" ? "urgent" : "done"}`}>{row.status === "non_responder" ? "Non-responder" : row.responseLabel}</span>{row.completedLate && <small>Late</small>}</td></tr>; })}</tbody></table></div>
-      {!busy && !filteredRows.length && <div className="empty-state"><span>◌</span><h3>No matching students</h3><p>There are no students in this task, wing, and status combination.</p></div>}
+      <div className="toolbar"><label>Current task<select value={payload.selectedItemKey} disabled={busy} onChange={(event) => { setWing("all"); void load({ itemKey: event.target.value, rowsOnly: true }); }}>
+        {!payload.items.length && <option value="">No current tasks</option>}{payload.items.map((item) => <option key={item.key} value={item.key}>{item.title} · {item.kind}</option>)}
+      </select></label><label>Wing<select value={wing} onChange={(event) => setWing(event.target.value as WingFilter)}><option value="all">All wings</option>{WING_IDS.map((id) => <option key={id}>{id}</option>)}</select></label><label>Status<select value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}><option value="non_responder">Non-responders</option><option value="action_needed">Action needed</option><option value="responded">Responded</option><option value="completed">Completed</option><option value="exempt">Exempt</option><option value="all">All statuses</option></select></label></div>
+      {moreCatalog && <button className="secondary-button" disabled={busy} onClick={() => void load({ itemKey: payload.selectedItemKey || undefined, catalogCursors: payload.nextCatalogCursors }, false, true)}>Load more current tasks</button>}
+      {selected && <p className="helper">{selected.title} · {selected.kind} · Due {formatDate(selected.dueAtIso)}</p>}
+      {busy && <p role="status">Loading compliance records…</p>}
+      {partial && <p className="form-error" role="status">Showing {payload.rows.length} loaded students. Load the remaining students for complete totals, filters, and CSV export.</p>}
+      <p className="helper">{rows.length} {partial ? "loaded" : "total"} recipients in this wing selection · {rows.filter((row) => row.status === "non_responder").length} non-responders · {rows.filter((row) => row.status === "action_needed").length} need action · Compliance: {partial || !accountable ? "awaiting complete data" : Math.round(complete / accountable * 100) + "%"}</p>
+      <div className="table-scroll"><table><thead><tr><th>Student</th><th>Section</th><th>Wing</th><th>Response</th></tr></thead><tbody>{filtered.map((row) => <tr key={row.id}><td><strong>{row.displayName}</strong><small>{row.rollNumber}</small></td><td>{row.sectionId}</td><td>{row.wingId}</td><td>{row.responseLabel}{row.completedLate && <small>Recorded late</small>}</td></tr>)}</tbody></table></div>
+      {!busy && !filtered.length && <p className="helper">{payload.items.length ? "No matching students in the loaded records." : "No ongoing tasks. Publish an item to start tracking responses."}</p>}
+      {payload.nextCursor && <button className="primary-button" disabled={busy} onClick={() => void load({ itemKey: payload.selectedItemKey, cursor: payload.nextCursor!, rowsOnly: true }, true)}>Load more students</button>}
     </section>
-
-    <section className="panel wing-compliance-panel"><div className="panel-head"><div><p className="eyebrow">WING BREAKDOWN</p><h2>{selectedItem?.title ?? "All ongoing tasks"}</h2></div>{wing !== "all" && <button className="secondary-button" onClick={() => setWing("all")}>Show all wings</button>}</div><div className="table-scroll"><table><thead><tr><th>Wing</th><th>Recipients</th><th>Non-responders</th><th>Action needed</th><th>Compliant</th><th>Compliance</th><th /></tr></thead><tbody>{wingStats.map((item) => <tr key={item.wingId} className={wing === item.wingId ? "selected-wing-row" : undefined}><td><strong>Wing {item.wingId}</strong></td><td>{item.total}</td><td>{item.nonResponders}</td><td>{item.actionNeeded}</td><td>{item.complete}</td><td><strong>{item.rate === null ? "—" : `${item.rate}%`}</strong></td><td><button className="text-button" onClick={() => setWing(item.wingId)}>View students</button></td></tr>)}</tbody></table></div></section>
+    {!partial && selected && <section className="panel compliance-panel"><h2>Wing breakdown</h2><div className="table-scroll"><table><thead><tr><th>Wing</th><th>Recipients</th><th>Non-responders</th><th>Action needed</th><th>Compliance</th></tr></thead><tbody>{WING_IDS.map((id) => {
+      const group = payload.rows.filter((row) => row.wingId === id); const count = group.filter((row) => row.status !== "exempt").length;
+      return <tr key={id}><td><button className="text-button" onClick={() => setWing(id)}>Wing {id}</button></td><td>{group.length}</td><td>{group.filter((row) => row.status === "non_responder").length}</td><td>{group.filter((row) => row.status === "action_needed").length}</td><td>{count ? Math.round(group.filter((row) => responseComplete(row.status)).length / count * 100) + "%" : "N/A"}</td></tr>;
+    })}</tbody></table></div></section>}
   </div>;
 }
