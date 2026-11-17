@@ -1,60 +1,112 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-17T22:28:10.346Z",
+  "generatedAt": "2026-11-17T22:47:15.283Z",
   "title": "Design System: DeadlineOS",
   "extensions": {
     "colorMeta": {
       "ink": {
-        "role": "primary",
-        "displayName": "Forest ink"
+        "role": "neutral",
+        "displayName": "Off-white ink"
       },
       "accent": {
         "role": "primary",
-        "displayName": "Action green"
+        "displayName": "Quest amber"
+      },
+      "on-accent": {
+        "role": "primary",
+        "displayName": "on accent"
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "accent hover"
+      },
+      "accent-surface": {
+        "role": "neutral",
+        "displayName": "accent surface"
       },
       "paper": {
         "role": "neutral",
-        "displayName": "Fresh paper"
+        "displayName": "Charcoal canvas"
       },
       "surface": {
         "role": "neutral",
-        "displayName": "White surface"
+        "displayName": "surface"
       },
       "surface-subtle": {
         "role": "neutral",
-        "displayName": "Soft sage"
+        "displayName": "surface subtle"
       },
       "muted": {
         "role": "neutral",
-        "displayName": "Muted forest"
+        "displayName": "Cool muted text"
       },
       "line": {
         "role": "neutral",
-        "displayName": "Sage rule"
+        "displayName": "line"
       },
       "control-border": {
         "role": "neutral",
-        "displayName": "Control boundary"
+        "displayName": "control border"
       },
-      "lime": {
-        "role": "secondary",
-        "displayName": "Quest lime"
+      "rail": {
+        "role": "neutral",
+        "displayName": "Near-black rail"
+      },
+      "rail-text": {
+        "role": "neutral",
+        "displayName": "rail text"
+      },
+      "quest-surface": {
+        "role": "neutral",
+        "displayName": "quest surface"
+      },
+      "quest-line": {
+        "role": "neutral",
+        "displayName": "quest line"
+      },
+      "quest-muted": {
+        "role": "neutral",
+        "displayName": "quest muted"
       },
       "lavender": {
-        "role": "tertiary",
-        "displayName": "Focus lavender"
+        "role": "neutral",
+        "displayName": "Focus blue surface"
+      },
+      "focus-text": {
+        "role": "neutral",
+        "displayName": "focus text"
+      },
+      "focus-muted": {
+        "role": "neutral",
+        "displayName": "focus muted"
       },
       "coral": {
-        "role": "tertiary",
-        "displayName": "Completion coral"
+        "role": "secondary",
+        "displayName": "coral"
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "success"
+      },
+      "success-surface": {
+        "role": "neutral",
+        "displayName": "success surface"
+      },
+      "danger-surface": {
+        "role": "neutral",
+        "displayName": "danger surface"
+      },
+      "blue": {
+        "role": "secondary",
+        "displayName": "blue"
       },
       "red": {
-        "role": "error",
-        "displayName": "Working red"
+        "role": "secondary",
+        "displayName": "red"
       },
       "amber": {
-        "role": "warning",
-        "displayName": "Working amber"
+        "role": "secondary",
+        "displayName": "amber"
       }
     },
     "typographyMeta": {
@@ -82,17 +134,17 @@
     "shadows": [
       {
         "name": "floating",
-        "value": "0 8px 22px rgb(32 61 53 / .12)",
-        "purpose": "Floating menus and saved-work rewards"
+        "value": "0 8px 22px rgb(0 0 0 / .3)",
+        "purpose": "Floating menus and saved-work rewards on dark surfaces"
       },
       {
         "name": "selected",
-        "value": "0 2px 5px rgb(32 61 53 / .08)",
+        "value": "0 2px 5px rgb(0 0 0 / .2)",
         "purpose": "Selected task-list segment"
       },
       {
         "name": "next-milestone",
-        "value": "0 4px 8px rgb(32 61 53 / .12)",
+        "value": "0 4px 8px rgb(0 0 0 / .2)",
         "purpose": "Next stop on the quest path"
       }
     ],
@@ -145,7 +197,7 @@
       "refersTo": "button-primary",
       "description": "Save or publish a real action.",
       "html": "<button class=\"ds-primary\">Save changes</button>",
-      "css": ".ds-primary{font:600 13px \"IBM Plex Sans\",sans-serif;min-height:44px;padding:10px 16px;border:1px solid var(--accent,#28604b);border-radius:8px;background:var(--accent,#28604b);color:#fff;cursor:pointer}.ds-primary:hover{background:var(--ink,#203d35)}.ds-primary:focus-visible{outline:2px solid var(--accent,#28604b);outline-offset:3px}.ds-primary:disabled{opacity:.5;cursor:not-allowed}"
+      "css": ".ds-primary{font:600 13px \"IBM Plex Sans\",sans-serif;min-height:44px;padding:10px 16px;border:1px solid var(--accent,#f0b76b);border-radius:8px;background:var(--accent,#f0b76b);color:var(--on-accent,#1a1510);cursor:pointer}.ds-primary:hover{background:var(--accent-hover,#f6ca8d)}.ds-primary:focus-visible{outline:2px solid var(--accent,#f0b76b);outline-offset:3px}.ds-primary:disabled{opacity:.5;cursor:not-allowed}"
     },
     {
       "name": "Secondary action",
@@ -153,7 +205,7 @@
       "refersTo": "button-secondary",
       "description": "An alternative action with a visible boundary.",
       "html": "<button class=\"ds-secondary\">Cancel</button>",
-      "css": ".ds-secondary{font:600 13px \"IBM Plex Sans\",sans-serif;min-height:44px;padding:10px 16px;border:1px solid var(--control-border,#819287);border-radius:8px;background:transparent;color:var(--ink,#203d35);cursor:pointer}.ds-secondary:hover{background:var(--surface-subtle,#eaf0e7)}.ds-secondary:focus-visible{outline:2px solid var(--accent,#28604b);outline-offset:3px}"
+      "css": ".ds-secondary{font:600 13px \"IBM Plex Sans\",sans-serif;min-height:44px;padding:10px 16px;border:1px solid var(--control-border,#727e90);border-radius:8px;background:transparent;color:var(--ink,#edf0f5);cursor:pointer}.ds-secondary:hover{background:var(--surface-subtle,#252b35)}.ds-secondary:focus-visible{outline:2px solid var(--accent,#f0b76b);outline-offset:3px}"
     },
     {
       "name": "Labelled field",
@@ -161,15 +213,15 @@
       "refersTo": "field",
       "description": "Explicit labels and visible control boundaries.",
       "html": "<label class=\"ds-label\">Title<input class=\"ds-field\" placeholder=\"Enter a deadline title\"></label>",
-      "css": ".ds-label{display:grid;gap:7px;font:500 13px \"IBM Plex Sans\",sans-serif;color:var(--ink,#203d35)}.ds-field{font:400 14px \"IBM Plex Sans\",sans-serif;min-height:44px;padding:10px 12px;border:1px solid var(--control-border,#819287);border-radius:7px;background:var(--surface,#fff);color:var(--ink,#203d35)}.ds-field::placeholder{color:var(--muted,#576b62)}.ds-field:focus-visible{outline:2px solid var(--accent,#28604b);outline-offset:3px}"
+      "css": ".ds-label{display:grid;gap:7px;font:500 13px \"IBM Plex Sans\",sans-serif;color:var(--ink,#edf0f5)}.ds-field{font:400 14px \"IBM Plex Sans\",sans-serif;min-height:44px;padding:10px 12px;border:1px solid var(--control-border,#727e90);border-radius:7px;background:var(--surface,#1b1f27);color:var(--ink,#edf0f5)}.ds-field::placeholder{color:var(--muted,#a2aab8)}.ds-field:focus-visible{outline:2px solid var(--accent,#f0b76b);outline-offset:3px}"
     },
     {
       "name": "Selected navigation",
       "kind": "nav",
       "refersTo": null,
-      "description": "Lime selected destination on the forest rail.",
+      "description": "Amber selected destination on the charcoal rail.",
       "html": "<nav class=\"ds-rail\"><button class=\"ds-nav\" aria-current=\"page\">Today</button></nav>",
-      "css": ".ds-rail{padding:14px;background:var(--ink,#203d35)}.ds-nav{font:650 13px \"IBM Plex Sans\",sans-serif;min-height:48px;width:100%;padding:12px 14px;border:0;border-radius:10px;text-align:left;color:var(--ink,#203d35);background:var(--lime,#dcf694);cursor:pointer}.ds-nav:hover{background:#e8fbb8}.ds-nav:focus-visible{outline:2px solid var(--lime,#dcf694);outline-offset:3px}"
+      "css": ".ds-rail{padding:14px;background:var(--rail,#0c0f14)}.ds-nav{font:650 13px \"IBM Plex Sans\",sans-serif;min-height:48px;width:100%;padding:12px 14px;border:0;border-radius:10px;text-align:left;color:var(--on-accent,#1a1510);background:var(--accent,#f0b76b);cursor:pointer}.ds-nav:hover{background:#f6ca8d}.ds-nav:focus-visible{outline:2px solid var(--accent,#f0b76b);outline-offset:3px}"
     },
     {
       "name": "Deadline record",
@@ -177,18 +229,18 @@
       "refersTo": "task-record",
       "description": "Readable saved-work record with its actual state.",
       "html": "<article class=\"ds-task\"><button class=\"ds-check\" aria-label=\"Mark deadline complete\"></button><div><strong>Deadline title</strong><p>Form · Wing A</p></div><span>Today</span></article>",
-      "css": ".ds-task{display:flex;align-items:center;gap:12px;padding:13px 12px;border:1px solid var(--line,#d9e2d6);border-radius:12px;background:var(--surface,#fff);color:var(--ink,#203d35);font:400 13px \"IBM Plex Sans\",sans-serif}.ds-task:hover{border-color:#9bb39e}.ds-task strong{font-weight:600}.ds-task p{margin:5px 0 0;font-size:11px;color:var(--muted,#576b62)}.ds-task>span{margin-left:auto}.ds-check{width:24px;height:24px;flex:none;border:1.5px solid var(--control-border,#819287);border-radius:8px;background:transparent;cursor:pointer}.ds-check:hover{background:var(--lime,#dcf694)}.ds-check:focus-visible{outline:2px solid var(--accent,#28604b);outline-offset:3px}"
+      "css": ".ds-task{display:flex;align-items:center;gap:12px;padding:13px 12px;border:1px solid var(--line,#343c48);border-radius:12px;background:var(--surface,#1b1f27);color:var(--ink,#edf0f5);font:400 13px \"IBM Plex Sans\",sans-serif}.ds-task:hover{border-color:#727e90}.ds-task strong{font-weight:600}.ds-task p{margin:5px 0 0;font-size:11px;color:var(--muted,#a2aab8)}.ds-task>span{margin-left:auto}.ds-check{width:24px;height:24px;flex:none;border:1.5px solid var(--control-border,#727e90);border-radius:8px;background:transparent;cursor:pointer}.ds-check:hover{background:var(--lime,#f0b76b)}.ds-check:focus-visible{outline:2px solid var(--accent,#f0b76b);outline-offset:3px}"
     }
   ],
   "narrative": {
-    "northStar": "Campus Quest",
-    "overview": "A playful game board around real academic work. Earned milestones make progress visible while familiar labels and clear actions keep daily work straightforward.",
+    "northStar": "Campus Quest after dark",
+    "overview": "A dark game board around real academic work. Charcoal elevation, amber earned progress and a muted blue focus sprint preserve clear next actions and familiar labels.",
     "keyCharacteristics": [
-      "Forest navigation and fresh paper",
-      "Lime earned-progress board",
-      "Lavender optional focus sprint",
+      "Charcoal navigation and graphite working surfaces",
+      "Amber actions and earned-progress milestones",
+      "Muted blue optional focus sprint",
       "Bold self-hosted IBM Plex Sans",
-      "Consistent authored outline icons"
+      "Accessible text and explicit state labels"
     ],
     "rules": [
       {

@@ -1,92 +1,105 @@
-﻿---
+---
 name: DeadlineOS
-description: A campus quest board that makes real deadlines feel achievable.
+description: A dark campus quest board with earned amber progress.
 colors:
-  ink: "#203d35"
-  accent: "#28604b"
-  paper: "#f4f7f2"
-  surface: "#ffffff"
-  surface-subtle: "#eaf0e7"
-  muted: "#576b62"
-  line: "#d9e2d6"
-  control-border: "#819287"
-  lime: "#dcf694"
-  lavender: "#e6def7"
-  coral: "#f4ad96"
-  red: "#b33932"
-  amber: "#865219"
+  ink: "#edf0f5"
+  accent: "#f0b76b"
+  on-accent: "#1a1510"
+  accent-hover: "#f6ca8d"
+  accent-surface: "#352b20"
+  paper: "#111318"
+  surface: "#1b1f27"
+  surface-subtle: "#252b35"
+  muted: "#a2aab8"
+  line: "#343c48"
+  control-border: "#727e90"
+  rail: "#0c0f14"
+  rail-text: "#d4dae5"
+  quest-surface: "#25231f"
+  quest-line: "#5c503d"
+  quest-muted: "#c5bcac"
+  lavender: "#202c3e"
+  focus-text: "#d5e3fc"
+  focus-muted: "#b0c4e4"
+  coral: "#f09a83"
+  success: "#9ed9bb"
+  success-surface: "#1d302a"
+  danger-surface: "#302326"
+  blue: "#a8c9fa"
+  red: "#f29a8c"
+  amber: "#f0b76b"
 typography:
   display:
-    fontFamily: "IBM Plex Sans, sans-serif"
-    fontSize: "40px"
+    fontFamily: IBM Plex Sans, sans-serif
+    fontSize: 40px
     fontWeight: 700
     lineHeight: 1.03
-    letterSpacing: "-0.04em"
+    letterSpacing: -0.04em
   headline:
-    fontFamily: "IBM Plex Sans, sans-serif"
-    fontSize: "38px"
+    fontFamily: IBM Plex Sans, sans-serif
+    fontSize: 38px
     fontWeight: 650
     lineHeight: 1.07
-    letterSpacing: "-0.035em"
+    letterSpacing: -0.035em
   title:
-    fontFamily: "IBM Plex Sans, sans-serif"
-    fontSize: "20px"
+    fontFamily: IBM Plex Sans, sans-serif
+    fontSize: 20px
     fontWeight: 650
   body:
-    fontFamily: "IBM Plex Sans, sans-serif"
-    fontSize: "15px"
+    fontFamily: IBM Plex Sans, sans-serif
+    fontSize: 15px
     fontWeight: 400
     lineHeight: 1.5
   label:
-    fontFamily: "IBM Plex Sans, sans-serif"
-    fontSize: "13px"
+    fontFamily: IBM Plex Sans, sans-serif
+    fontSize: 13px
     fontWeight: 600
 rounded:
-  field: "7px"
-  control: "8px"
-  record: "12px"
-  focus: "14px"
-  board: "16px"
+  field: 7px
+  control: 8px
+  record: 12px
+  focus: 14px
+  board: 16px
 spacing:
-  compact: "8px"
-  group: "16px"
-  section: "28px"
-  page: "38px"
+  compact: 8px
+  group: 16px
+  section: 28px
+  page: 38px
 components:
   button-primary:
     backgroundColor: "{colors.accent}"
-    textColor: "{colors.surface}"
+    textColor: "{colors.on-accent}"
     rounded: "{rounded.control}"
-    padding: "10px 16px"
+    padding: 10px 16px
     typography: "{typography.label}"
   button-secondary:
-    backgroundColor: "transparent"
+    backgroundColor: transparent
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
-    padding: "10px 16px"
+    padding: 10px 16px
   field:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     rounded: "{rounded.field}"
-    padding: "10px 12px"
+    padding: 10px 12px
   task-record:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     rounded: "{rounded.record}"
-    padding: "13px 12px"
+    padding: 13px 12px
 ---
 
 # Design System: DeadlineOS
 
 ## Overview
 
-Campus Quest makes academic work feel approachable through visible, earned progress. Forest navigation, a lime milestone path, lavender focus controls and peach notices form a playful game board around real tasks. Clear labels, readable records and direct actions preserve the product's working vocabulary.
+Campus Quest makes academic work feel approachable through visible, earned progress. Charcoal navigation, warm amber milestones, muted blue focus controls and subdued status surfaces form a dark game board around real tasks. Clear labels, readable records and direct actions preserve the product's working vocabulary.
 
-The user explicitly requested this replacement of the previous Academic Register identity. The normative theme is apps/web/src/app/quest.css, imported after daybook.css. The dashboard's composition and behavior live in .impeccable/surfaces/dashboard.md; primitives here apply across sign-in, student and management screens.
+The user explicitly requested a dark palette for the Campus Quest identity. The normative theme is apps/web/src/app/quest.css, imported after daybook.css. The dashboard's composition and behavior live in .impeccable/surfaces/dashboard.md; primitives here apply across sign-in, student and management screens.
 
 ## Colors
 
-Forest ink carries navigation, text and the next-task action. Lime denotes the quest board and selected navigation. Lavender identifies the optional focus sprint; peach supports registration notices and the completion mark. Fresh paper and white keep dense records readable.
+A near-black canvas (#111318) and darker rail (#0c0f14) frame elevated graphite records (#1b1f27). Off-white foregrounds and cool muted text maintain reading hierarchy. Amber (#f0b76b) identifies primary actions, earned XP and selected navigation. The quest board is a dark warm surface (#25231f), with a muted blue focus sprint (#202c3e). Red and green status tones remain legible against explicitly dark surfaces. The legacy lavender CSS token now carries the focus-blue surface; it is retained for component compatibility.
 
 Use the accent for links, primary actions and focus. Decorative separators use line; interactive boundaries use control-border. Red and amber accompany visible overdue, cancellation, warning and error words. Every state has text or an explicit pressed/disabled state; color alone never communicates status.
 
@@ -104,7 +117,7 @@ At 900px, the rail becomes a labelled four-item bottom navigation and a role-awa
 
 ## Elevation & Depth
 
-Task records use a border rather than a floating shadow. White selected segments use a small downward 0 2px 5px shadow. The next milestone uses 0 4px 8px depth. Floating action menus and reward confirmations use the shared 0 8px 22px shadow at 12% forest opacity. Avoid decorative glow and glass.
+Task records use a border rather than a floating shadow. White selected segments use a small downward 0 2px 5px shadow. The next milestone uses 0 4px 8px depth. Floating action menus and reward confirmations use the shared 0 8px 22px shadow at 30% black opacity. Avoid decorative glow and glass.
 
 ## Shapes
 
@@ -114,11 +127,11 @@ Controls have 8px corners, task records 12px, focus 14px, and the quest board 16
 
 ### Actions and fields
 
-Primary actions use accent with white text, a 44px minimum height, and 8px corners. Hover darkens toward forest ink. Secondary actions retain a visible boundary. Disabled actions reject interaction and reduce opacity. Keyboard focus uses a 2px accent outline with 3px offset, switching to lime on the rail. Inputs retain explicit labels, visible boundaries and readable phone sizes. Errors preserve recovery text and entered values.
+Primary actions use amber with dark on-accent text, a 44px minimum height, and 8px corners. Hover uses a lighter amber. Secondary actions retain a visible boundary. Disabled actions reject interaction and reduce opacity. Keyboard focus uses a 2px accent outline with 3px offset, retaining amber on the rail. Inputs retain explicit labels, visible boundaries and readable phone sizes. Errors preserve recovery text and entered values.
 
 ### Navigation and records
 
-The forest rail uses full labels and outline icons; the current destination is lime with dark text. Mobile navigation keeps Today, Academics, Opportunities and My desk. Management keeps factual labels, records-first editing and server-authorized actions. Task records expose title, scope, deadline, completion and resource links. Overdue records use a pale peach treatment plus explicit overdue text.
+The charcoal rail uses full labels and outline icons; the current destination is amber with dark text. Mobile navigation keeps Today, Academics, Opportunities and My desk. Management keeps factual labels, records-first editing and server-authorized actions. Task records expose title, scope, deadline, completion and resource links. Overdue records use a subdued dark red surface plus explicit coral overdue text.
 
 ### Earned progress
 
@@ -137,4 +150,5 @@ The optional 15-minute sprint starts, pauses, resets and finishes against wall-c
 - Don't invent streaks, rankings, scores, classmates or productivity claims.
 - Don't replace familiar task labels with obscure game terminology.
 - Don't animate routine page loads or require watching a sequence before acting.
-- Don't restore the previous vermilion/cream/serif world on new screens.
+- Don't reintroduce large lime, pastel or white panels into this dark theme.
+- Do keep native controls, browser chrome, icons and offline surfaces dark.

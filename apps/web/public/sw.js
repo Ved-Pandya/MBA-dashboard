@@ -1,4 +1,4 @@
-const CACHE_NAME = "deadlineos-static-v3";
+const CACHE_NAME = "deadlineos-static-v4";
 const OFFLINE_ASSETS = [
   "/offline.html",
   "/fonts/ibm-plex-sans-latin-variable.woff2",

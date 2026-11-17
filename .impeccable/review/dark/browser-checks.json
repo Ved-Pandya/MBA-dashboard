@@ -1,0 +1,86 @@
+{
+  "reports": [
+    {
+      "name": "login-desktop",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "login-mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "desktop",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "desktop-1280",
+      "width": 1280,
+      "scrollWidth": 1280,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "tablet",
+      "width": 820,
+      "scrollWidth": 820,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "mobile-viewport",
+      "width": 390,
+      "scrollWidth": 390,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "reward-desktop",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "academics-desktop",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "inbox-desktop",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "wing-editor-desktop",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "wing-editor-mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "colorScheme": "dark"
+    },
+    {
+      "name": "offline-mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "colorScheme": "dark"
+    }
+  ],
+  "errors": [],
+  "contrastIssues": [],
+  "reducedMotion": true,
+  "xpCompletionAndReopen": true
+}
