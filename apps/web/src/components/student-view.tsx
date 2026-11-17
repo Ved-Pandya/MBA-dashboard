@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import type { AcademicEventRecord, AssignmentRecord, GeneralPollRecord, PollResponseRecord, SessionIntimationRecord, SessionResponseRecord } from "@/lib/models";
 import { getFirebase } from "@/lib/firebase";
@@ -10,6 +10,7 @@ import { useClock } from "@/lib/use-clock";
 import { callFunction, readableError } from "@/lib/callable";
 import { AppIcon } from "./app-icon";
 import { DateStamp } from "./date-stamp";
+import { FocusSprint, QuestCelebration, QuestProgress } from "./quest-progress";
 
 const labels = {
   subject_assignment: "Assignment",
@@ -34,6 +35,18 @@ export function StudentView({ onNavigate }: { onNavigate: (view: "forms" | "acad
   const [filter, setFilter] = useState<"active" | "completed" | "all">("active");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [celebration, setCelebration] = useState<{ message: string; earned: boolean; key: number } | null>(null);
+  const dismissCelebration = useCallback(() => setCelebration(null), []);
+  const deadlineDesk = useRef<HTMLElement>(null);
+  const [focusNext, setFocusNext] = useState(false);
+
+  useEffect(() => {
+    if (!focusNext) return;
+    const first = deadlineDesk.current?.querySelector<HTMLButtonElement>(".task-row .check:not(:disabled)");
+    if (first) { first.focus({ preventScroll: true }); first.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" }); }
+    else deadlineDesk.current?.scrollIntoView({ block: "start" });
+    setFocusNext(false);
+  }, [focusNext, filter, search]);
 
   useEffect(() => {
     if (!user) return;
@@ -112,6 +125,7 @@ export function StudentView({ onNavigate }: { onNavigate: (view: "forms" | "acad
     setBusy(`task:${item.id}`); setError(null);
     try {
       await callFunction(item.status === "completed" ? "reopenMyCompletion" : "setMyCompletion", { taskId: item.taskId, idempotencyKey: crypto.randomUUID() });
+      setCelebration({ message: item.status === "completed" ? "Deadline reopened. Your XP reflects saved completions." : "Deadline completed. A little closer to your next level.", earned: item.status !== "completed", key: Date.now() });
     } catch (toggleError) { setError(readableError(toggleError)); }
     finally { setBusy(null); }
   }
@@ -158,11 +172,12 @@ export function StudentView({ onNavigate }: { onNavigate: (view: "forms" | "acad
   };
   const showManagement = Boolean(profile?.roles.cr || profile?.roles.systemAdmin || Object.keys(profile?.scopes.wingPocWings ?? {}).length || Object.keys(profile?.scopes.subjectPocOfferings ?? {}).length);
   return <div className="page-wrap today-page">
-    <header className="day-heading"><div><h1>Today<span className="heading-dot">.</span></h1><p>{date}</p><div className="day-note"><span>Hello, {profile?.displayName.split(" ")[0]}.</span><strong>{pendingCount ? `${pendingCount} ${pendingCount === 1 ? "deadline" : "deadlines"} to keep in view.` : "Your deadlines are clear."}</strong></div></div><DateStamp /></header>
+    <header className="day-heading"><div><h1>Let’s go, {profile?.displayName.split(" ")[0]}<span className="heading-dot">.</span></h1><p>{date}<span className="day-heading-divider"> / </span>Your daily quest board</p></div><DateStamp /></header>
+    <QuestProgress completed={stats.complete} pending={pendingCount} loading={assignmentsLoading} onStart={() => { if (pendingCount) { setFilter("active"); setSearch(""); setFocusNext(true); } else onNavigate("academics"); }} onReview={() => { setFilter("completed"); setSearch(""); deadlineDesk.current?.scrollIntoView({ block: "start" }); }} />
     {showManagement && <nav className="responsibility-bar" aria-label="Your responsibilities"><span>Your workspace</span>{Boolean(Object.keys(profile?.scopes.wingPocWings ?? {}).length) && <button onClick={() => onNavigate("forms")}><AppIcon name="form" />Manage wing forms<AppIcon name="arrow" /></button>}{Boolean(Object.keys(profile?.scopes.subjectPocOfferings ?? {}).length) && <button onClick={() => onNavigate("academics")}><AppIcon name="book" />Manage academic dates<AppIcon name="arrow" /></button>}<button onClick={() => onNavigate("compliance")}><AppIcon name="report" />Check responses<AppIcon name="arrow" /></button></nav>}
     {error && <p className="form-error" role="alert">{error}</p>}
     <div className="daybook-layout">
-      <section className="deadline-desk" aria-label="Your deadlines"><div className="section-heading"><h2>Deadlines</h2><span>{stats.overdue > 0 ? <b className="overdue-text">{stats.overdue} overdue</b> : "Keep one step ahead"}</span></div>
+      <section className="deadline-desk" ref={deadlineDesk} aria-label="Your deadlines"><div className="section-heading"><h2><AppIcon name="flag" />Your deadlines</h2><span>{stats.overdue > 0 ? <b className="overdue-text">{stats.overdue} overdue</b> : "One task at a time"}</span></div>
         <div className="deadline-toolbar"><div className="segmented" aria-label="Deadline view">{([{ id: "active", label: "To do", count: pendingCount }, { id: "completed", label: "Completed", count: stats.complete }, { id: "all", label: "All activity" }] as const).map((item) => <button key={item.id} aria-label={item.label} aria-pressed={filter === item.id} className={filter === item.id ? "active" : ""} onClick={() => setFilter(item.id)}>{item.label}{"count" in item && <span>{item.count}</span>}</button>)}</div><label className="search-control"><AppIcon name="search" /><span className="sr-only">Find a deadline</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a deadline" /></label></div>
         {assignmentsLoading ? <p className="list-message" role="status">Loading your deadlines…</p> : !groups.size ? <div className="list-empty"><AppIcon name="check" /><h3>{search ? "No matching deadlines" : filter === "active" ? "Nothing left to do here." : "No activity yet."}</h3><p>{search ? "Try another title or clear your search." : "Academic dates, registrations and batch replies are in their own sections."}</p><button className="text-link" onClick={() => onNavigate("academics")}>Check academic dates<AppIcon name="arrow" /></button></div> : [...groups].map(([label, items]) => <div className="deadline-group" key={label}><h3 className="group-heading">{label}<span>{items.length}</span></h3><div className="task-list">{items.map((item) => {
           const open = item.taskSnapshot.taskStatus === "published", level = open ? urgency(item.taskSnapshot.dueAt, item.status, now) : "done";
@@ -171,9 +186,11 @@ export function StudentView({ onNavigate }: { onNavigate: (view: "forms" | "acad
         <p className="completion-note"><AppIcon name="check" />Tick a deadline after submitting it. You can reopen it if needed.</p>
       </section>
       <aside className="daybook-aside">
+        <FocusSprint />
         <section className="reply-desk"><div className="section-heading"><h2>Needs your reply</h2><span>{unansweredSessions.length + unansweredPolls.length + actionSummary.missingCompetitionConfirmations}</span></div>{actionSummary.missingCompetitionConfirmations > 0 && <button className="registration-notice" onClick={() => onNavigate("opportunities")}><AppIcon name="briefcase" /><span><strong>Competition registrations</strong><small>{actionSummary.missingCompetitionConfirmations} need your confirmation</small></span><AppIcon name="arrow" /></button>}{unansweredSessions.map(sessionRow)}{unansweredPolls.map(pollRow)}{!unansweredSessions.length && !unansweredPolls.length && !actionSummary.missingCompetitionConfirmations && <p className="quiet-note">No replies needed right now.</p>}{Boolean(answeredSessions.length + answeredPolls.length) && <details className="recorded-replies"><summary>{answeredSessions.length + answeredPolls.length} replies recorded</summary>{answeredSessions.map(sessionRow)}{answeredPolls.map(pollRow)}</details>}<div className="section-footer"><button className="text-link" onClick={() => onNavigate("sessions")}>Sessions</button><button className="text-link" onClick={() => onNavigate("polls")}>All polls<AppIcon name="arrow" /></button></div></section>
         <section className="academic-desk"><div className="section-heading"><h2>Academic dates</h2><AppIcon name="book" /></div>{academicDates.length ? academicDates.map((item) => <button className="agenda-row" key={item.id} onClick={() => onNavigate("academics")}><div className="agenda-date"><strong>{new Intl.DateTimeFormat("en-IN", { day: "2-digit", timeZone: "Asia/Kolkata" }).format(item.occursAt.toDate())}</strong><span>{new Intl.DateTimeFormat("en-IN", { month: "short", timeZone: "Asia/Kolkata" }).format(item.occursAt.toDate())}</span></div><div><strong>{item.title}</strong><small>{item.eventType.replaceAll("_", " ")} · {new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(item.occursAt.toDate())}</small></div></button>) : <p className="quiet-note">No upcoming dates in your section.</p>}<div className="section-footer"><button className="text-link" onClick={() => onNavigate("academics")}>Open academics<AppIcon name="arrow" /></button></div></section>
       </aside>
     </div>
+    {celebration && <QuestCelebration key={celebration.key} message={celebration.message} earned={celebration.earned} onDismiss={dismissCelebration} />}
   </div>;
 }

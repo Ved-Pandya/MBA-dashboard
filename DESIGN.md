@@ -1,40 +1,37 @@
----
+﻿---
 name: DeadlineOS
-description: An academic register in cream and vermilion.
+description: A campus quest board that makes real deadlines feel achievable.
 colors:
-  ink: "#302a25"
-  link: "#963b2b"
-  accent: "#a53a2a"
-  paper: "#f5f0e5"
-  card: "#fbf8f0"
-  surface-subtle: "#eee6d7"
-  muted: "#6f6256"
-  line: "#d7cdbc"
-  control-border: "#93816a"
-  rail: "#9d3829"
-  rail-text: "#fff4df"
-  on-accent: "#fff9ed"
-  red: "#a12e24"
-  amber: "#80511d"
+  ink: "#203d35"
+  accent: "#28604b"
+  paper: "#f4f7f2"
+  surface: "#ffffff"
+  surface-subtle: "#eaf0e7"
+  muted: "#576b62"
+  line: "#d9e2d6"
+  control-border: "#819287"
+  lime: "#dcf694"
+  lavender: "#e6def7"
+  coral: "#f4ad96"
+  red: "#b33932"
+  amber: "#865219"
 typography:
   display:
-    fontFamily: "Fraunces, Georgia, serif"
-    fontSize: "clamp(66px, 7vw, 88px)"
-    fontWeight: 450
-    lineHeight: 0.98
+    fontFamily: "IBM Plex Sans, sans-serif"
+    fontSize: "40px"
+    fontWeight: 700
+    lineHeight: 1.03
     letterSpacing: "-0.04em"
   headline:
-    fontFamily: "Fraunces, Georgia, serif"
-    fontSize: "clamp(38px, 4vw, 54px)"
-    fontWeight: 450
+    fontFamily: "IBM Plex Sans, sans-serif"
+    fontSize: "38px"
+    fontWeight: 650
     lineHeight: 1.07
-    letterSpacing: "-0.04em"
+    letterSpacing: "-0.035em"
   title:
-    fontFamily: "Fraunces, Georgia, serif"
-    fontSize: "24px"
-    fontWeight: 500
-    lineHeight: 1.15
-    letterSpacing: "-0.025em"
+    fontFamily: "IBM Plex Sans, sans-serif"
+    fontSize: "20px"
+    fontWeight: 650
   body:
     fontFamily: "IBM Plex Sans, sans-serif"
     fontSize: "15px"
@@ -43,21 +40,22 @@ typography:
   label:
     fontFamily: "IBM Plex Sans, sans-serif"
     fontSize: "13px"
-    fontWeight: 500
+    fontWeight: 600
 rounded:
-  field: "3px"
-  control: "3px"
-  flat: "0px"
+  field: "7px"
+  control: "8px"
+  record: "12px"
+  focus: "14px"
+  board: "16px"
 spacing:
   compact: "8px"
   group: "16px"
-  panel: "22px"
-  section: "24px"
+  section: "28px"
   page: "38px"
 components:
   button-primary:
     backgroundColor: "{colors.accent}"
-    textColor: "{colors.on-accent}"
+    textColor: "{colors.surface}"
     rounded: "{rounded.control}"
     padding: "10px 16px"
     typography: "{typography.label}"
@@ -66,147 +64,77 @@ components:
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
     padding: "10px 16px"
-    typography: "{typography.label}"
   field:
-    backgroundColor: "{colors.card}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     rounded: "{rounded.field}"
     padding: "10px 12px"
-  panel:
-    backgroundColor: "{colors.card}"
-    rounded: "{rounded.flat}"
-  navigation-item:
-    textColor: "{colors.rail-text}"
-    rounded: "{rounded.flat}"
-    padding: "12px"
-  status:
-    textColor: "{colors.muted}"
+  task-record:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.record}"
+    padding: "13px 12px"
 ---
 
 # Design System: DeadlineOS
 
 ## Overview
 
-**Creative North Star: "The Academic Register"**
+Campus Quest makes academic work feel approachable through visible, earned progress. Forest navigation, a lime milestone path, lavender focus controls and peach notices form a playful game board around real tasks. Clear labels, readable records and direct actions preserve the product's working vocabulary.
 
-DeadlineOS uses the character of an academic register: warm cream pages, deep vermilion navigation, expressive Fraunces headings and precise IBM Plex Sans interface data. Actual work remains visible through readable records, aligned dates and direct actions.
-
-The implementation is flat and practical. Fine rules structure records; darker boundaries identify controls. The user rejected the earlier generic blue/sans-serif appearance and asked mainly for a visual-style change, so established workflows and information layout remain intact. The source of truth is `apps/web/src/app/daybook.css`; surface composition is recorded separately in `.impeccable/surfaces/dashboard.md`.
-
-**Key Characteristics:**
-
-- Expressive Fraunces headings paired with readable Plex data.
-- Vermilion identity surfaces, cream fields and dark warm ink.
-- Flat records with fine rules and stronger interactive boundaries.
-- Live India-date stamps and consistent authored outline SVG icons.
+The user explicitly requested this replacement of the previous Academic Register identity. The normative theme is apps/web/src/app/quest.css, imported after daybook.css. The dashboard's composition and behavior live in .impeccable/surfaces/dashboard.md; primitives here apply across sign-in, student and management screens.
 
 ## Colors
 
-Warm cream and dark ink carry working content; committed vermilion identity surfaces and action states give the system its character. Frontmatter values are normative.
+Forest ink carries navigation, text and the next-task action. Lime denotes the quest board and selected navigation. Lavender identifies the optional focus sprint; peach supports registration notices and the completion mark. Fresh paper and white keep dense records readable.
 
-### Primary
-
-- **Vermilion Accent:** primary actions, active tabs, calendar details and prominent date numerals.
-- **Deep Vermilion Rail:** navigation and the sign-in cover.
-- **Working Red:** links and shared keyboard focus.
-
-### Neutral
-
-- **Ink:** primary text and headings.
-- **Paper:** the cream canvas and utility header.
-- **Card:** light cream fields, dialogs and editors.
-- **Subtle Surface:** quiet tonal states and hover backgrounds.
-- **Muted Ink:** supporting dates, labels and explanations.
-- **Rule:** thin decorative separators.
-- **Control Boundary:** darker field, task-toggle and outlined-action strokes.
-- **Rail Text / On Accent:** light foregrounds on vermilion surfaces.
-
-Red and amber support explicit error, overdue and warning text. Published and completed labels retain the implemented green treatment.
-
-**The State Has Words Rule.** Overdue, cancelled and other states retain visible text. Red and amber support those labels; color alone does not communicate status.
-
-**The Control Boundary Rule.** Use the darker control-boundary token for outlined controls; the lighter line token belongs to decorative separators.
+Use the accent for links, primary actions and focus. Decorative separators use line; interactive boundaries use control-border. Red and amber accompany visible overdue, cancellation, warning and error words. Every state has text or an explicit pressed/disabled state; color alone never communicates status.
 
 ## Typography
 
-**Display Font:** Fraunces, with Georgia and serif fallback.
-**Body Font:** IBM Plex Sans, with sans-serif fallback.
+Self-hosted IBM Plex Sans is the single interface family, with its license retained in public/fonts. Bold headings give the world its personality; actions and dense data use measured sizes and weights. Fraunces is no longer the active display face.
 
-Both Latin variable fonts are self-hosted with their OFL licenses and provenance. Headings use the implemented SOFT 25 and WONK 1 variation settings. The contrast between expressive serif headings and precise sans-serif data carries the identity. Monospace is reserved for actual CSV/code.
-
-### Hierarchy
-
-- **Display:** Today uses the frontmatter display role, reduced to 64px on phones. The sign-in cover has its own responsive display (58?92px, 52px on phones).
-- **Headline:** page titles; reduced to 39px on phones.
-- **Title:** section headings; day-view sections use 24?25px. Management record titles and reply questions use Fraunces at 23px, weight 450. Student task titles remain Plex at 16px.
-- **Body:** ordinary content; supporting copy also uses 13?14px with generous line height. Explanatory heading copy is constrained to 68ch.
-- **Label:** sentence-case controls and form labels. Small metadata uses 11?12px; phone field values enlarge to 16px.
-- **Calendar numerals:** Fraunces lining numerals, weight 400, 64px in the main stamp and 46px on phones.
-
-**The Two Voices Rule.** Use Fraunces for headings, prominent dates and management record titles. Use Plex for actions, field values, student task details and dense tables.
+The quest heading is 40px/700 on desktop, 36px at 1180px and 26px on phones. General page headings are 38px/650, reducing to 30px on phones. The personal greeting is 34px, reducing to 27px. Section headings use 20px/650. Task titles are 14px/600. Timers and XP use tabular numerals. Display tracking never exceeds -0.04em. Sign-in uses a larger responsive display, capped at 72px.
 
 ## Layout
 
-The established shell has a sticky desktop rail (224px), a cream utility header (66px minimum) and a constrained work area (1370px maximum). Generous page gutters and 16?34px group spacing keep working records aligned. Editors remain deliberate disclosures beside their records.
+The desktop rail is 238px, narrowing to 218px at 1180px. A 72px utility header and a work area up to 1370px frame the content. The day view pairs a flexible deadline column with a 294px aside; the latter narrows to 258px at 1180px.
 
-At 1180px the rail narrows to 202px and gutters to 28px. At 900px the rail becomes a mobile directory and labelled four-item bottom navigation with safe-area padding. The day view becomes one main column with adjacent reply/date sections. At 680px those sections and forms stack, gutters shrink to 16px and contextual editors precede records. Preserve scrollable tables when the data cannot usefully collapse.
+At 900px, the rail becomes a labelled four-item bottom navigation and a role-aware My desk directory. The work area becomes one main column with a two-column aside. At 680px, the quest heading and next-task action share a compact top row, with the milestone path below; the aside stacks and places focus after replies and academic dates. Respect safe areas and keep scrollable tables when columns cannot usefully collapse.
 
 ## Elevation & Depth
 
-Pages, records and fields are flat. Cream tonal differences, spacing and rules establish hierarchy. Management lists remove side boundaries and keep separated records; contained editors have light solid surfaces. Modal drawers use a dimmed warm-ink backdrop and native focus management.
-
-### Shadow Vocabulary
-
-- **Menu:** 0 6px 18px rgb(48 42 37 / .12); floating row actions only.
-
-**The Flat Records Rule.** Give a record its rule and spacing before adding a container. Reserve the soft downward shadow for floating action menus.
+Task records use a border rather than a floating shadow. White selected segments use a small downward 0 2px 5px shadow. The next milestone uses 0 4px 8px depth. Floating action menus and reward confirmations use the shared 0 8px 22px shadow at 12% forest opacity. Avoid decorative glow and glass.
 
 ## Shapes
 
-Flat panels and navigation have square corners. Principal actions and fields have small control corners; some secondary menus retain four-pixel corners. One-pixel rules structure records. The task toggle begins as an outlined circle and becomes a filled checked square, retaining a 44px hit target. The date stamp is a narrow outlined rectangle. Calendar and interface icons use authored SVG geometry with consistent rounded stroke ends. Status dots and unread counts use circular geometry for meaningful states.
+Controls have 8px corners, task records 12px, focus 14px, and the quest board 16px. The tilted outline brand mark and trophy stop add restrained game-board character. Task checks use an 8px rounded square with a 38-by-44px hit area. Authored outline SVG icons share rounded stroke ends; no emoji substitute for icons.
 
 ## Components
 
-### Buttons
+### Actions and fields
 
-Primary actions are vermilion with light text, compact padding and a 44px minimum height. Secondary actions are transparent with dark text and the control boundary. Hover changes tone; keyboard focus uses the shared two-pixel working-red outline with three-pixel offset. Rail focus is light against vermilion. Disabled controls reduce opacity and reject interaction. Text actions retain vertical targets and underline on hover.
+Primary actions use accent with white text, a 44px minimum height, and 8px corners. Hover darkens toward forest ink. Secondary actions retain a visible boundary. Disabled actions reject interaction and reduce opacity. Keyboard focus uses a 2px accent outline with 3px offset, switching to lime on the rail. Inputs retain explicit labels, visible boundaries and readable phone sizes. Errors preserve recovery text and entered values.
 
-### Cards / Containers
+### Navigation and records
 
-Light cream panels group editors or fields. Headers and rows separate with fine rules; management lists are flat and unboxed. Serif headings pair with quiet Plex counts. Reports retain contiguous ruled summaries instead of floating statistic cards.
+The forest rail uses full labels and outline icons; the current destination is lime with dark text. Mobile navigation keeps Today, Academics, Opportunities and My desk. Management keeps factual labels, records-first editing and server-authorized actions. Task records expose title, scope, deadline, completion and resource links. Overdue records use a pale peach treatment plus explicit overdue text.
 
-### Inputs / Fields
+### Earned progress
 
-Light cream fields have strong warm strokes, visible external labels and small corners. The control-boundary token contrasts at least 3:1 with both paper and card. Textareas resize vertically. Errors use readable red text on pale red surfaces alongside the recovery message. Warm peach selection and ink carets belong to the palette. Phone values enlarge without shrinking labels or targets.
+The quest board derives 25 XP from each saved task completion, with five completions per level. Reopening recalculates XP from saved records, so toggling cannot accumulate extra points. Five connected stops, an explicit progressbar and a text count express progress. Pick my next task clears filters and focuses the earliest pending deadline. See my wins opens completed work. Empty task queues lead to academics.
 
-### Navigation
+### Focus and feedback
 
-The deep vermilion rail has full Plex labels and outline icons. Hover darkens it; selected destinations use cream and dark red. Mobile navigation keeps Today, Academics, Opportunities and My desk, with a vermilion selected indicator. The directory contains remaining role-appropriate tools. App setup and Inbox remain in the cream utility header.
-
-### Status Labels
-
-Compact text and a small dot communicate state without a badge container. Keep the words visible. Tabs underline selected views in vermilion instead of enclosing them in pills.
-
-### Date Stamp and Brand
-
-The live India-date stamp pairs a small month/year with large Fraunces numerals in a fine vermilion frame. It is hidden from assistive technology when the day heading already provides date context. The wordmark pairs Fraunces Deadline with a compact outlined Plex OS suffix and the authored calendar icon. Application icons follow the warm palette.
-
-### Completion and Motion
-
-A task toggle changes from an outlined circle to a vermilion square with a check over 250ms using exponential ease-out. Its pressed state and completed view remain explicit and reversible. Reduced motion removes that transition and the loading spinner animation. No entrance effect delays working content.
+The optional 15-minute sprint starts, pauses, resets and finishes against wall-clock time. Its helper states that the user should remain on the page; it resets when the Today view unmounts. It does not award XP. A successful saved completion triggers a dismissible five-second confirmation and one bounded 750ms confetti burst. Reopening shows ordinary confirmation. Routine feedback lasts 160â€“200ms; drawers use 220ms and the milestone line 500ms with exponential ease-out. Content is visible by default. Reduced motion removes confetti and spatial animation while preserving visible state and confirmation.
 
 ## Do's and Don'ts
 
-### Do:
-
-- **Do** place the real title, state, date and action in a readable record.
-- **Do** use Fraunces headings and Plex data according to their roles.
-- **Do** retain visible labels, keyboard focus and explicit failure recovery.
-- **Do** keep control boundaries stronger than decorative row rules.
-
-### Don't:
-
-- **Don't** add decorative gradients, floating statistics or icon mosaics to working screens.
-- **Don't** replace meaningful content with generic marketing copy.
-- **Don't** rely on color alone for status.
-- **Don't** introduce eyebrow labels, glyph icons or ornamental shadows.
+- Do make actual obligations and their next action easy to find.
+- Do derive progress from saved records and preserve clear failure feedback.
+- Do carry shared tokens through management, sign-in, icons and offline states.
+- Do preserve role permissions, server mutations, labelled controls and mobile navigation.
+- Don't invent streaks, rankings, scores, classmates or productivity claims.
+- Don't replace familiar task labels with obscure game terminology.
+- Don't animate routine page loads or require watching a sequence before acting.
+- Don't restore the previous vermilion/cream/serif world on new screens.

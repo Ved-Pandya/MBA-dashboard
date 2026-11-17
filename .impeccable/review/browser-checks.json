@@ -1,0 +1,67 @@
+{
+  "reports": [
+    {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "firstTask": {
+        "x": 276,
+        "y": 658,
+        "width": 804,
+        "height": 87,
+        "top": 658,
+        "right": 1080,
+        "bottom": 745,
+        "left": 276
+      },
+      "headingSize": "34px"
+    },
+    {
+      "width": 1280,
+      "scrollWidth": 1280,
+      "firstTask": {
+        "x": 276,
+        "y": 658,
+        "width": 644,
+        "height": 87,
+        "top": 658,
+        "right": 920,
+        "bottom": 745,
+        "left": 276
+      },
+      "headingSize": "34px"
+    },
+    {
+      "width": 820,
+      "scrollWidth": 820,
+      "firstTask": {
+        "x": 22,
+        "y": 687.5,
+        "width": 776,
+        "height": 88.09375,
+        "top": 687.5,
+        "right": 798,
+        "bottom": 775.59375,
+        "left": 22
+      },
+      "headingSize": "34px"
+    },
+    {
+      "width": 390,
+      "scrollWidth": 390,
+      "firstTask": {
+        "x": 16,
+        "y": 715.953125,
+        "width": 358,
+        "height": 89,
+        "top": 715.953125,
+        "right": 374,
+        "bottom": 804.953125,
+        "left": 16
+      },
+      "headingSize": "27px"
+    }
+  ],
+  "errors": [],
+  "reducedMotion": true,
+  "xpCompletionAndReopen": true
+}

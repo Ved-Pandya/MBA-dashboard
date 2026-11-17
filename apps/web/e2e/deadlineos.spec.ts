@@ -136,6 +136,38 @@ test("student lifecycle, internship access, clock refresh and accessible inbox",
   await expect(internship.getByText("My status: registered", { exact: true })).toBeVisible();
 });
 
+test("quest progress follows saved work and focus sprints can pause and reset", async ({ page }) => {
+  await page.clock.install();
+  await login(page, "student");
+  const progress = page.getByRole("region", { name: "Your quest progress" });
+  await expect(progress.getByText("0 XP", { exact: true })).toBeVisible();
+  await page.getByRole("textbox", { name: "Find a deadline" }).fill("no matching title");
+  await page.getByRole("button", { name: "Pick my next task", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Find a deadline" })).toHaveValue("");
+  await expect(page.locator(".task-row .check").first()).toBeFocused();
+  await page.getByRole("button", { name: "Mark complete: Demo open form", exact: true }).click();
+  await expect(progress.getByText("25 XP", { exact: true })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "One more win!" })).toBeVisible();
+  await page.getByRole("button", { name: "See my wins", exact: true }).click();
+  await page.getByRole("button", { name: "Reopen Demo open form", exact: true }).click();
+  await expect(progress.getByText("0 XP", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "To do", exact: true }).click();
+  const timer = page.getByRole("timer", { name: "Time remaining" });
+  await page.getByRole("button", { name: "Start focus sprint", exact: true }).click();
+  await page.clock.fastForward(30_000);
+  await expect(timer).toHaveText("14:30");
+  await page.getByRole("button", { name: "Pause focus sprint", exact: true }).click();
+  await page.clock.fastForward(10_000);
+  await expect(timer).toHaveText("14:30");
+  await page.getByRole("button", { name: "Reset focus sprint", exact: true }).click();
+  await expect(timer).toHaveText("15:00");
+  await page.getByRole("button", { name: "Start focus sprint", exact: true }).click();
+  await page.clock.fastForward(900_000);
+  await expect(timer).toHaveText("00:00");
+  await expect(page.getByText("Sprint complete. Take a breather. You earned it.", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test("wing POC publishes, edits, syncs and closes a form", async ({ page }, info) => {
   await login(page, "wing");
   await page.goto("/?view=forms");

@@ -6,7 +6,6 @@ import { useAuth } from "@/components/auth-provider";
 import { Dashboard } from "@/components/dashboard";
 
 import { AppIcon, Brand } from "@/components/app-icon";
-import { DateStamp } from "@/components/date-stamp";
 
 function Login() {
   const { signIn, loading, error } = useAuth();
@@ -15,8 +14,8 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   async function submit(event: FormEvent) { event.preventDefault(); await signIn(rollNumber, password); }
   return <main className="login-page"><header className="landing-nav"><Brand /><span>For your MBA batch</span></header>
-    <div className="login-grid"><section className="login-copy"><h1>Keep the day<br />in order<span>.</span></h1><p>Deadlines, academic dates and the replies your batch is waiting on. A shared place to keep things moving.</p><dl className="login-index"><div><dt>Your next deadline</dt><dd>Know what needs doing and when.</dd></div><div><dt>Your batch, connected</dt><dd>Answer polls, sessions and registration requests.</dd></div><div><dt>Your responsibility, clear</dt><dd>Publish to the right people. Follow up with the facts.</dd></div></dl><div className="login-dateline"><span>One batch.<br />Every moving part.</span><DateStamp /></div></section>
-    <section className="login-form-panel"><h2>Sign in</h2><p>Use your roll number and the password issued by your administrator.</p><form className="login-form" onSubmit={submit}>
+    <div className="login-grid"><section className="login-copy"><h1>Your MBA.<br />One quest<br /> at a time<span>.</span></h1><p>Big days start with small wins. Keep up with deadlines, show up for your batch, and turn “to do” into “done”.</p><div className="login-quest"><div className="login-quest-heading"><h2>How a win works</h2><AppIcon name="spark" /></div><ol><li><span><AppIcon name="flag" /></span><div><strong>Pick your next task</strong><small>Your deadlines, all in one place.</small></div></li><li><span><AppIcon name="check" /></span><div><strong>Submit it. Tick it off.</strong><small>The actual work comes first.</small></div></li><li><span><AppIcon name="trophy" /></span><div><strong>Watch your progress grow</strong><small>25 XP per deadline. Every five unlock a level.</small></div></li></ol></div><div className="login-footnote"><AppIcon name="bolt" /><span>A little less deadline dread.<br /><strong>A lot more “I’ve got this”.</strong></span></div></section>
+    <section className="login-form-panel"><div className="login-welcome"><AppIcon name="play" /></div><h2>Ready, set, go.</h2><p>Sign in to your batch workspace.<br />Your next small win is waiting.</p><form className="login-form" onSubmit={submit}>
       <label htmlFor="login-roll">Roll number</label><input id="login-roll" value={rollNumber} onChange={(event) => setRollNumber(event.target.value.toUpperCase())} autoComplete="username" autoCapitalize="characters" spellCheck={false} pattern="(?:24|26)M2[0-9]{3}" placeholder="26M2301" required />
       <label htmlFor="login-password">Password</label><div className="password-field"><input id="login-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" minLength={8} required /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? "Hide" : "Show"}</button></div>
       {error && <p className="form-error" role="alert">{error}</p>}<button className="sign-in-button" disabled={loading}>{loading ? "Signing in…" : "Sign in"}<AppIcon name="arrow" /></button>

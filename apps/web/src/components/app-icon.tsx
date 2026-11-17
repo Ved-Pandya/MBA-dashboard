@@ -1,6 +1,13 @@
 import type { SVGProps } from "react";
 
 const paths = {
+  spark: "m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z",
+  trophy: "M8 3h8v7a4 4 0 0 1-8 0z M8 5H4v3a4 4 0 0 0 4 4 M16 5h4v3a4 4 0 0 1-4 4 M12 14v5 M8 21h8 M9 19h6",
+  flag: "M5 21V3 M5 4c5-4 9 4 14 0v10c-5 4-9-4-14 0",
+  bolt: "m13 2-9 12h7l-1 8 10-13h-7z",
+  play: "m8 4 12 8-12 8z",
+  pause: "M8 4v16 M16 4v16",
+  reset: "M3 10a9 9 0 1 1 2 8 M3 4v6h6",
   today: "M4 5h16v15H4z M8 3v4 M16 3v4 M4 10h16 M8 14h3 M8 17h6",
   book: "M12 6v15 M3 4h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v15h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z",
   briefcase: "M3 7h18v13H3z M8 7V4h8v3 M3 12c5 3 13 3 18 0 M10 13h4v4h-4z",

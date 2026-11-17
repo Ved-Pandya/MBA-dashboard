@@ -1,6 +1,7 @@
-const CACHE_NAME = "deadlineos-static-v2";
+const CACHE_NAME = "deadlineos-static-v3";
 const OFFLINE_ASSETS = [
   "/offline.html",
+  "/fonts/ibm-plex-sans-latin-variable.woff2",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/icon-maskable-512.png",

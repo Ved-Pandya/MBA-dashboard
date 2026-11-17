@@ -78,7 +78,7 @@ export function Dashboard() {
     <a className="skip-link" href="#main-content">Skip to content</a>
     {!online && <div className="offline-banner" role="status">You're offline. Reconnect to view updates or save changes.</div>}
     <aside className="sidebar">
-      <div className="rail-brand"><Brand /><span className="batch-label">MBA workspace</span></div>
+      <div className="rail-brand"><Brand /><span className="batch-label">A little progress, every day.</span></div>
       <div className="rail-scroll"><nav aria-label="My desk"><h2 className="nav-group-title">My desk</h2>{studentNav.map(navButton)}</nav>
       {management.length > 0 && <nav className="management-nav" aria-label="Management"><h2 className="nav-group-title">Manage batch</h2>{management.map(navButton)}</nav>}</div>
       <div className="sidebar-foot"><div className="user-chip"><strong>{profile.displayName}</strong><span>{role}</span><small>{profile.rollNumber} · Section {profile.sectionId}</small></div><button className="signout-button" onClick={() => void signOutUser()}><AppIcon name="logout" />Sign out</button></div>
