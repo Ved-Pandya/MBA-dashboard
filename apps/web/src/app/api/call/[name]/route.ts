@@ -22,15 +22,19 @@ function errorStatus(code: string | undefined) {
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ name: string }> }) {
+  const started = performance.now();
+  const timings: string[] = [];
   try {
     const { invokeSparkCallable, runImmediatePushDelivery, shouldFlushPushAfterCallable } = await import("@mba/functions/spark-adapter");
+    timings.push(`startup;dur=${(performance.now() - started).toFixed(1)}`);
     const { name } = await context.params;
     const rawBody = await request.text();
     if (rawBody.length > 1_000_000) return NextResponse.json({ error: { message: "Request is too large" } }, { status: 413 });
     let body: { data?: unknown };
     try { body = JSON.parse(rawBody); }
     catch { return NextResponse.json({ error: { message: "Request must contain valid JSON" } }, { status: 400 }); }
-    const data = await invokeSparkCallable(name, body?.data, bearerToken(request), request.headers.get("x-firebase-appcheck") ?? undefined);
+    const data = await invokeSparkCallable(name, body?.data, bearerToken(request), request.headers.get("x-firebase-appcheck") ?? undefined,
+      (stage, milliseconds) => timings.push(`${stage};dur=${milliseconds.toFixed(1)}`));
     if (shouldFlushPushAfterCallable(name)) {
       after(async () => {
         try {
@@ -41,7 +45,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ na
         }
       });
     }
-    return NextResponse.json({ data });
+    timings.push(`total;dur=${(performance.now() - started).toFixed(1)}`);
+    return NextResponse.json({ data }, { headers: { "Server-Timing": timings.join(", "), "Cache-Control": "private, no-store" } });
   } catch (error) {
     const candidate = error as { code?: string; message?: string };
     if (errorStatus(candidate.code) === 500) console.error("Callable operation failed", error);

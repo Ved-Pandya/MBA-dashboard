@@ -1,211 +1,167 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { buildCatchUpReminderSchedule, buildReminderSchedule, rollNumberToAuthEmail, type ReminderStage } from "@mba/domain";
+import { z } from "zod";
+import { DEMO_ACCOUNTS, DEMO_SEED_ID, rollNumberToAuthEmail, type DemoSummary } from "@mba/domain";
 import { adminAuth, db, FieldValue, Timestamp } from "./firebase.js";
-import { asHttpsError, callableOptions, requireActor, requireAdmin, writeAudit } from "./helpers.js";
+import { asHttpsError, callableOptions, requireActor, requireAdmin, writeAudit, type Actor } from "./helpers.js";
+import { ensureDemoAccounts } from "./test-accounts.js";
+import { buildDemoFixtures, DEMO_OFFERING_IDS, type DemoIdentity } from "./demo-fixtures.js";
 
-const DEMO_SEED_ID = "mock_v1";
-const DEMO_OFFERINGS = [
-  { id: "DEMO-FIN-A", subjectCode: "FIN101", subjectName: "Financial Management" },
-  { id: "DEMO-MKT-A", subjectCode: "MKT101", subjectName: "Marketing Management" },
-  { id: "DEMO-OPS-A", subjectCode: "OPS101", subjectName: "Operations Management" },
-  { id: "DEMO-STR-A", subjectCode: "STR101", subjectName: "Business Strategy" },
-] as const;
+const inputSchema = z.object({ origin: z.string().url().optional(), resetPasswords: z.boolean().optional().default(false) });
+const DEMO_COLLECTIONS = ["academicTerms", "subjectOfferings", "timetableSlots", "timetableExceptions", "academicEvents", "competitions", "competitionTeams", "competitionTeamNames", "competitionMemberships", "competitionRounds", "competitionRoundEntries", "opportunityResponses", "internships", "internshipResponses", "tasks", "taskAssignments", "taskStats", "reminderJobs", "reminderDeliveries", "competitionStats", "internshipStats", "competitionRoundStats", "pocAssignments", "crTasks", "pushJobs", "pushDeliveries", "sessionIntimations", "sessionResponses", "sessionStats", "generalPolls", "pollResponses", "pollStats", "placementStatuses", "placementResponseHistory"];
 
-type TestIdentity = { uid: string; displayName: string; rollNumber: string; sectionId: string; wingId: string };
-
-async function getTestIdentity(rollNumber: string): Promise<TestIdentity> {
-  let authUser;
-  try { authUser = await adminAuth.getUserByEmail(rollNumberToAuthEmail(rollNumber)); }
-  catch (error) {
-    if ((error as { code?: string }).code === "auth/user-not-found") throw new HttpsError("failed-precondition", "Create the three test accounts before seeding mock data");
-    throw error;
-  }
-  const profile = await db.doc(`users/${authUser.uid}`).get();
-  if (!profile.exists || profile.get("isTestAccount") !== true) throw new HttpsError("failed-precondition", `${rollNumber} is not a protected test account`);
-  return { uid: authUser.uid, displayName: String(profile.get("displayName")), rollNumber, sectionId: String(profile.get("sectionId")), wingId: String(profile.get("wingId")) };
+function demoOrigin(value?: string) {
+  const url = new URL(value ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "https://example.com"));
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) throw new HttpsError("invalid-argument", "Use an HTTPS origin or a local demo server");
+  return url.origin;
 }
 
-function notification(uid: string, id: string, title: string, body: string, extra: Record<string, unknown> = {}) {
-  return {
-    ref: db.doc(`users/${uid}/notifications/${id}`),
-    data: { type: "demo_notice", title, body, ...extra, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), readAt: null },
-  };
+async function demoIdentities(): Promise<DemoIdentity[]> {
+  return Promise.all(DEMO_ACCOUNTS.map(async (spec) => {
+    let user;
+    try { user = await adminAuth.getUserByEmail(rollNumberToAuthEmail(spec.rollNumber)); }
+    catch (error) { if ((error as { code?: string }).code === "auth/user-not-found") throw new HttpsError("failed-precondition", "Use Prepare 15-minute demo to prepare the six protected demo accounts first"); throw error; }
+    const profile = await db.doc(`users/${user.uid}`).get();
+    if (profile.get("isTestAccount") !== true) throw new HttpsError("failed-precondition", `${spec.rollNumber} belongs to a non-demo account`);
+    return { ...spec, uid: user.uid };
+  }));
 }
 
-function addReminderJobs(writer: FirebaseFirestore.BulkWriter, input: {
-  prefix: string;
-  kind?: "competition_registration" | "internship_registration" | "competition_round" | "cr_task" | "session_response";
-  opportunityId?: string;
-  crTaskId?: string;
-  sessionId?: string;
-  taskId?: string;
-  title: string;
-  deadline: Date;
-}) {
-  const reminders = (input.kind === "cr_task" ? buildCatchUpReminderSchedule(input.deadline) : buildReminderSchedule(input.deadline)).filter((item) => input.kind !== "session_response" || item.stage === "minus24h" || item.stage === "minus2h");
-  for (const item of reminders) {
-    const id = `demo_${input.prefix}_${item.stage}`;
-    writer.set(db.doc(`reminderJobs/${id}`), {
-      ...(input.kind === "cr_task"
-        ? { kind: input.kind, crTaskId: input.crTaskId }
-        : input.kind === "session_response"
-          ? { kind: input.kind, sessionId: input.sessionId, title: input.title }
-        : input.kind
-          ? { kind: input.kind, opportunityId: input.opportunityId, title: input.title }
-          : { taskId: input.taskId }),
-      scheduleVersion: 1,
-      stage: item.stage as ReminderStage,
-      fireAt: Timestamp.fromDate(item.fireAt),
-      status: "scheduled",
-      attempts: 0,
-      isTestData: true,
-      demoSeedId: DEMO_SEED_ID,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-  }
+/** Prevent two administrator tabs from clearing and seeding over each other. */
+async function withDemoLease<T>(actor: Actor, work: () => Promise<T>) {
+  const ref = db.doc("operations/demo_seed");
+  const lease = `${actor.uid}_${Date.now()}_${Math.random()}`;
+  await db.runTransaction(async (tx) => {
+    const previous = await tx.get(ref);
+    if (previous.get("leaseUntil")?.toMillis() > Date.now()) throw new HttpsError("aborted", "Another sample-data operation is running. Wait for it to finish.");
+    tx.set(ref, { type: "demo_seed", status: "processing", actorUid: actor.uid, lease, leaseUntil: Timestamp.fromMillis(Date.now() + 240_000), updatedAt: FieldValue.serverTimestamp() });
+  });
+  try { const result = await work(); await ref.set({ status: "complete", leaseUntil: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }); return result; }
+  catch (error) { await ref.set({ status: "failed", leaseUntil: FieldValue.delete(), recovery: "Run Prepare 15-minute demo again to rebuild the tagged fixtures.", updatedAt: FieldValue.serverTimestamp() }, { merge: true }); await db.doc("systemHealth/demoData").set({ status: "failed", updatedAt: FieldValue.serverTimestamp() }, { merge: true }); throw error; }
 }
 
-export const seedTestData = onCall({ ...callableOptions, timeoutSeconds: 120 }, async (request) => {
-  try {
-    const actor = await requireActor(request);
-    requireAdmin(actor);
-    const [student, poc, cr] = await Promise.all([
-      getTestIdentity("24M2901"),
-      getTestIdentity("24M2902"),
-      getTestIdentity("24M2903"),
-    ]);
-    await deleteDemoSeedRecords();
-    const users = [student, poc, cr];
-    const now = Date.now();
-    const at = (hours: number) => new Date(now + hours * 60 * 60_000);
-    const day = 24;
-    const writer = db.bulkWriter();
-
-    writer.set(db.doc("academicTerms/DEMO-TERM"), { name: "Demo MBA Term", startDate: at(-7 * day).toISOString().slice(0, 10), endDate: at(90 * day).toISOString().slice(0, 10), active: true, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    DEMO_OFFERINGS.forEach((offering, index) => {
-      writer.set(db.doc(`subjectOfferings/${offering.id}`), { subjectCode: offering.subjectCode, subjectName: offering.subjectName, sectionId: "A", termId: "DEMO-TERM", active: true, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      const slotId = `demo_slot_${offering.id}`;
-      writer.set(db.doc(`timetableSlots/${slotId}`), { offeringId: offering.id, termId: "DEMO-TERM", sectionId: "A", weekday: ((new Date().getDay() + index + 1) % 7) || 7, startTime: `${String(9 + index).padStart(2, "0")}:00`, endTime: `${String(10 + index).padStart(2, "0")}:00`, room: `Demo Room ${index + 1}`, active: true, source: "demo_seed", isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      writer.set(db.doc(`pocAssignments/subject_${offering.id}`), { kind: "subject", scopeId: offering.id, uid: poc.uid, seat: 1, active: true, assignedBy: actor.uid, assignedAt: FieldValue.serverTimestamp(), isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    });
-    const demoPocScopes: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
-    DEMO_OFFERINGS.forEach((offering) => { demoPocScopes[`scopes.subjectPocOfferings.${offering.id}`] = true; });
-    demoPocScopes["scopes.batchPocRoles.grooming"] = true;
-    demoPocScopes["scopes.batchPocRoles.attendance"] = true;
-    demoPocScopes["scopes.batchPocRoles.caseCompetition"] = true;
-    writer.update(db.doc(`users/${poc.uid}`), demoPocScopes);
-    writer.set(db.doc("pocAssignments/grooming_batch"), { kind: "grooming", scopeId: "batch", uid: poc.uid, active: true, assignedBy: actor.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    writer.set(db.doc("pocAssignments/attendance_batch"), { kind: "attendance", scopeId: "batch", uid: poc.uid, active: true, assignedBy: actor.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    writer.set(db.doc("pocAssignments/case_competition_batch"), { kind: "case_competition", scopeId: "batch", uid: poc.uid, active: true, assignedBy: actor.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-
-    const academicEvents = [
-      { id: "demo_preread_fin", offeringId: "DEMO-FIN-A", eventType: "pre_read", title: "Read: Time Value of Money", details: "Review pages 42–58 before the next Finance class.", hours: 20, resourceUrl: "https://example.com/finance-preread" },
-      { id: "demo_assignment_mkt", offeringId: "DEMO-MKT-A", eventType: "assignment_deadline", title: "Brand Positioning Memo", details: "Submit the two-page positioning memo on the course portal.", hours: 52, resourceUrl: "https://example.com/marketing-assignment" },
-      { id: "demo_quiz_ops", offeringId: "DEMO-OPS-A", eventType: "quiz", title: "Process Analysis Quiz", details: "In-class quiz covering capacity and bottlenecks.", hours: 76, resourceUrl: null },
-      { id: "demo_midterm_strategy", offeringId: "DEMO-STR-A", eventType: "midterm", title: "Strategy Midterm", details: "Closed-book midterm covering modules 1–4.", hours: 8 * day, resourceUrl: null },
-      { id: "demo_endterm_fin", offeringId: "DEMO-FIN-A", eventType: "endterm", title: "Finance Endterm", details: "Formal endterm covering the full term.", hours: 20 * day, resourceUrl: null },
-    ];
-    academicEvents.forEach((event) => writer.set(db.doc(`academicEvents/${event.id}`), { offeringId: event.offeringId, sectionId: "A", termId: "DEMO-TERM", eventType: event.eventType, title: event.title, details: event.details, occursAt: Timestamp.fromDate(at(event.hours)), resourceUrl: event.resourceUrl, status: "published", version: 1, ownerUid: poc.uid, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
-
-    const competitionDeadline = at(48);
-    writer.set(db.doc("competitions/demo_case_registered"), { title: "Demo National Strategy Challenge", organizer: "Demo Consulting Club", description: "A mock strategy case competition used to test the two individual form confirmations.", externalRegistrationUrl: "https://example.com/demo-case", internalFormUrl: "https://example.com/demo-internal", registrationDeadline: Timestamp.fromDate(competitionDeadline), minTeamSize: 1, maxTeamSize: 1, status: "published", ownerUid: actor.uid, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, publishedAt: FieldValue.serverTimestamp(), createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    users.forEach((user) => writer.set(db.doc(`opportunityResponses/demo_case_registered_${user.uid}`), { opportunityId: "demo_case_registered", uid: user.uid, sectionId: user.sectionId, wingId: user.wingId, status: user.uid === cr.uid ? "no_response" : "registered", participationStatus: user.uid === cr.uid ? "no_response" : "registered", confirmationStatus: user.uid === cr.uid ? "not_started" : "completed", externalRegistration: { status: user.uid === cr.uid ? "pending" : "confirmed" }, internalForm: { status: user.uid === cr.uid ? "pending" : "confirmed" }, confirmationsLocked: false, registeredLate: false, studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber }, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
-
-    const openCompetitionDeadline = at(26);
-    writer.set(db.doc("competitions/demo_case_open"), { title: "Demo Product Innovation Sprint", organizer: "Demo Entrepreneurship Cell", description: "An open mock competition for testing external and internal form confirmations.", externalRegistrationUrl: "https://example.com/demo-innovation", internalFormUrl: "https://example.com/demo-innovation-internal", registrationDeadline: Timestamp.fromDate(openCompetitionDeadline), minTeamSize: 1, maxTeamSize: 1, status: "published", ownerUid: actor.uid, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, publishedAt: FieldValue.serverTimestamp(), createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    users.forEach((user) => writer.set(db.doc(`opportunityResponses/demo_case_open_${user.uid}`), { opportunityId: "demo_case_open", uid: user.uid, sectionId: user.sectionId, wingId: user.wingId, status: "no_response", participationStatus: "no_response", externalRegistration: { status: "pending" }, internalForm: { status: "pending" }, studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber }, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
-
-    const internshipDeadline = at(26.5);
-    writer.set(db.doc("internships/demo_internship"), { title: "DemoCorp - Strategy Intern", company: "DemoCorp", role: "Strategy Intern", description: "Mock summer internship registration for testing response tracking.", registrationUrl: "https://example.com/demo-internship", registrationDeadline: Timestamp.fromDate(internshipDeadline), status: "published", ownerUid: actor.uid, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, publishedAt: FieldValue.serverTimestamp(), createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    const internshipStatuses = new Map([[student.uid, "no_response"], [poc.uid, "registered"], [cr.uid, "not_participating"]]);
-    users.forEach((user) => writer.set(db.doc(`internshipResponses/demo_internship_${user.uid}`), { internshipId: "demo_internship", uid: user.uid, sectionId: user.sectionId, wingId: user.wingId, status: internshipStatuses.get(user.uid), registeredLate: false, studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber }, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
-
-    const sessionDeadline = at(25);
-    writer.set(db.doc("sessionIntimations/demo_placement_session"), { title: "Demo Consulting Grooming Session", details: "Confirm whether you will attend the interview grooming session.", venue: "Demo Auditorium", sessionStartsAt: Timestamp.fromDate(at(28)), responseDeadline: Timestamp.fromDate(sessionDeadline), status: "published", audience: { kind: "batch" }, ownerUid: cr.uid, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    const sessionStatuses = new Map([[student.uid, "no_response"], [poc.uid, "attending"], [cr.uid, "not_attending"]]);
-    users.forEach((user) => writer.set(db.doc(`sessionResponses/demo_placement_session_${user.uid}`), { sessionId: "demo_placement_session", uid: user.uid, status: sessionStatuses.get(user.uid), ...(user.uid === student.uid ? {} : { respondedAt: FieldValue.serverTimestamp() }), studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber, sectionId: user.sectionId, wingId: user.wingId }, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
-    writer.set(db.doc("sessionStats/demo_placement_session"), { eligibleCount: 3, noResponseCount: 1, attendingCount: 1, notAttendingCount: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-
-    writer.set(db.doc("generalPolls/demo_open_poll"), { question: "Which theme should the next batch social use?", details: "Named demo poll for testing the general area.", options: [{ id: "option_1", label: "Retro" }, { id: "option_2", label: "Sports" }, { id: "option_3", label: "Formal" }], closesAt: Timestamp.fromDate(at(30)), status: "published", ownerUid: poc.uid, version: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    users.forEach((user, index) => writer.set(db.doc(`pollResponses/demo_open_poll_${user.uid}`), { pollId: "demo_open_poll", uid: user.uid, status: index === 0 ? "no_response" : "responded", optionId: index === 0 ? null : `option_${index}`, ...(index === 0 ? {} : { respondedAt: FieldValue.serverTimestamp() }), studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber, sectionId: user.sectionId, wingId: user.wingId }, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
-    writer.set(db.doc("pollStats/demo_open_poll"), { eligibleCount: 3, responseCount: 2, noResponseCount: 1, optionCounts: { option_1: 1, option_2: 1 }, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    writer.set(db.doc("generalPolls/demo_closed_poll"), { question: "Demo closed poll", details: "Historical poll state.", options: [{ id: "option_1", label: "Yes" }, { id: "option_2", label: "No" }], closesAt: Timestamp.fromDate(at(-24)), status: "closed", ownerUid: poc.uid, version: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), closedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-
-    const formDeadline = at(2.5);
-    writer.set(db.doc("tasks/demo_wing_form"), { title: "Demo Corporate Relations Form", description: "Mock administrative form for testing pending, completed, and exempt states.", taskType: "administrative_form", status: "published", target: { kind: "wing", scopeKey: "wing:A", wingId: "A" }, dueAt: Timestamp.fromDate(formDeadline), dueTimezone: "Asia/Kolkata", resourceUrl: "https://example.com/demo-form", ownerUid: actor.uid, version: 1, audienceVersion: 1, scheduleVersion: 1, audienceSyncStatus: "ready", isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    const assignmentStates = new Map([[student.uid, "pending"], [poc.uid, "completed"], [cr.uid, "exempt"]]);
-    users.forEach((user) => {
-      const status = assignmentStates.get(user.uid)!;
-      writer.set(db.doc(`taskAssignments/demo_wing_form_${user.uid}`), { taskId: "demo_wing_form", uid: user.uid, taskType: "administrative_form", scopeKey: "wing:A", sectionId: user.sectionId, wingId: user.wingId, status, ...(status === "completed" ? { completedAt: Timestamp.fromDate(at(-2)), completedBy: user.uid, completionMethod: "self", completedLate: false } : {}), ...(status === "exempt" ? { exemptionReason: "Demo exemption state" } : {}), taskSnapshot: { title: "Demo Corporate Relations Form", dueAt: Timestamp.fromDate(formDeadline), resourceUrl: "https://example.com/demo-form", taskStatus: "published" }, studentSnapshot: { displayName: user.displayName, rollNumber: user.rollNumber }, taskVersion: 1, audienceVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    });
-    writer.set(db.doc("taskStats/demo_wing_form"), { eligibleCount: 3, pendingCount: 1, completedCount: 1, exemptCount: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp(), reconciledAt: FieldValue.serverTimestamp() }, { merge: true });
-
-    const crTaskAssignedDue = at(26);
-    const crTaskProgressDue = at(1.5);
-    writer.set(db.doc("crTasks/demo_cr_assigned"), { title: "Confirm guest speaker logistics", notes: "Confirm the auditorium, visitor pass, and AV requirements.", status: "assigned", dueAt: Timestamp.fromDate(crTaskAssignedDue), createdBy: cr.uid, updatedBy: cr.uid, creatorSnapshot: { displayName: cr.displayName, rollNumber: cr.rollNumber }, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    writer.set(db.doc("crTasks/demo_cr_progress"), { title: "Compile batch feedback", notes: "Merge the Section A and B feedback before sharing the summary.", status: "in_progress", dueAt: Timestamp.fromDate(crTaskProgressDue), createdBy: cr.uid, updatedBy: cr.uid, creatorSnapshot: { displayName: cr.displayName, rollNumber: cr.rollNumber }, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    writer.set(db.doc("crTasks/demo_cr_completed"), { title: "Publish club room allocation", notes: "Allocation was confirmed and circulated to all clubs.", status: "completed", dueAt: Timestamp.fromDate(at(-2)), createdBy: cr.uid, updatedBy: cr.uid, completedBy: cr.uid, creatorSnapshot: { displayName: cr.displayName, rollNumber: cr.rollNumber }, version: 1, scheduleVersion: 1, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), completedAt: FieldValue.serverTimestamp() }, { merge: true });
-
-    addReminderJobs(writer, { prefix: "case_open", kind: "competition_registration", opportunityId: "demo_case_open", title: "Demo Product Innovation Sprint", deadline: openCompetitionDeadline });
-    addReminderJobs(writer, { prefix: "internship", kind: "internship_registration", opportunityId: "demo_internship", title: "DemoCorp - Strategy Intern", deadline: internshipDeadline });
-    addReminderJobs(writer, { prefix: "placement_session", kind: "session_response", sessionId: "demo_placement_session", title: "Demo Consulting Grooming Session", deadline: sessionDeadline });
-    addReminderJobs(writer, { prefix: "wing_form", taskId: "demo_wing_form", title: "Demo Corporate Relations Form", deadline: formDeadline });
-    addReminderJobs(writer, { prefix: "cr_assigned", kind: "cr_task", crTaskId: "demo_cr_assigned", title: "Confirm guest speaker logistics", deadline: crTaskAssignedDue });
-    addReminderJobs(writer, { prefix: "cr_progress", kind: "cr_task", crTaskId: "demo_cr_progress", title: "Compile batch feedback", deadline: crTaskProgressDue });
-
-    for (const user of users) {
-      const notices = [
-        notification(user.uid, "demo_academics_ready", "Demo academic calendar ready", "Four mock academic items were added for Section A."),
-        notification(user.uid, "demo_opportunity_ready", "Demo opportunities ready", "Mock competitions and an internship are ready for testing."),
-      ];
-      notices.forEach((notice) => writer.set(notice.ref, notice.data, { merge: true }));
+async function deleteDemoSeedRecords() {
+  const writer = db.bulkWriter(); let deleted = 0;
+  const writes: Promise<unknown>[] = [], failures: unknown[] = [];
+  const queue = (write: Promise<unknown>) => writes.push(write.catch((error) => { failures.push(error); }));
+  const removed = new Set<string>();
+  const remove = (ref: FirebaseFirestore.DocumentReference) => { if (!removed.has(ref.path)) { removed.add(ref.path); queue(writer.delete(ref)); deleted++; } };
+  const collections = [...DEMO_COLLECTIONS, "users"];
+  for (let index = 0; index < collections.length; index += 8) {
+    const snapshots = await Promise.all(collections.slice(index, index + 8).map(async (collection) => ({ collection, docs: await db.collection(collection).where("demoSeedId", "==", DEMO_SEED_ID).get() })));
+    for (const { collection, docs } of snapshots) {
+      for (const doc of docs.docs) {
+        // Only report-only synthetic profiles are disposable. Sign-in profiles remain.
+        if (collection === "users" && doc.get("isDemoRoster") !== true) continue;
+        remove(doc.ref);
+      }
     }
-    await writer.close();
-    await writeAudit({ actorUid: actor.uid, action: "test_data.seeded", resourceType: "demoSeed", resourceId: DEMO_SEED_ID, after: { subjects: DEMO_OFFERINGS.length, academicEvents: academicEvents.length, competitions: 2, internships: 1, sessions: 1, polls: 2, teams: 0, rounds: 0, wingForms: 1, crTasks: 3 } });
-    return { subjects: 4, academicEvents: academicEvents.length, competitions: 2, internships: 1, sessions: 1, polls: 2, teams: 0, rounds: 0, wingForms: 1, crTasks: 3, testUsers: 3 };
+  }
+  for (const spec of DEMO_ACCOUNTS) {
+    let account;
+    try { account = await adminAuth.getUserByEmail(rollNumberToAuthEmail(spec.rollNumber)); }
+    catch (error) { if ((error as { code?: string }).code === "auth/user-not-found") continue; throw error; }
+    const ref = db.doc(`users/${account.uid}`), user = await ref.get();
+    if (user.get("isTestAccount") !== true) continue;
+    const notices = await ref.collection("notifications").get();
+    const removedNotices = new Set<string>();
+    notices.docs.forEach((notice) => {
+      const linked = ["taskId", "crTaskId", "sessionId", "pollId", "opportunityId", "competitionId", "internshipId", "academicEventId", "eventId"].some((key) => String(notice.get(key) ?? "").startsWith("demo_"));
+      if (notice.get("demoSeedId") === DEMO_SEED_ID || linked) { remove(notice.ref); removedNotices.add(notice.ref.path); }
+    });
+    const pushJobs = await db.collection("pushJobs").where("uid", "==", account.uid).get();
+    for (const job of pushJobs.docs) if (removedNotices.has(String(job.get("notificationPath")))) {
+      remove(job.ref);
+      const deliveries = await db.collection("pushDeliveries").where("jobId", "==", job.id).get();
+      deliveries.docs.forEach((delivery) => remove(delivery.ref));
+    }
+    const patch: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
+    DEMO_OFFERING_IDS.forEach((id) => { patch[`scopes.subjectPocOfferings.${id}`] = FieldValue.delete(); });
+    if (spec.key === "poc") for (const role of ["grooming", "attendance", "caseCompetition"]) patch[`scopes.batchPocRoles.${role}`] = FieldValue.delete();
+    if (spec.key === "wing") patch["scopes.wingPocWings.A"] = FieldValue.delete();
+    queue(writer.update(ref, patch));
+  }
+  const reminderDeliveries = await db.collection("reminderDeliveries").where("jobId", ">=", "demo_").where("jobId", "<=", "demo_\uf8ff").get();
+  reminderDeliveries.docs.forEach((delivery) => remove(delivery.ref));
+  await writer.close(); await Promise.all(writes); if (failures.length) throw failures[0]; return deleted;
+}
+
+async function seed(actor: Actor, origin: string, identities: DemoIdentity[]) {
+  const plan = buildDemoFixtures(identities, actor.uid, origin, Date.now());
+  // Fixed fixture IDs must never replace an unrelated document, even by accident.
+  for (let i = 0; i < plan.records.length; i += 150) {
+    const existing = await db.getAll(...plan.records.slice(i, i + 150).map((r) => db.doc(r.path)));
+    const collision = existing.find((doc) => doc.exists && doc.get("demoSeedId") !== DEMO_SEED_ID);
+    if (collision) throw new HttpsError("already-exists", `Sample ID ${collision.ref.path} is occupied by non-demo data. No sample records were replaced.`);
+  }
+  await db.doc("systemHealth/demoData").set({ status: "preparing", phase: "clearing", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await deleteDemoSeedRecords();
+  await db.doc("systemHealth/demoData").set({ phase: "writing", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await db.runTransaction(async (tx) => {
+    const defaults: Array<[string, Record<string, unknown>]> = [
+      ["appConfig/current", { batchName: "Demo MBA Batch", currentTermId: "DEMO-TERM", timezone: "Asia/Kolkata" }],
+      ...["A", "B"].flatMap((id): Array<[string, Record<string, unknown>]> => [[`sections/${id}`, { name: `Section ${id}`, active: true }], [`wings/${id}`, { name: `Wing ${id}`, active: true }]]),
+    ];
+    const existing = await Promise.all(defaults.map(([path]) => tx.get(db.doc(path))));
+    defaults.forEach(([path, data], i) => { if (!existing[i]!.exists) tx.create(db.doc(path), { ...data, isTestData: true, updatedAt: FieldValue.serverTimestamp() }); });
+  });
+  const writer = db.bulkWriter();
+  const writes: Promise<unknown>[] = plan.records.map((r) => writer.set(db.doc(r.path), r.data));
+  const subjectScopes: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
+  DEMO_OFFERING_IDS.forEach((id) => { subjectScopes[`scopes.subjectPocOfferings.${id}`] = true; });
+  writes.push(writer.update(db.doc(`users/${plan.subjectPocUid}`), subjectScopes));
+  writes.push(writer.update(db.doc(`users/${plan.wingPocUid}`), { "scopes.subjectPocOfferings.DEMO-FIN-A": true, "scopes.wingPocWings.A": true, updatedAt: FieldValue.serverTimestamp() }));
+  await Promise.all([writer.close(), ...writes]);
+  // Fill unoccupied demonstration seats without displacing a real wing or batch POC.
+  plan.counts.sharedResponsibilitySeats = await db.runTransaction(async (tx) => {
+    const seats = [
+      { id: "wing_A", kind: "wing", scopeId: "A", uid: plan.wingPocUid, role: "" },
+      { id: "grooming_batch", kind: "grooming", scopeId: "batch", uid: plan.subjectPocUid, role: "grooming" },
+      { id: "attendance_batch", kind: "attendance", scopeId: "batch", uid: plan.subjectPocUid, role: "attendance" },
+      { id: "case_competition_batch", kind: "case_competition", scopeId: "batch", uid: plan.subjectPocUid, role: "caseCompetition" },
+    ];
+    const refs = seats.map((seat) => db.doc(`pocAssignments/${seat.id}`));
+    const existing = await Promise.all(refs.map((ref) => tx.get(ref)));
+    let count = 0;
+    seats.forEach((seat, i) => {
+      if (existing[i]!.exists && existing[i]!.get("demoSeedId") !== DEMO_SEED_ID) return;
+      count++;
+      tx.set(refs[i]!, { kind: seat.kind, scopeId: seat.scopeId, uid: seat.uid, seat: 1, active: true, isTestData: true, demoSeedId: DEMO_SEED_ID, assignedBy: actor.uid, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      if (seat.role) tx.update(db.doc(`users/${seat.uid}`), { [`scopes.batchPocRoles.${seat.role}`]: true });
+    });
+    return count;
+  });
+  await writeAudit({ actorUid: actor.uid, action: "test_data.seeded", resourceType: "demoSeed", resourceId: DEMO_SEED_ID, after: plan.counts });
+  await db.doc("systemHealth/demoData").set({ seedId: DEMO_SEED_ID, status: "ready", phase: "ready", generatedAt: plan.generatedAt, reminderAt: plan.reminderAt, counts: plan.counts, updatedAt: FieldValue.serverTimestamp() });
+  return plan;
+}
+
+export const prepareDemoData = onCall({ ...callableOptions, timeoutSeconds: 240 }, async (request) => {
+  try {
+    const actor = await requireActor(request); requireAdmin(actor);
+    const input = inputSchema.parse(request.data ?? {}), origin = demoOrigin(input.origin);
+    return await withDemoLease(actor, async (): Promise<DemoSummary> => {
+      await db.doc("systemHealth/demoData").set({ status: "preparing", phase: "accounts", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      const { credentials, accounts } = await ensureDemoAccounts(actor, input.resetPasswords);
+      const plan = await seed(actor, origin, accounts);
+      return { seedId: DEMO_SEED_ID, generatedAt: plan.generatedAt, reminderAt: plan.reminderAt, counts: plan.counts, accounts: DEMO_ACCOUNTS.map(({ role, rollNumber }) => ({ role, rollNumber })), credentials };
+    });
   } catch (error) { asHttpsError(error); }
 });
 
-const DEMO_COLLECTIONS = [
-  "academicTerms", "subjectOfferings", "timetableSlots", "timetableExceptions", "academicEvents",
-  "competitions", "competitionTeams", "competitionTeamNames", "competitionMemberships", "competitionRounds",
-  "competitionRoundEntries", "opportunityResponses", "internships", "internshipResponses", "tasks",
-  "taskAssignments", "taskStats", "reminderJobs", "reminderDeliveries", "competitionStats",
-  "internshipStats", "competitionRoundStats", "pocAssignments", "crTasks", "pushJobs", "pushDeliveries",
-  "sessionIntimations", "sessionResponses", "sessionStats", "generalPolls", "pollResponses", "pollStats",
-] as const;
+// Retain the existing callable for scripts; the prominent UI uses prepareDemoData.
+export const seedTestData = onCall({ ...callableOptions, timeoutSeconds: 240 }, async (request) => {
+  try { const actor = await requireActor(request); requireAdmin(actor); const input = inputSchema.parse(request.data ?? {}); return await withDemoLease(actor, async () => (await seed(actor, demoOrigin(input.origin), await demoIdentities())).counts); }
+  catch (error) { asHttpsError(error); }
+});
 
-async function deleteDemoSeedRecords() {
-  const writer = db.bulkWriter();
-  let deleted = 0;
-  for (const collectionName of DEMO_COLLECTIONS) {
-    const records = await db.collection(collectionName).where("demoSeedId", "==", DEMO_SEED_ID).get();
-    records.docs.forEach((record) => { writer.delete(record.ref); deleted += 1; });
-  }
-  const users = await db.collection("users").limit(2_000).get();
-  for (const user of users.docs) {
-    const notices = await user.ref.collection("notifications").where("demoSeedId", "==", DEMO_SEED_ID).get();
-    notices.docs.forEach((record) => { writer.delete(record.ref); deleted += 1; });
-    const scopeDeletes: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
-    DEMO_OFFERINGS.forEach((offering) => { scopeDeletes[`scopes.subjectPocOfferings.${offering.id}`] = FieldValue.delete(); });
-    scopeDeletes["scopes.batchPocRoles.grooming"] = FieldValue.delete();
-    scopeDeletes["scopes.batchPocRoles.attendance"] = FieldValue.delete();
-    scopeDeletes["scopes.batchPocRoles.caseCompetition"] = FieldValue.delete();
-    writer.update(user.ref, scopeDeletes);
-  }
-  await writer.close();
-  return deleted;
-}
-
-export const clearTestData = onCall({ ...callableOptions, timeoutSeconds: 120 }, async (request) => {
+export const clearTestData = onCall({ ...callableOptions, timeoutSeconds: 240 }, async (request) => {
   try {
-    const actor = await requireActor(request);
-    requireAdmin(actor);
-    const deleted = await deleteDemoSeedRecords();
-    const writer = db.bulkWriter();
-    await writer.close();
-    await writeAudit({ actorUid: actor.uid, action: "test_data.cleared", resourceType: "demoSeed", resourceId: DEMO_SEED_ID, after: { deleted } });
-    return { deleted };
+    const actor = await requireActor(request); requireAdmin(actor);
+    return await withDemoLease(actor, async () => {
+      const deleted = await deleteDemoSeedRecords();
+      await db.doc("systemHealth/demoData").set({ status: "cleared", seedId: DEMO_SEED_ID, updatedAt: FieldValue.serverTimestamp() });
+      await writeAudit({ actorUid: actor.uid, action: "test_data.cleared", resourceType: "demoSeed", resourceId: DEMO_SEED_ID, after: { deleted } });
+      return { deleted };
+    });
   } catch (error) { asHttpsError(error); }
 });

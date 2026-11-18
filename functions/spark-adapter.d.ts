@@ -11,6 +11,7 @@ export declare function invokeSparkCallable(
   data: unknown,
   idToken: string,
   appCheckToken?: string,
+  onTiming?: (stage: "auth" | "rate-limit" | "handler", milliseconds: number) => void,
 ): Promise<unknown>;
 
 export declare function verifySparkAppCheck(token?: string): Promise<void>;

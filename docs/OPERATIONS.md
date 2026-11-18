@@ -30,6 +30,8 @@ Before batch launch, retain a protected offline roster and essential CSV exports
 
 ## Real-device checks after deployment
 
+For a full synthetic feature rehearsal, use System admin → Presentation workspace → Prepare 15-minute demo and follow [the presentation runbook](PRESENTATION_RUNBOOK.md). Ordinary refresh preserves demo passwords; explicit password reset replaces them. The injector refuses unrelated documents at reserved sample IDs, preserves occupied real POC seats, and records interrupted operations for retry. The report-only profiles have no Auth logins. Cleanup is scoped to sample records and linked seed deliveries, rather than removing grants from the entire roster.
+
 1. Install from the production HTTPS URL on supported Android and iPhone devices.
 2. Enable push using App setup; publish an item from another account while the recipient app is closed.
 3. Confirm title/body sanitization, deep-link navigation, retries and scheduler health.

@@ -4,3 +4,4 @@ export * from "./rbac.js";
 export * from "./reminders.js";
 export * from "./credentials.js";
 export * from "./push.js";
+export * from "./demo.js";

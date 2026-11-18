@@ -1,0 +1,78 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DeadlineOS role-based views demonstration</title><style>@font-face{font-family:Plex;src:url(/fonts/ibm-plex-sans-latin-variable.woff2)}@font-face{font-family:Fraunces;src:url(/fonts/fraunces-latin-variable.woff2)}:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#111318;color:#edf0f5;font:16px/1.65 Plex,Arial,sans-serif}main{max-width:900px;margin:auto;padding:36px 24px 80px}h1,h2{font-family:Plex,Arial,sans-serif;font-weight:650;line-height:1.15;letter-spacing:-.025em}h1{font-size:48px}h2{font-size:30px;margin:42px 0 17px}a{color:#f0b76b}li{margin-bottom:10px}code{font:inherit;overflow-wrap:anywhere}table{border-collapse:collapse;display:block;overflow-x:auto;width:100%;font-size:13px;margin:20px 0}th,td{border:1px solid #343c48;text-align:left;padding:10px;min-width:95px}th{background:#252b35}button{min-height:44px;padding:8px 15px;background:#f0b76b;color:#1a1510;border:0;font:inherit;cursor:pointer}nav{display:flex;justify-content:space-between;align-items:center;gap:20px}:focus-visible{outline:2px solid #f0b76b;outline-offset:3px}@media(max-width:600px){h1{font-size:37px}h2{font-size:27px}}@media print{body{background:white;font:11pt/1.4 Arial,sans-serif}main{padding:0;max-width:none}nav{display:none}h1,h2{color:black;break-after:avoid}table{font-size:9pt;display:table}tr{break-inside:avoid}@page{margin:.7in}}</style></head><body><main><nav><a href="/?view=admin">Return to System admin</a><button onclick="window.print()">Print this script</button></nav><h1>Demonstrating role-based views</h1>
+<p>Use this as a 7 to 10 minute introduction before the <a href="presentation-guide.html">full feature demonstration</a>. Show how the same system changes with responsibility, then demonstrate the complete workflows.</p>
+<h2>Prepare the sessions</h2>
+<ol>
+<li>Sign in with your existing System admin account and select <strong>Presentation workspace &gt; Prepare 15-minute demo</strong>. Copy any newly generated passwords before leaving the page. If you no longer have the existing demo passwords, use <strong>Reset demo passwords</strong> before preparing your other sessions.</li>
+<li>Keep the administrator signed in. Use a separate browser profile for each demo identity. Two normal tabs in one profile share the Firebase login; opening another tab does not give you a different role. You can instead sign out and sign in between demonstrations.</li>
+<li>Label your browser windows Student, Wing POC, Subject/batch POC, CR and Admin. Open Today in each. On desktop, compare the left navigation; on mobile, compare the <strong>My desk</strong> directory.</li>
+<li>Use a dedicated demo project. Existing occupied wing/batch POC seats are preserved by the injector, so a shared project&#39;s existing grants can change the sample POC&#39;s available controls.</li>
+</ol>
+<p>Use real sign-ins for this demonstration. There is no administrator impersonation or cosmetic role selector: each session exercises the actual account&#39;s permissions.</p>
+<h2>What changes for each identity</h2>
+<p>All accounts retain the personal student screens. Management tools are added according to their roles and scopes; becoming a POC does not remove the person&#39;s own deadlines.</p>
+<table>
+<thead>
+<tr>
+<th>Identity</th>
+<th>Sign-in</th>
+<th>Views or controls to highlight</th>
+<th>Boundary to explain</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Student</td>
+<td><code>24M2901</code></td>
+<td>Today, Academics, Opportunities, Placement sessions and Batch polls; personal completion and response controls</td>
+<td>Cannot publish work, assign POCs or access System admin</td>
+</tr>
+<tr>
+<td>Wing A POC</td>
+<td><code>24M2904</code></td>
+<td>Wing forms, Task compliance and Reports; publishing and following up wing tasks</td>
+<td>Wing management is limited to assigned wings. This demo account also holds the second subject POC seat for DEMO-FIN-A, so it is intentionally an example of combined scopes</td>
+</tr>
+<tr>
+<td>Subject and batch POC</td>
+<td><code>24M2902</code></td>
+<td>Academics editing for assigned DEMO offerings; competition, session and poll management where the relevant batch seat is granted; Task compliance</td>
+<td>Subject editing is limited to assigned offerings. Batch responsibilities are separate grants; this account combines them for the presentation</td>
+</tr>
+<tr>
+<td>Class representative</td>
+<td><code>24M2903</code></td>
+<td>Task compliance, CR Board, Reports, POC setup, Placement status and Timetable setup</td>
+<td>Has governance responsibilities, but no System admin page. Wing forms still require a wing POC scope</td>
+</tr>
+<tr>
+<td>System administrator</td>
+<td>Your existing admin account</td>
+<td>System admin: roster, configuration, presentation data and delivery health; governance screens</td>
+<td>Administrative authority is checked on the server. The Wing forms menu still requires a wing scope; an admin is not automatically a wing POC</td>
+</tr>
+</tbody></table>
+<p>The two remaining sample accounts illustrate <strong>data visibility and eligibility</strong>, rather than extra permission roles:</p>
+<ul>
+<li><strong>Section B student (<code>24M2906</code>):</strong> same student interface, but Section B academic records and a different set of assigned tasks.</li>
+<li><strong>Placed student (<code>24M2905</code>):</strong> same student role, with different internship eligibility. For the seeded internships, show <strong>No action assigned</strong> and contrast it with the ordinary student&#39;s registration controls. Private placement records are managed through the authorised governance screen.</li>
+</ul>
+<h2>Presentation order and actions</h2>
+<h3>1. Student: show personal work</h3>
+<p>Sign in as <code>24M2901</code>. Point out the personal navigation and open <strong>Demo placement preference form</strong> on Today. Leave it pending initially. Explain: &quot;This person sees work assigned to them and can update their own response. They cannot publish the task or change other people&#39;s responses.&quot;</p>
+<h3>2. Wing POC: show the manager&#39;s side of the same work</h3>
+<p>Switch to <code>24M2904</code>. Highlight <strong>Wing forms</strong>, <strong>Task compliance</strong> and <strong>Reports</strong>. Open the seeded placement preference form in Wing forms to show its management controls. Open <strong>Demo directory audit</strong> in the scoped reporting view to show pending/completed/exempt responses. Explain: &quot;The POC sees the people they must follow up with, rather than only their own to-do list.&quot;</p>
+<p>For a live connection between the views, return to the Student session and complete the placement preference form. Return to its manager&#39;s view and show the updated completion total or response list; reopen/reload the report if needed. The shared task remains the same while one student&#39;s response changes.</p>
+<h3>3. Subject and batch POC: show responsibilities inside shared screens</h3>
+<p>Switch to <code>24M2902</code>. Open <strong>Academics</strong> and edit a seeded event for <strong>DEMO-FIN-A</strong>. Compare with the ordinary Student session, which can read the event but cannot edit it. Then open Opportunities or Placement sessions and show the management controls provided by the relevant batch grant.</p>
+<p>Explain: &quot;A role difference can be an extra control inside the same page. It does not always need a completely different dashboard. This sample user has several grants; subject ownership and batch responsibility are separate.&quot;</p>
+<h3>4. CR: show coordination and delegation</h3>
+<p>Switch to <code>24M2903</code>. Point out <strong>CR Board</strong>, <strong>POC setup</strong>, <strong>Placement status</strong> and <strong>Timetable setup</strong>. Open a seeded CR task, then show the two subject POC seats on <strong>DEMO-FIN-A</strong> in POC setup. Explain that a representative coordinates work and assigns responsibility. Point out that System admin is absent.</p>
+<p>If demonstrating revocation, do it after the POC feature walkthrough: removing a grant can intentionally remove menus or edit controls that you need earlier in the presentation.</p>
+<h3>5. Admin: show system operation</h3>
+<p>Return to the existing administrator session. Open <strong>System admin</strong> and show roster/configuration, sample-data controls and delivery health. Explain: &quot;This view operates the system itself; it is separate from a student&#39;s responses and a POC&#39;s assigned responsibility.&quot;</p>
+<h3>6. Contrast two ordinary students</h3>
+<p>Briefly sign in as <code>24M2906</code> and show the Section B academic record. Then use <code>24M2905</code> to contrast internship eligibility. Say: &quot;The permission role can stay the same while the data changes with section, wing, assignment and eligibility.&quot;</p>
+<h2>Explain the protection accurately</h2>
+<p>Navigation helps users find permitted work. The server handlers and Firestore rules enforce access independently of which buttons are displayed. In the current navigation, requesting an unavailable view through the URL falls back to Today; use this as a short interface demonstration, not as proof of the entire security model.</p>
+<p>If you want to show the fallback, open <code>/?view=admin</code> while signed in as the ordinary Student. It should return to Today rather than reveal System admin. Do not change database grants or disable rules for the presentation. The automated rule and workflow tests provide the separate permission checks.</p>
+<p>Close this introduction with: &quot;One system, a personal view for everyone, additional tools for assigned responsibilities, and access checks behind every privileged operation.&quot;</p>
+</main></body></html>

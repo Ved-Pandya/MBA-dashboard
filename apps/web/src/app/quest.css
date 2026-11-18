@@ -210,6 +210,10 @@ input,select,textarea { border-radius:7px; }
 .selected-wing-row { background:var(--accent-surface); }
 th,.directory-list { border-color:var(--line); }
 .table-scroll { scrollbar-color:var(--control-border) var(--paper); }
+.report-load-status { min-height:24px; margin:0 0 16px; color:var(--muted); font-size:12px; }
+.report-records .table-scroll { min-height:180px; }
+.report-pagination { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:10px; margin:18px 0 0; }
+.report-pagination > span { flex:1 1 180px; color:var(--muted); font-size:12px; }
 .status-pill.published,.status-pill.upcoming,.status-pill.done,.status-pill.completed,.stat-card.success strong { color:var(--success); }
 .status-pill.published::before,.status-pill.done::before,.status-pill.completed::before { background:var(--success); }
 .status-pill::before { background:var(--muted); }

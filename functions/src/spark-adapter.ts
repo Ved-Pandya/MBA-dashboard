@@ -2,7 +2,7 @@ import type { CallableFunction } from "firebase-functions/v2/https";
 import { notificationCopy, type ReminderStage } from "@mba/domain";
 import { activateMyAccount } from "./account.js";
 import { createTestAccounts } from "./test-accounts.js";
-import { clearTestData, seedTestData } from "./test-data.js";
+import { clearTestData, seedTestData, prepareDemoData } from "./test-data.js";
 import { initializeAppConfig, saveSubjectOffering } from "./catalog.js";
 import { getComplianceExport, markNotificationsRead, reopenMyCompletion, setMyCompletion, setTaskExemption } from "./completion.js";
 import { getCurrentTaskCompliance } from "./compliance.js";
@@ -30,6 +30,7 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   activateMyAccount,
   createTestAccounts,
   seedTestData,
+  prepareDemoData,
   clearTestData,
   initializeAppConfig,
   saveSubjectOffering,
@@ -116,30 +117,36 @@ export async function verifySparkMaintenanceUser(idToken: string, appCheckToken?
   if (user.get("status") !== "active") throw new HttpsError("permission-denied", "Active roster access is required");
 }
 
-export async function invokeSparkCallable(name: string, data: unknown, idToken: string, appCheckToken?: string) {
+export async function invokeSparkCallable(name: string, data: unknown, idToken: string, appCheckToken?: string, onTiming?: (stage: "auth" | "rate-limit" | "handler", milliseconds: number) => void) {
   const handler = callableHandlers[name];
   if (!handler) {
     const error = new Error("Unknown operation") as Error & { code?: string };
     error.code = "not-found";
     throw error;
   }
-  const token = await verifySparkIdToken(idToken);
-  await verifySparkAppCheck(appCheckToken);
+  const authStarted = performance.now();
+  const [token] = await Promise.all([verifySparkIdToken(idToken), verifySparkAppCheck(appCheckToken)]);
+  onTiming?.("auth", performance.now() - authStarted);
   // Shared across server instances. Limit repeated expensive calls without trusting client state.
   const minute = Math.floor(Date.now() / 60_000);
   const rateRef = db.doc(`apiRateLimits/${token.uid}`);
+  const rateStarted = performance.now();
   await db.runTransaction(async (tx) => {
     const state = await tx.get(rateRef);
     const count = state.get("minute") === minute ? Number(state.get("count") ?? 0) : 0;
     if (count >= 60) throw new HttpsError("resource-exhausted", "Too many requests. Wait a minute and try again.");
     tx.set(rateRef, { minute, count: count + 1 });
   });
-  return handler.run({
+  onTiming?.("rate-limit", performance.now() - rateStarted);
+  const handlerStarted = performance.now();
+  const result = await handler.run({
     data,
     auth: { uid: token.uid, token, rawToken: idToken },
     acceptsStreaming: false,
     rawRequest: {} as never,
   });
+  onTiming?.("handler", performance.now() - handlerStarted);
+  return result;
 }
 
 export function shouldFlushPushAfterCallable(name: string) {

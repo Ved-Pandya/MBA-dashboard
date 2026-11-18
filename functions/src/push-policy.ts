@@ -41,6 +41,7 @@ export function buildPushPayload(input: { type: string; jobId: string; title?: u
 const notificationProducingCallables = new Set([
   "createTestAccounts",
   "seedTestData",
+  "prepareDemoData",
   "updateTask",
   "publishTask",
   "closeTask",

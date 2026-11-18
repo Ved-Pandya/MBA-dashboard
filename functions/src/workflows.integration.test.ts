@@ -11,6 +11,8 @@ let roster: typeof import("./roster.js");
 let opportunities: typeof import("./opportunities.js");
 let placements: typeof import("./placements.js");
 let compliance: typeof import("./compliance.js");
+let demo: typeof import("./test-data.js");
+let demoCredentials: Array<{ role: string; rollNumber: string; password: string }> = [];
 const uid = `integration_${Date.now()}`;
 const ids = { admin: `${uid}_admin`, otherAdmin: `${uid}_other_admin`, student: `${uid}_student`, wing: `${uid}_wing`, cr: `${uid}_cr` };
 const password = "Synthetic-test-123!";
@@ -29,8 +31,8 @@ suite("privileged workflows against real emulators", () => {
     process.env.FIREBASE_ADMIN_PROJECT_ID = "demo-deadlineos-integration";
     process.env.GCLOUD_PROJECT = "demo-deadlineos-integration";
     firebase = await import("./firebase.js");
-    [tasks, academics, completion, roster, opportunities, placements, compliance] = await Promise.all([
-      import("./tasks.js"), import("./academics.js"), import("./completion.js"), import("./roster.js"), import("./opportunities.js"), import("./placements.js"), import("./compliance.js"),
+    [tasks, academics, completion, roster, opportunities, placements, compliance, demo] = await Promise.all([
+      import("./tasks.js"), import("./academics.js"), import("./completion.js"), import("./roster.js"), import("./opportunities.js"), import("./placements.js"), import("./compliance.js"), import("./test-data.js"),
     ]);
     for (const [index, role] of (Object.keys(ids) as Array<keyof typeof ids>).entries()) {
       const data = profile(`26M28${String(index).padStart(2, "0")}`, role);
@@ -194,4 +196,88 @@ suite("privileged workflows against real emulators", () => {
     const records = await firebase.db.collection("operations").where("type", "==", "roster_import").get();
     expect(JSON.stringify(records.docs.map((doc) => doc.data()))).not.toContain(replacementPassword);
   }, 30_000);
+  it("prepares coherent demo roles, placement history and a fully paginated report", async () => {
+    await expect(call(demo.prepareDemoData, "student", {})).rejects.toThrow("administrator");
+    await firebase.db.doc('users/'+ids.otherAdmin).update({ 'scopes.batchPocRoles.grooming': true, 'scopes.subjectPocOfferings.DEMO-FIN-A': true });
+    await firebase.db.doc('pocAssignments/attendance_batch').set({kind:'attendance',scopeId:'batch',uid:ids.otherAdmin,active:true});
+    await firebase.db.doc('academicEvents/real_event_to_keep').set({ title:'Real event to keep',status:'published' });
+    const result = await call(demo.prepareDemoData, "admin", { origin:'http://127.0.0.1:3100' });
+    demoCredentials=result.credentials; expect(demoCredentials).toHaveLength(6);
+    expect(result.counts.reportRecipients).toBe(114); expect(result.counts.wingForms).toBe(9);
+    const wingUser=await firebase.adminAuth.getUserByEmail('24m2904@users.deadlineos.app');
+    expect((await firebase.db.doc('users/'+wingUser.uid).get()).get('scopes.wingPocWings.A')).toBe(true);
+    const first=await call(compliance.getCurrentTaskCompliance,'cr',{itemKey:'deadline:demo_directory_audit',rowsOnly:true});
+    expect(first.rows).toHaveLength(100); expect(first.nextCursor).toBeTruthy();
+    const last=await call(compliance.getCurrentTaskCompliance,'cr',{itemKey:'deadline:demo_directory_audit',rowsOnly:true,cursor:first.nextCursor});
+    expect(last.rows).toHaveLength(14); expect(last.nextCursor).toBeNull();
+    const catalog = await call(compliance.getCurrentTaskCompliance, 'cr', { itemKey: 'deadline:demo_directory_audit', catalogOnly: true });
+    expect(catalog.rows).toEqual([]); expect(catalog.nextCursor).toBeNull();
+    expect(catalog.items.some((item: { key: string }) => item.key === 'deadline:demo_directory_audit')).toBe(true);
+    const wingReport = await call(opportunities.getWingOpportunityReport, 'admin', { wingId: 'A', opportunityKind: 'competition', opportunityId: 'demo_case_open' });
+    expect(wingReport.competitionResponses).toHaveLength(4); expect(wingReport.internshipResponses).toEqual([]); expect(wingReport.internships).toEqual([]);
+    expect(wingReport.competitionResponses.every((row: { opportunityId: string }) => row.opportunityId === 'demo_case_open')).toBe(true);
+    const rows=await firebase.db.collection('taskAssignments').where('taskId','==','demo_directory_audit').get();
+    const stats=await firebase.db.doc('taskStats/demo_directory_audit').get();
+    for(const [state,key] of [['pending','pendingCount'],['completed','completedCount'],['exempt','exemptCount']])expect(stats.get(key!)).toBe(rows.docs.filter(r=>r.get('status')===state).length);
+    const placed=await firebase.adminAuth.getUserByEmail('24m2905@users.deadlineos.app');
+    await call(placements.setPlacementStatus,'cr',{uid:placed.uid,status:'seeking',reason:'Demo eligibility restoration'});
+    expect((await firebase.db.doc('internshipResponses/demo_internship_'+placed.uid).get()).get('status')).toBe('registered');
+    expect((await firebase.db.doc('reminderJobs/demo_reminder_check_v1_minus2h').get()).get('fireAt').toMillis()).toBeGreaterThan(Date.now());
+    expect((await firebase.db.doc('academicEvents/real_event_to_keep').get()).get('title')).toBe('Real event to keep');
+    const operation=await firebase.db.doc('operations/demo_seed').get(); expect(JSON.stringify(operation.data())).not.toContain(demoCredentials[0]!.password);
+  },60_000);
+
+  it("refreshes demo responses while preserving passwords and supports an explicit password reset",async()=>{
+    const student=await firebase.adminAuth.getUserByEmail('24m2901@users.deadlineos.app');
+    await firebase.db.doc('taskAssignments/demo_wing_form_'+student.uid).update({status:'completed'});
+    const result=await call(demo.prepareDemoData,'admin',{origin:'http://127.0.0.1:3100'});
+    expect(result.credentials).toEqual([]);
+    expect((await firebase.db.doc('taskAssignments/demo_wing_form_'+student.uid).get()).get('status')).toBe('pending');
+    const login=async(password:string)=>fetch('http://'+process.env.FIREBASE_AUTH_EMULATOR_HOST+'/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer owner'},body:JSON.stringify({targetProjectId:'demo-deadlineos-integration',email:'24m2901@users.deadlineos.app',password,returnSecureToken:true})});
+    const governance=await import('./governance.js');
+    const wing=await firebase.adminAuth.getUserByEmail('24m2904@users.deadlineos.app');
+    await call(governance.assignPoc,'admin',{kind:'subject',scopeId:'DEMO-FIN-A',seat:2,uid:wing.uid});
+    expect((await firebase.db.doc('pocAssignments/subject_DEMO-FIN-A_2').get()).get('demoSeedId')).toBe('mock_v1');
+    const oldPassword=demoCredentials.find(c=>c.rollNumber==='24M2901')!.password;
+    expect((await login(oldPassword)).ok).toBe(true);
+    const reset=await call(demo.prepareDemoData,'admin',{origin:'http://127.0.0.1:3100',resetPasswords:true});
+    expect(reset.credentials).toHaveLength(6);
+    expect((await login(oldPassword)).ok).toBe(false);
+    expect((await login(reset.credentials.find((c:{rollNumber:string})=>c.rollNumber==='24M2901').password)).ok).toBe(true);
+  },60_000);
+
+  it("clears fixtures and derived delivery records without touching unrelated users or grants",async()=>{
+    const student=await firebase.adminAuth.getUserByEmail('24m2901@users.deadlineos.app');
+    await firebase.db.doc('users/'+student.uid+'/notifications/derived_demo_notice').set({taskId:'demo_wing_form',title:'Derived notice'});
+    await firebase.db.doc('pushJobs/derived_demo_job').set({uid:student.uid,notificationPath:'users/'+student.uid+'/notifications/derived_demo_notice'});
+    await firebase.db.doc('pushDeliveries/derived_demo_delivery').set({jobId:'derived_demo_job'});
+    await firebase.db.doc('reminderDeliveries/demo_session_delivery').set({jobId:'demo_placement_session_v1_minus2h'});
+    const result=await call(demo.clearTestData,'admin',{});expect(result.deleted).toBeGreaterThan(300);
+    expect((await firebase.db.collection('users').where('isDemoRoster','==',true).get()).size).toBe(0);
+    expect((await firebase.db.doc('users/'+student.uid).get()).exists).toBe(true);
+    expect((await firebase.db.doc('users/'+ids.otherAdmin).get()).get('scopes.batchPocRoles.grooming')).toBe(true);
+    expect((await firebase.db.doc('users/'+ids.otherAdmin).get()).get('scopes.subjectPocOfferings.DEMO-FIN-A')).toBe(true);
+    expect((await firebase.db.doc('academicEvents/real_event_to_keep').get()).exists).toBe(true);
+    expect((await firebase.db.doc('pocAssignments/attendance_batch').get()).get('uid')).toBe(ids.otherAdmin);
+    for(const path of ['pushJobs/derived_demo_job','pushDeliveries/derived_demo_delivery','reminderDeliveries/demo_session_delivery','tasks/demo_wing_form'])expect((await firebase.db.doc(path).get()).exists).toBe(false);
+  },60_000);
+
+  it("refuses occupied sample IDs, protected account collisions and overlapping setup",async()=>{
+    await firebase.db.doc('tasks/demo_wing_form').set({title:'Unrelated reserved record'});
+    await expect(call(demo.prepareDemoData,'admin',{})).rejects.toThrow('occupied by non-demo');
+    expect((await firebase.db.doc('tasks/demo_wing_form').get()).get('title')).toBe('Unrelated reserved record');
+    await firebase.db.doc('tasks/demo_wing_form').delete();
+    const protectedUser=await firebase.adminAuth.getUserByEmail('24m2906@users.deadlineos.app');
+    await firebase.db.doc('users/'+protectedUser.uid).update({isTestAccount:false});
+    await expect(call(demo.prepareDemoData,'admin',{})).rejects.toThrow('non-test identity');
+    expect((await firebase.db.doc('users/'+protectedUser.uid).get()).get('isTestAccount')).toBe(false);
+    await firebase.db.doc('users/'+protectedUser.uid).update({isTestAccount:true});
+    await firebase.db.doc('users/'+protectedUser.uid).delete();
+    const recovered=await call(demo.prepareDemoData,'admin',{});
+    expect(recovered.credentials.map((c:{rollNumber:string})=>c.rollNumber)).toEqual(['24M2906']);
+    await firebase.db.doc('operations/demo_seed').set({leaseUntil:firebase.Timestamp.fromMillis(Date.now()+60_000)});
+    await expect(call(demo.prepareDemoData,'admin',{})).rejects.toThrow('Another sample-data operation');
+    await firebase.db.doc('operations/demo_seed').delete();
+  },60_000);
+
 });

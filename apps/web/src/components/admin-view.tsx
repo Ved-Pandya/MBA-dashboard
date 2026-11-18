@@ -5,6 +5,7 @@ import { doc, onSnapshot, type Timestamp } from "firebase/firestore";
 import { callFunction, readableError } from "@/lib/callable";
 import { getFirebase } from "@/lib/firebase";
 import { WorkspaceEditor } from "./workspace-editor";
+import { DemoWorkspace } from "./demo-workspace";
 
 interface CsvRow {
   password: string;
@@ -43,7 +44,7 @@ function parseCsv(text: string): CsvRow[] {
   });
 }
 
-export function AdminView() {
+export function AdminView({ onNavigate }: { onNavigate?: (view: "reports" | "compliance") => void }) {
   const [batchName, setBatchName] = useState("MBA Batch");
   const [termId, setTermId] = useState("TERM-1");
   const [csvText, setCsvText] = useState("rollNumber,password,displayName,sectionId,wingId,cr\n");
@@ -52,8 +53,6 @@ export function AdminView() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [testCredentials, setTestCredentials] = useState<Array<{ role: string; rollNumber: string; password: string }>>([]);
-  const [demoSummary, setDemoSummary] = useState<Record<string, number> | null>(null);
   const [pushHealth, setPushHealth] = useState<PushHealth | null>(null);
   const [schedulerHealth, setSchedulerHealth] = useState<{ processedJobs?: number; deliveries?: number; lastSuccessAt?: Timestamp } | null>(null);
 
@@ -94,44 +93,17 @@ export function AdminView() {
     try { const result = await callFunction<unknown, { updated: number; idempotent?: boolean }>("migrateCompetitionConfirmations", {}); setMessage(result.idempotent ? "Competition confirmation migration was already completed." : `${result.updated} competition records prepared for dual confirmations.`); }
     catch (migrationError) { setError(readableError(migrationError)); } finally { setBusy(false); }
   }
-  async function createTestUsers() {
-    if (!window.confirm("Create or reset the Student, Subject POC, and CR test accounts? Existing test passwords will stop working.")) return;
-    setBusy(true); setError(null); setTestCredentials([]);
-    try {
-      const result = await callFunction<unknown, { credentials: Array<{ role: string; rollNumber: string; password: string }> }>("createTestAccounts", {});
-      setTestCredentials(result.credentials);
-      setMessage("Three test accounts are ready. Copy the passwords now; they are not stored in Firestore.");
-    } catch (accountError) { setError(readableError(accountError)); } finally { setBusy(false); }
-  }
-  async function seedDemoData() {
-    if (!window.confirm("Reset the mock subjects, competitions, internship, form, reminders, and test-user statuses to a fresh demo state?")) return;
-    setBusy(true); setError(null);
-    try {
-      const result = await callFunction<unknown, Record<string, number>>("seedTestData", {});
-      setDemoSummary(result);
-      setMessage("Complete mock dataset seeded. Sign in with the test accounts to exercise each workflow.");
-    } catch (seedError) { setError(readableError(seedError)); } finally { setBusy(false); }
-  }
-  async function clearDemoData() {
-    if (!window.confirm("Delete only records created by the mock_v1 demo seed? Test login accounts will remain.")) return;
-    setBusy(true); setError(null);
-    try {
-      const result = await callFunction<unknown, { deleted: number }>("clearTestData", {});
-      setDemoSummary(null);
-      setMessage(`${result.deleted} mock records removed. The three test login accounts remain available.`);
-    } catch (clearError) { setError(readableError(clearError)); } finally { setBusy(false); }
-  }
 
   return (
     <div className="page-wrap">
-      <header className="page-heading"><div><h1>System admin</h1><p>Roster, subject catalogues and delivery health.</p></div></header>
-      {message && <div className="success-banner">✓ {message}</div>}{error && <p className="form-error" role="alert">{error}</p>}
+      <header className="page-heading"><div><h1>System admin</h1><p>Roster, subject catalogues and delivery health.</p></div>{onNavigate && <div className="form-actions"><button className="secondary-button" onClick={() => onNavigate("compliance")}>Task compliance</button><button className="secondary-button" onClick={() => onNavigate("reports")}>Opportunity reports</button></div>}</header>
+      {message && <div className="success-banner" role="status">{message}</div>}{error && <p className="form-error" role="alert">{error}</p>}
+      <DemoWorkspace disabled={busy} onBusyChange={setBusy} />
       <div className="admin-grid">
         <WorkspaceEditor title="Batch configuration"><form className="panel create-form" onSubmit={initialize}><div className="panel-head"><div><h2>Batch configuration</h2></div></div><label>Batch name<input value={batchName} onChange={(event) => setBatchName(event.target.value)} required /></label><label>Current term ID<input value={termId} onChange={(event) => setTermId(event.target.value)} required /></label><button className="primary-button" disabled={busy}>Initialize catalogs</button><small>Creates Sections A/B, Wings A–J, the current term, timezone, and reminder defaults.</small></form></WorkspaceEditor>
         <WorkspaceEditor title="Add subject offering"><form className="panel create-form" onSubmit={saveOffering}><div className="panel-head"><div><h2>Subject offering</h2></div></div><div className="form-row"><label>Offering ID<input value={offering.offeringId} onChange={(event) => setOffering({ ...offering, offeringId: event.target.value })} placeholder="FIN-A" required /></label><label>Code<input value={offering.subjectCode} onChange={(event) => setOffering({ ...offering, subjectCode: event.target.value })} placeholder="FIN101" required /></label></div><label>Subject name<input value={offering.subjectName} onChange={(event) => setOffering({ ...offering, subjectName: event.target.value })} required /></label><div className="form-row"><label>Section<select value={offering.sectionId} onChange={(event) => setOffering({ ...offering, sectionId: event.target.value })}><option>A</option><option>B</option></select></label><label>Term<input value={offering.termId} onChange={(event) => setOffering({ ...offering, termId: event.target.value })} required /></label></div><button className="primary-button" disabled={busy}>Save offering</button></form></WorkspaceEditor>
       </div>
-      <details className="maintenance-details"><summary>Demo accounts & migration tools</summary>
-      <section className="panel create-form migration-panel"><div className="panel-head"><div><h2>Student, POC, and CR accounts</h2></div></div><p className="helper">Creates or resets 24M2901, 24M2902, and 24M2903. The POC receives isolated demo subject scopes, so real POC assignments are not disturbed.</p><div className="form-actions test-actions"><button className="secondary-button" onClick={createTestUsers} disabled={busy}>1. Create/reset accounts</button><button className="primary-button" onClick={seedDemoData} disabled={busy}>2. Seed complete mock data</button><button className="danger-button" onClick={clearDemoData} disabled={busy}>Clear mock data</button></div>{testCredentials.length > 0 && <div className="test-credentials"><strong>Copy these passwords now</strong>{testCredentials.map((item) => <div key={item.rollNumber}><span>{item.role.toUpperCase()}</span><code>{item.rollNumber}</code><code>{item.password}</code></div>)}</div>}{demoSummary && <div className="recipient-preview"><strong>Mock dataset ready</strong><p>{Object.entries(demoSummary).map(([key, value]) => `${key}: ${value}`).join(" · ")}</p></div>}</section>
+      <details className="maintenance-details"><summary>Migration tools</summary>
       <section className="panel create-form migration-panel"><div className="panel-head"><div><h2>Convert W01–W10 to A–J</h2></div></div><p className="helper">Safe to run repeatedly. It updates legacy users, wing task scopes, and assignment snapshots, then marks old wing records inactive.</p><button className="secondary-button" onClick={migrateWings} disabled={busy}>Run wing migration</button></section>
       <section className="panel create-form migration-panel"><div className="panel-head"><div><h2>Enable dual competition confirmations</h2></div></div><p className="helper">Copies legacy registration links, preserves historical records, and flags competitions that still need an internal Google Form.</p><button className="secondary-button" onClick={migrateCompetitions} disabled={busy}>Run competition migration</button></section>
 </details>

@@ -74,9 +74,11 @@ Prerequisites: Node 24, npm, and Java 21 if you want to run the Firestore Emulat
 
 6. In Admin, initialize the batch, then validate and commit the roster. Import the timetable or create offerings, and assign POCs from the dedicated POC Setup page. A sample is available at `fixtures/roster.sample.csv`.
 
-For role testing, System Admins can use **Admin → Test identities → Create or reset test accounts**. This creates `24M2901` (Student), `24M2902` (Subject POC for the isolated `TEST-A` offering), and `24M2903` (CR). Secure passwords are generated on demand and displayed only in the administrator's browser.
+For a complete presentation, open **System admin > Presentation workspace > Prepare 15-minute demo**. One action prepares six protected demo logins, linked records across all feature modules, and 110 report-only profiles so the sample directory audit has 114 recipients and spans two response pages. Fresh credentials are shown only in the current browser page; ordinary refresh preserves existing passwords. **Reset demo passwords** explicitly replaces them.
 
-After creating the identities, click **Seed complete mock data** to reset a tagged demo dataset containing four subjects and timetable slots, four academic events, two competitions with individual confirmation states, one internship, one wing form, mixed response/completion states, reminder jobs, and notifications. **Clear mock data** removes only records tagged with the `mock_v1` seed and leaves the three test login accounts intact.
+The six reserved demo logins are `24M2901` (Student), `24M2902` (Subject and batch POC), `24M2903` (CR), `24M2904` (Wing A POC), `24M2905` (Placed Student), and `24M2906` (Section B Student). Your existing administrator session handles System admin. No shared password is committed or saved in Firestore.
+
+The sample data includes nine academic records, nine wing forms, four competitions, four internships, three sessions, four polls, three CR tasks, placement history, POC seats, sample inbox events and real scheduled reminder jobs. Deadlines are relative to injection time. Practice forms simulate submission without sending data. **Remove sample data** removes the tagged fixtures and report-only profiles while preserving the six sign-in accounts and unrelated records. Use a dedicated demo Firebase project because sample records share the application catalogue and queries. [Follow the full feature presentation order](docs/PRESENTATION_RUNBOOK.md), also available inside System admin.
 
 The roster contains each roll number and its administrator-chosen password. Passwords are sent only to the privileged Vercel route and are handed to Firebase Authentication; they are never stored in Firestore or audit events. Re-importing an existing roll number deliberately resets its password.
 
@@ -142,7 +144,7 @@ The server private key is mandatory on Vercel and must never be committed, logge
 
 ## Alert behavior on free plans
 
-Notification-producing mutations schedule a bounded post-response flush in the same Vercel invocation. The flush mirrors new inbox notifications into deterministic push jobs and processes up to 150 jobs with eight concurrent deliveries, covering the expected 114-student batch plus manager recipients. Cloudflare's one-minute Cron Trigger remains the recovery source for retries, outages, and work above that cap. It calls the protected Vercel maintenance route, which also processes due reminders. `apps/web/vercel.json` retains one protected daily catch-up at 02:30 UTC, corresponding to 08:00 Asia/Kolkata.
+Notification-producing mutations schedule a bounded post-response flush in the same Vercel invocation. The flush mirrors new inbox notifications into deterministic push jobs and processes up to 150 jobs with up to ten concurrent deliveries, covering the expected 114-student batch plus manager recipients. Cloudflare's one-minute Cron Trigger remains the recovery source for retries, outages, and work above that cap. It calls the protected Vercel maintenance route, which also processes due reminders. `apps/web/vercel.json` retains one protected daily catch-up at 02:30 UTC, corresponding to 08:00 Asia/Kolkata.
 
 Every authenticated browser also sends a lightweight maintenance pulse every five minutes while visible. A Firestore transaction allows only one processor run in each two-minute window, so Cloudflare, Vercel, and active-browser invocations can safely overlap. Notification, push-job, and device-delivery IDs remain deterministic.
 
@@ -171,6 +173,8 @@ Monitor:
 
 ## Current MVP constraints
 
+Report filtering and the timed presentation workspace are described in [report performance and demo notes](docs/REPORT_PERFORMANCE.md). Opportunity filters reuse a wing snapshot; use Refresh for the latest responses. Report tables render 50 rows at a time while CSV uses the loaded dataset. The System admin preparation button includes a 14-minute walkthrough.
+
 - One batch and one timezone.
 - Subject offerings target their entire section; elective enrollment is not modeled.
 - Push notifications require explicit per-device permission and supported browsers; the in-app inbox remains authoritative.
@@ -182,6 +186,8 @@ Monitor:
 Before a real batch launch, run the emulator rule suite, load-test with the actual roster size, keep an offline roster backup, export essential data manually, and rehearse account recovery.
 
 ## Project walkthrough and verification
+
+For a teammate-friendly explanation of the complete architecture with diagrams, read the [architecture handbook](docs/ARCHITECTURE_GUIDE.md) or the [shareable PDF](output/pdf/DeadlineOS_Architecture_Guide.pdf).
 
 See [the presentation walkthrough and screenshots](docs/DEMO.md) for a repeatable demonstration, architecture diagram, and current feature boundaries. See [launch and recovery procedures](docs/OPERATIONS.md) for App Check configuration, timetable replacement, complete paginated reporting, roster recovery, and real-device checks.
 

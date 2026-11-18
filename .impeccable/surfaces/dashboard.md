@@ -22,4 +22,6 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 ## Verification
 
+Report surfaces keep stable loading regions, explicit snapshot refresh, and 50-row UI pages. Local filters reuse the loaded dataset; server pagination remains explicit before full compliance export. System admin exposes report shortcuts and a Prepare 15-minute demo action with real setup phases, protected demo sign-ins and a 14-minute walkthrough. These additions inherit the dark Campus Quest system.
+
 One combined desktop/mobile inspection round, one corrective batch and one confirmation round. Preserve role workflows and verify navigation, editor disclosure, forms, response controls and accessibility with emulator/browser tests. Screenshots are synthetic browser captures, not generated illustrations.

@@ -1,0 +1,52 @@
+{
+  "preparationMs": 1839,
+  "presentationMinutes": 14,
+  "seededRecipients": 114,
+  "renderedRows": 50,
+  "initialReportRequests": 1,
+  "filterAdditionalRequests": 0,
+  "filterInteractionMs": 22,
+  "errors": [],
+  "timings": [
+    {
+      "operation": "activateMyAccount",
+      "status": 200,
+      "serverTiming": "startup;dur=0.0, auth;dur=1.2, rate-limit;dur=8.4, handler;dur=5.2, total;dur=14.9"
+    },
+    {
+      "operation": "activateMyAccount",
+      "status": 200,
+      "serverTiming": "startup;dur=0.0, auth;dur=1.3, rate-limit;dur=8.0, handler;dur=3.8, total;dur=13.2"
+    },
+    {
+      "operation": "prepareDemoData",
+      "status": 200,
+      "serverTiming": "startup;dur=0.0, auth;dur=1.4, rate-limit;dur=34.6, handler;dur=1572.1, total;dur=1608.6"
+    },
+    {
+      "operation": "getCurrentTaskCompliance",
+      "status": 200,
+      "serverTiming": "startup;dur=0.0, auth;dur=1.7, rate-limit;dur=29.7, handler;dur=34.8, total;dur=66.4"
+    },
+    {
+      "operation": "getCurrentTaskCompliance",
+      "status": 200,
+      "serverTiming": "startup;dur=0.0, auth;dur=1.2, rate-limit;dur=13.6, handler;dur=36.1, total;dur=51.1"
+    },
+    {
+      "operation": "getCurrentTaskCompliance",
+      "status": 200,
+      "serverTiming": "startup;dur=0.0, auth;dur=1.5, rate-limit;dur=30.6, handler;dur=20.2, total;dur=52.4"
+    },
+    {
+      "operation": "activateMyAccount",
+      "status": 200,
+      "serverTiming": "startup;dur=0.0, auth;dur=1.4, rate-limit;dur=13.7, handler;dur=4.0, total;dur=19.3"
+    },
+    {
+      "operation": "getWingOpportunityReport",
+      "status": 200,
+      "serverTiming": "startup;dur=0.0, auth;dur=2.2, rate-limit;dur=24.7, handler;dur=33.2, total;dur=60.3"
+    }
+  ]
+}

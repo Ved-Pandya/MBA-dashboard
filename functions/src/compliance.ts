@@ -61,6 +61,7 @@ export const getCurrentTaskCompliance = onCall({ ...callableOptions, timeoutSeco
     const input = z.object({
       itemKey: z.string().max(250).optional(), cursor: z.string().max(1500).optional(),
       catalogCursors: z.record(z.string().max(1500)).optional(), rowsOnly: z.boolean().optional().default(false),
+      catalogOnly: z.boolean().optional().default(false),
     }).parse(request.data ?? {});
     const definitions = [
       { kind: "deadline", collection: "tasks", statuses: ["published"], responseCollection: "taskAssignments", foreignKey: "taskId" },
@@ -69,17 +70,32 @@ export const getCurrentTaskCompliance = onCall({ ...callableOptions, timeoutSeco
       { kind: "session", collection: "sessionIntimations", statuses: ["published"], responseCollection: "sessionResponses", foreignKey: "sessionId" },
       { kind: "poll", collection: "generalPolls", statuses: ["published"], responseCollection: "pollResponses", foreignKey: "pollId" },
     ] as const;
+    const requestedDefinition = definitions.find((item) => input.itemKey?.startsWith(item.kind + ":"));
+    const requestedId = requestedDefinition && input.itemKey ? input.itemKey.slice(requestedDefinition.kind.length + 1) : undefined;
+    if (input.itemKey && (!requestedDefinition || !requestedId || requestedId.includes("/"))) throw new HttpsError("invalid-argument", "Select a valid compliance item");
+    const responseQuery = (definition: typeof definitions[number], id: string) => {
+      let query = db.collection(definition.responseCollection).where(definition.foreignKey, "==", id)
+        .orderBy(FieldPath.documentId()).limit(101)
+        .select(definition.foreignKey, "uid", "studentSnapshot", "sectionId", "wingId", "status", "completedLate", "registeredLate", "externalRegistration", "internalForm");
+      if (input.cursor) query = query.startAfter(input.cursor);
+      return query.get();
+    };
     const nextCatalogCursors: Record<string, string> = {};
-    const catalogs = await Promise.all(definitions.map(async (definition) => {
+    const [catalogs, requestedSelected, requestedResponses] = await Promise.all([
+    Promise.all(definitions.map(async (definition) => {
       if (input.rowsOnly || input.catalogCursors?.[definition.kind] === "") return { docs: [] as FirebaseFirestore.QueryDocumentSnapshot[] };
-      let query = db.collection(definition.collection).where("status", "in", [...definition.statuses]).orderBy(FieldPath.documentId()).limit(51);
+      let query = db.collection(definition.collection).where("status", "in", [...definition.statuses]).orderBy(FieldPath.documentId()).limit(51)
+        .select("status", "title", "question", "dueAt", "registrationDeadline", "responseDeadline", "closesAt", "target");
       const cursor = input.catalogCursors?.[definition.kind];
       if (cursor) query = query.startAfter(cursor);
       const snapshot = await query.get();
       const docs = snapshot.docs.slice(0, 50);
       nextCatalogCursors[definition.kind] = snapshot.size > 50 ? docs.at(-1)!.id : "";
       return { docs };
-    }));
+    })),
+    requestedDefinition && requestedId && !input.catalogOnly ? db.doc(`${requestedDefinition.collection}/${requestedId}`).get() : Promise.resolve(null),
+    requestedDefinition && requestedId && !input.catalogOnly ? responseQuery(requestedDefinition, requestedId) : Promise.resolve(null),
+    ]);
     const [tasks = { docs: [] }, competitions = { docs: [] }, internships = { docs: [] }, sessions = { docs: [] }, polls = { docs: [] }] = catalogs;
 
     const items: ComplianceItem[] = [];
@@ -118,12 +134,11 @@ export const getCurrentTaskCompliance = onCall({ ...callableOptions, timeoutSeco
     if (input.itemKey && (!definition || !id || id.includes("/"))) throw new HttpsError("invalid-argument", "Select a valid compliance item");
     let responseDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
     let nextCursor: string | null = null;
-    if (definition && id) {
-      const selected = await db.collection(definition.collection).doc(id).get();
+    if (definition && id && !input.catalogOnly) {
+      const selected = requestedSelected ?? catalogs[definitions.indexOf(definition)]?.docs.find((doc) => doc.id === id);
+      if (!selected) throw new HttpsError("failed-precondition", "This item is no longer ongoing. Refresh the current task list.");
       if (!selected.exists || !(definition.statuses as readonly string[]).includes(String(selected.get("status")))) throw new HttpsError("failed-precondition", "This item is no longer ongoing. Refresh the current task list.");
-      let query = db.collection(definition.responseCollection).where(definition.foreignKey, "==", id).orderBy(FieldPath.documentId()).limit(101);
-      if (input.cursor) query = query.startAfter(input.cursor);
-      const snapshot = await query.get();
+      const snapshot = requestedResponses ?? await responseQuery(definition, id);
       responseDocs = snapshot.docs.slice(0, 100);
       if (snapshot.size > 100) nextCursor = responseDocs.at(-1)!.id;
       itemKeys.add(selectedKey!);

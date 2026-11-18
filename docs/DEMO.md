@@ -2,9 +2,13 @@
 
 DeadlineOS coordinates academic dates, administrative forms, opportunities and batch responses for an MBA cohort. Its main technical story is the lifecycle of an obligation: a scoped manager publishes it, the right student receives it, and an authorized representative reviews the response.
 
+## Full presentation
+
+Use [the full feature runbook](PRESENTATION_RUNBOOK.md) for the 14-minute quick path and longer reference order, exact sample records, expected outcomes and cleanup boundaries. The same ten-step checklist is built into System admin.
+
 ## Prepare a repeatable demonstration
 
-Use a dedicated demo Firebase project or the local emulators. From System admin, expand Demo identities and migrations, then create/reset the three test accounts and seed mock data. Passwords are generated in the administrator's browser; use separate browser profiles for Student, Subject POC and CR. Assign an additional disposable Wing POC from POC Setup for the wing-form demonstration. Never use a real roster for a portfolio demo.
+Use a dedicated demo Firebase project or the local emulators. From System admin, use Presentation workspace > Prepare 15-minute demo. Copy the generated credentials and open separate browser profiles for Student, Subject POC, Wing A POC and CR. The two Section B identities demonstrate section scope and placement eligibility. Refreshing the seed preserves existing passwords; password reset is a separate explicit action. Never use a real roster for a portfolio demo.
 
 The automated browser fixtures are also entirely synthetic. They exercise Student, Wing POC, CR and Admin accounts on desktop and mobile. Run `npm run test:emulators` after installing the Playwright browser with `npx playwright install chromium`.
 

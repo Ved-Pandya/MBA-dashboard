@@ -679,15 +679,20 @@ export const getWingOpportunityReport = onCall(callableOptions, async (request) 
     const wingId = input.wingId ?? actor.wingId;
     if (!actor.roles.systemAdmin && !actor.roles.cr && actor.scopes.wingPocWings[wingId] !== true) throw new HttpsError("permission-denied", "Wing report is outside your scope");
     const canSeePrivatePlacementStatus = actor.roles.systemAdmin || actor.roles.cr;
-    const [competitionResponses, internshipResponses, competitions, internships] = await Promise.all([
-      db.collection("opportunityResponses").where("wingId", "==", wingId).limit(2_000).get(),
-      db.collection("internshipResponses").where("wingId", "==", wingId).limit(2_000).get(),
-      db.collection("competitions").limit(500).get(),
-      db.collection("internships").limit(500).get(),
-    ]);
-    const filterId = input.opportunityId;
     const includeCompetitions = input.opportunityKind !== "internship";
     const includeInternships = input.opportunityKind !== "competition";
+    function responseQuery(collection: string, foreignKey: string) {
+      let query = db.collection(collection).where("wingId", "==", wingId);
+      if (input.opportunityId) query = query.where(foreignKey, "==", input.opportunityId);
+      return query.limit(2_000).select("uid", "status", foreignKey, "registeredLate", "externalRegistration", "internalForm", "studentSnapshot").get();
+    }
+    const [competitionResponses, internshipResponses, competitions, internships] = await Promise.all([
+      includeCompetitions ? responseQuery("opportunityResponses", "opportunityId") : Promise.resolve({ docs: [] }),
+      includeInternships ? responseQuery("internshipResponses", "internshipId") : Promise.resolve({ docs: [] }),
+      includeCompetitions ? db.collection("competitions").limit(500).select("title", "status").get() : Promise.resolve({ docs: [] }),
+      includeInternships ? db.collection("internships").limit(500).select("title", "company", "role", "status").get() : Promise.resolve({ docs: [] }),
+    ]);
+    const filterId = input.opportunityId;
     return {
       wingId,
       opportunityKind: input.opportunityKind,

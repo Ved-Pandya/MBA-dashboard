@@ -36,6 +36,21 @@ export async function callFunction<TInput, TOutput>(name: string, input: TInput)
   return payload.data as TOutput;
 }
 
+const pendingReads = new Map<string, Promise<unknown>>();
+
+/** Share identical concurrent report reads, including Strict Mode's repeated mount.
+ * Results are not retained here or persisted across signed-in sessions. */
+export function readReport<TInput, TOutput>(name: "getWingOpportunityReport" | "getCurrentTaskCompliance", input: TInput): Promise<TOutput> {
+  const uid = getFirebase().auth.currentUser?.uid;
+  if (!uid) return Promise.reject(new Error("Sign in is required"));
+  const key = `${uid}:${name}:${JSON.stringify(input)}`;
+  const pending = pendingReads.get(key);
+  if (pending) return pending as Promise<TOutput>;
+  const request = callFunction<TInput, TOutput>(name, input).finally(() => { pendingReads.delete(key); });
+  pendingReads.set(key, request);
+  return request;
+}
+
 export function readableError(error: unknown) {
   if (error instanceof Error) return error.message.replace(/^Firebase:\s*/i, "");
   return "Something went wrong. Please try again.";

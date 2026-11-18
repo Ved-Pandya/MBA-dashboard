@@ -96,6 +96,8 @@ export const assignPoc = onCall(callableOptions, async (request) => {
       tx.set(assignmentRef, {
         kind: input.kind, scopeId: input.scopeId, uid: input.uid, seat: input.kind === "subject" ? input.seat : 1, active: true,
         assignedBy: actor.uid, assignedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+        ...(assignment.get("isTestData") === true ? { isTestData: true } : {}),
+        ...(assignment.get("demoSeedId") ? { demoSeedId: assignment.get("demoSeedId") } : {}),
       });
     });
     const seatSuffix = input.kind === "subject" ? `_seat${input.seat}` : "";

@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { initializeApp, getApps, deleteApp } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) throw new Error("Browser tests require emulators");
@@ -238,34 +238,132 @@ test("admin edits and cancels internships and preserves a failed competition for
 
 test("CR loads all response pages before exporting exact totals", async ({ page }, info) => {
   await login(page, "cr");
-  // Dev Strict Mode starts two initial loads. Hold the first response until
-  // the representative has selected a report, reproducing a slow-network race.
-  let firstLoad = true;
+  let held = false;
   let releaseStale: (() => Promise<void>) | undefined;
   await page.route("**/api/call/getCurrentTaskCompliance", async (route) => {
-    if (firstLoad) {
-      firstLoad = false;
-      releaseStale = () => route.fulfill({ json: { data: { items: [{ key: "deadline:stale", id: "stale", kind: "deadline", title: "Stale initial report", dueAtIso: "2027-01-01T00:00:00Z", scopeLabel: "Wing A" }], rows: [], generatedAtIso: "2026-11-15T00:00:00Z", selectedItemKey: "deadline:stale", nextCursor: null, nextCatalogCursors: {} } } });
+    const input = route.request().postDataJSON().data;
+    if (!held && input.itemKey === `deadline:${prefix}_open` && input.rowsOnly && !input.cursor) {
+      held = true;
+      const response = await route.fetch();
+      releaseStale = () => route.fulfill({ response });
       return;
     }
     await route.continue();
   });
   await page.goto("/?view=compliance");
   await expect(page.getByRole("heading", { name: "Current task compliance", exact: true })).toBeVisible();
-  await page.getByRole("combobox", { name: "Current task", exact: true }).selectOption(`deadline:${prefix}_open`);
-  await expect(page.getByRole("button", { name: "Load more students", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Export filtered CSV", exact: true })).toBeDisabled();
-  expect(releaseStale).toBeDefined();
-  const staleResponse = page.waitForResponse(async (response) => response.url().endsWith("/api/call/getCurrentTaskCompliance") && (await response.json()).data?.selectedItemKey === "deadline:stale");
+  const selection = page.getByRole("combobox", { name: "Current task", exact: true });
+  await expect(selection).toBeEnabled();
+  await selection.selectOption(`deadline:${prefix}_open`);
+  await expect.poll(() => Boolean(releaseStale)).toBe(true);
+  await selection.selectOption("deadline:ui_demo_directory");
+  await expect(page.locator(".report-records").first()).toHaveAttribute("aria-busy", "false");
+  const staleResponse = page.waitForResponse(response => response.url().endsWith("/api/call/getCurrentTaskCompliance") && response.request().postDataJSON().data.itemKey === `deadline:${prefix}_open`);
   await releaseStale!();
   await staleResponse;
-  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  await expect(page.getByRole("combobox", { name: "Current task", exact: true })).toHaveValue(`deadline:${prefix}_open`);
+  await expect(selection).toHaveValue("deadline:ui_demo_directory");
+  await selection.selectOption(`deadline:${prefix}_open`);
+  await expect(page.getByRole("button", { name: "Load more students", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Export filtered CSV", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Load more students", exact: true }).click();
   await expect(page.getByRole("button", { name: "Load more students", exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Wing breakdown", exact: true })).toBeVisible();
+  await expect(page.locator(".report-records").first().locator("tbody tr")).toHaveCount(50);
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export filtered CSV", exact: true }).click();
-  expect((await download).suggestedFilename()).toBe("current-task-compliance.csv");
+  const exported = await download;
+  expect(exported.suggestedFilename()).toBe("current-task-compliance.csv");
+  expect(readFileSync((await exported.path())!, "utf8").trim().split(/\r?\n/)).toHaveLength(116);
   await page.screenshot({ path: resolve(`../../docs/screenshots/compliance-${info.project.name}.png`) });
+});
+
+test("opportunity filters reuse one report and ignore a late wing response", async ({ page }) => {
+  await login(page, "admin");
+  let requests = 0;
+  let releaseWing: (() => Promise<void>) | undefined;
+  await page.route("**/api/call/getWingOpportunityReport", async (route) => {
+    requests++;
+    if (route.request().postDataJSON().data.wingId === "B") {
+      releaseWing = () => route.fulfill({ json: { data: { wingId: "B", opportunityKind: "all", opportunityId: null, competitions: [], internships: [], competitionResponses: [], internshipResponses: [] } } });
+      return;
+    }
+    await route.continue();
+  });
+  await page.goto("/?view=reports");
+  const records = page.locator(".report-records");
+  await expect(records).toHaveAttribute("aria-busy", "false");
+  expect(requests).toBe(1);
+  await page.getByRole("combobox", { name: "Opportunity type", exact: true }).selectOption("competition");
+  await page.getByRole("combobox", { name: "Opportunity", exact: true }).selectOption("ui_demo_case");
+  await expect(records).toContainText("National Strategy Challenge");
+  expect(requests).toBe(1);
+  console.info("Report request check: one initial request, zero additional requests for type/opportunity filters.");
+  await page.getByRole("combobox", { name: "Wing", exact: true }).selectOption("B");
+  await expect.poll(() => Boolean(releaseWing)).toBe(true);
+  await page.getByRole("combobox", { name: "Wing", exact: true }).selectOption("A");
+  await expect(records).toHaveAttribute("aria-busy", "false");
+  const late = page.waitForResponse(response => response.url().endsWith("/api/call/getWingOpportunityReport") && response.request().postDataJSON().data.wingId === "B");
+  await releaseWing!(); await late;
+  await expect(page.getByRole("combobox", { name: "Wing", exact: true })).toHaveValue("A");
+  await expect(records).toContainText("National Strategy Challenge");
+  const refreshed = page.waitForResponse(response => response.url().endsWith("/api/call/getWingOpportunityReport") && response.request().postDataJSON().data.wingId === "A");
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  const response = await refreshed;
+  expect(response.headers()["server-timing"]).toContain("handler;dur=");
+  expect(response.headers()["cache-control"]).toBe("private, no-store");
+  expect(requests).toBe(3);
+});
+
+test("System admin injects a complete presentation workspace and preserves demo passwords on refresh", async ({ page, browser }, info) => {
+  test.setTimeout(120_000);
+  await login(page, "admin"); await page.goto("/?view=admin");
+  await expect(page.getByRole("heading", { name: "Presentation workspace", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Prepare 15-minute demo", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Preparing sample data…", exact: true })).toBeDisabled();
+  await expect(page.getByLabel("Sample data summary")).toContainText("114", { timeout: 60_000 });
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Reset demo passwords", exact: true }).click();
+  const credentials = page.getByRole("region", { name: "Demo sign-in credentials", exact: true });
+  await expect(credentials.locator("tbody tr")).toHaveCount(6, { timeout: 60_000 });
+  const studentPassword = await credentials.locator("tbody tr").filter({ hasText: "24M2901" }).locator("td").nth(2).innerText();
+  await page.getByRole("button", { name: "Hide passwords", exact: true }).click();
+  await page.getByRole("button", { name: "Prepare 15-minute demo", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Existing demo passwords still work" })).toBeVisible({ timeout: 60_000 });
+  await expect(credentials).toHaveCount(0);
+  await page.locator(".demo-instructions > summary").click();
+  await expect(page.locator(".demo-presentation-order > li")).toHaveCount(10);
+  await expect(page.locator(".demo-duration")).toHaveText("14-minute presentation plan");
+  await page.evaluate(() => { window.scrollTo(0, 0); (document.activeElement as HTMLElement)?.blur(); });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: resolve(`../../docs/screenshots/demo-admin-${info.project.name}.png`) });
+
+  const context = await browser.newContext();
+  try {
+    const student = await context.newPage();
+    await student.goto(new URL("/", page.url()).href);
+    await student.getByLabel("Roll number").fill("24M2901");
+    await student.getByLabel("Password", { exact: true }).fill(studentPassword);
+    await student.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(student.locator(".app-shell")).toBeVisible();
+    const task = student.locator(".task-row").filter({ hasText: "Demo placement preference form" });
+    const opened = student.waitForEvent("popup");
+    await task.getByRole("link", { name: "Open form", exact: false }).click();
+    const formPage = await opened;
+    await expect(formPage.getByRole("heading", { name: "Demo placement preference form", exact: true })).toBeVisible();
+    await formPage.getByLabel("Fictional name").fill("Example Student");
+    await formPage.getByRole("checkbox").check();
+    await formPage.getByRole("button", { name: "Simulate submission", exact: true }).click();
+    await expect(formPage.getByRole("status")).toContainText("No information was sent or saved");
+    await formPage.close();
+    await task.getByRole("button", { name: "Mark complete: Demo placement preference form", exact: true }).click();
+    await expect(task).toHaveCount(0);
+    await student.goto(new URL("/?view=opportunities", page.url()).href);
+    const partial = student.locator(".opportunity-card").filter({ hasText: "Demo Social Impact Challenge" });
+    await partial.getByRole("button", { name: "Confirm internal", exact: true }).click();
+    await expect(partial.getByRole("button", { name: "Internal confirmed", exact: true })).toBeVisible();
+  } finally { await context.close(); }
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Remove sample data", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "sample records removed" })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByLabel("Sample data summary")).toHaveCount(0);
 });
