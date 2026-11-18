@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
+import { demoMetadata } from "./demo-metadata.js";
 import { isGroomingPoc, pollDraftFieldsSchema, pollDraftSchema, pollResponseSchema, type UserProfile } from "@mba/domain";
 import { db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, writeAudit } from "./helpers.js";
@@ -58,7 +59,7 @@ export const publishGeneralPoll = onCall({ ...callableOptions, timeoutSeconds: 1
       writer.set(db.doc(`users/${student.id}/notifications/poll_published_${pollId}`), { type: "poll_published", title: "New batch poll", body: String(poll.get("question")), pollId, createdAt: FieldValue.serverTimestamp(), readAt: null }, { merge: true });
     }
     writer.update(ref, { status: "published", publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-    writer.set(db.doc(`pollStats/${pollId}`), { eligibleCount: students.length, responseCount: 0, noResponseCount: students.length, optionCounts: {}, updatedAt: FieldValue.serverTimestamp() });
+    writer.set(db.doc(`pollStats/${pollId}`), { ...demoMetadata(poll.data()), eligibleCount: students.length, responseCount: 0, noResponseCount: students.length, optionCounts: {}, updatedAt: FieldValue.serverTimestamp() });
     await writer.close(); await writeAudit({ actorUid: actor.uid, action: "poll.published", resourceType: "generalPoll", resourceId: pollId, after: { recipients: students.length } });
     return { pollId, recipientCount: students.length };
   } catch (error) { asHttpsError(error); }

@@ -2,7 +2,8 @@ import type { CallableFunction } from "firebase-functions/v2/https";
 import { notificationCopy, type ReminderStage } from "@mba/domain";
 import { activateMyAccount } from "./account.js";
 import { createTestAccounts } from "./test-accounts.js";
-import { clearTestData, seedTestData, prepareDemoData } from "./test-data.js";
+import { clearTestData, seedTestData, prepareDemoData, resetDemoPasswords } from "./test-data.js";
+import { demoMetadata } from "./demo-metadata.js";
 import { initializeAppConfig, saveSubjectOffering } from "./catalog.js";
 import { getComplianceExport, markNotificationsRead, reopenMyCompletion, setMyCompletion, setTaskExemption } from "./completion.js";
 import { getCurrentTaskCompliance } from "./compliance.js";
@@ -33,6 +34,7 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   createTestAccounts,
   seedTestData,
   prepareDemoData,
+  resetDemoPasswords,
   clearTestData,
   initializeAppConfig,
   saveSubjectOffering,
@@ -581,6 +583,7 @@ async function reconcileStats() {
     const counts = { pending: 0, completed: 0, exempt: 0 };
     assignments.docs.forEach((doc) => { counts[doc.get("status") as keyof typeof counts] += 1; });
     writer.set(db.doc(`taskStats/${task.id}`), {
+      ...demoMetadata(task.data()),
       eligibleCount: assignments.size,
       pendingCount: counts.pending,
       completedCount: counts.completed,
@@ -607,17 +610,17 @@ async function reconcileOpportunityStats() {
     ]);
     const statuses = { no_response: 0, team_draft: 0, registered: 0, not_participating: 0 };
     responses.docs.forEach((doc) => { const key = String(doc.get("status")) as keyof typeof statuses; if (key in statuses) statuses[key] += 1; });
-    writer.set(db.doc(`competitionStats/${competition.id}`), { ...statuses, responseCount: responses.size, draftTeamCount: teams.docs.filter((doc) => doc.get("status") === "draft").length, registeredTeamCount: teams.docs.filter((doc) => doc.get("status") === "registered").length, reconciledAt: FieldValue.serverTimestamp() });
+    writer.set(db.doc(`competitionStats/${competition.id}`), { ...demoMetadata(competition.data()), ...statuses, responseCount: responses.size, draftTeamCount: teams.docs.filter((doc) => doc.get("status") === "draft").length, registeredTeamCount: teams.docs.filter((doc) => doc.get("status") === "registered").length, reconciledAt: FieldValue.serverTimestamp() });
   }
   for (const internship of internships.docs) {
     const responses = await db.collection("internshipResponses").where("internshipId", "==", internship.id).get();
     const statuses = { no_response: 0, registered: 0, not_participating: 0, notApplicablePlaced: 0, lateRegistered: 0 };
     responses.docs.forEach((doc) => { const key = String(doc.get("status")); if (key === "no_response" || key === "registered" || key === "not_participating") statuses[key] += 1; if (key === "not_applicable_placed") statuses.notApplicablePlaced += 1; if (doc.get("registeredLate") === true) statuses.lateRegistered += 1; });
-    writer.set(db.doc(`internshipStats/${internship.id}`), { ...statuses, eligibleCount: responses.size - statuses.notApplicablePlaced, responseCount: responses.size, reconciledAt: FieldValue.serverTimestamp() });
+    writer.set(db.doc(`internshipStats/${internship.id}`), { ...demoMetadata(internship.data()), ...statuses, eligibleCount: responses.size - statuses.notApplicablePlaced, responseCount: responses.size, reconciledAt: FieldValue.serverTimestamp() });
   }
   for (const round of rounds.docs) {
     const entries = await db.collection("competitionRoundEntries").where("roundId", "==", round.id).get();
-    writer.set(db.doc(`competitionRoundStats/${round.id}`), { eligibleTeamCount: entries.size, pendingTeamCount: entries.docs.filter((doc) => doc.get("submissionStatus") === "pending").length, submittedTeamCount: entries.docs.filter((doc) => doc.get("submissionStatus") === "submitted").length, lateTeamCount: entries.docs.filter((doc) => doc.get("submittedLate") === true).length, reconciledAt: FieldValue.serverTimestamp() });
+    writer.set(db.doc(`competitionRoundStats/${round.id}`), { ...demoMetadata(round.data()), eligibleTeamCount: entries.size, pendingTeamCount: entries.docs.filter((doc) => doc.get("submissionStatus") === "pending").length, submittedTeamCount: entries.docs.filter((doc) => doc.get("submissionStatus") === "submitted").length, lateTeamCount: entries.docs.filter((doc) => doc.get("submittedLate") === true).length, reconciledAt: FieldValue.serverTimestamp() });
   }
   await writer.close();
   return competitions.size + internships.size + rounds.size;

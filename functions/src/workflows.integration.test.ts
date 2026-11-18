@@ -262,9 +262,19 @@ suite("privileged workflows against real emulators", () => {
 
   it("refreshes demo responses while preserving passwords and supports an explicit password reset",async()=>{
     const student=await firebase.adminAuth.getUserByEmail('24m2901@users.deadlineos.app');
+    const { runSparkMaintenance } = await import('./spark-adapter.js');
+    await runSparkMaintenance('daily');
+    const counters = ['taskStats/demo_wing_form', 'competitionStats/demo_case_open', 'internshipStats/demo_internship'];
+    for (const path of counters) {
+      const ref = firebase.db.doc(path), stats = await ref.get();
+      expect(stats.get('demoSeedId')).toBe('mock_v1');
+      // Reproduce statistics written by the old maintenance implementation.
+      await ref.update({ demoSeedId: firebase.FieldValue.delete(), isTestData: firebase.FieldValue.delete() });
+    }
     await firebase.db.doc('taskAssignments/demo_wing_form_'+student.uid).update({status:'completed'});
     const result=await call(demo.prepareDemoData,'admin',{origin:'http://127.0.0.1:3100'});
     expect(result.credentials).toEqual([]);
+    for (const path of counters) expect((await firebase.db.doc(path).get()).get('demoSeedId')).toBe('mock_v1');
     expect((await firebase.db.doc('taskAssignments/demo_wing_form_'+student.uid).get()).get('status')).toBe('pending');
     const login=async(password:string)=>fetch('http://'+process.env.FIREBASE_AUTH_EMULATOR_HOST+'/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer owner'},body:JSON.stringify({targetProjectId:'demo-deadlineos-integration',email:'24m2901@users.deadlineos.app',password,returnSecureToken:true})});
     const governance=await import('./governance.js');
@@ -275,9 +285,31 @@ suite("privileged workflows against real emulators", () => {
     expect((await login(oldPassword)).ok).toBe(true);
     const reset=await call(demo.prepareDemoData,'admin',{origin:'http://127.0.0.1:3100',resetPasswords:true});
     expect(reset.credentials).toHaveLength(6);
+    demoCredentials = reset.credentials;
     expect((await login(oldPassword)).ok).toBe(false);
     expect((await login(reset.credentials.find((c:{rollNumber:string})=>c.rollNumber==='24M2901').password)).ok).toBe(true);
   },60_000);
+
+  it("resets only demo credentials even when a fixture counter has lost its tag", async () => {
+    await expect(call(demo.resetDemoPasswords, 'student', {})).rejects.toThrow('administrator');
+    const student = await firebase.adminAuth.getUserByEmail('24m2901@users.deadlineos.app');
+    const counter = firebase.db.doc('taskStats/demo_wing_form');
+    await counter.set({ eligibleCount: 99, pendingCount: 98, completedCount: 1 });
+    const assignment = firebase.db.doc('taskAssignments/demo_wing_form_'+student.uid);
+    await assignment.update({status: 'completed'});
+    const taskBefore = (await firebase.db.doc('tasks/demo_wing_form').get()).data();
+    const healthBefore = (await firebase.db.doc('systemHealth/demoData').get()).data();
+    const reset = await call(demo.resetDemoPasswords, 'admin', {});
+    expect(reset.credentials).toHaveLength(6);
+    expect((await counter.get()).data()).toEqual({ eligibleCount: 99, pendingCount: 98, completedCount: 1 });
+    expect((await assignment.get()).get('status')).toBe('completed');
+    expect((await firebase.db.doc('tasks/demo_wing_form').get()).data()).toEqual(taskBefore);
+    expect((await firebase.db.doc('systemHealth/demoData').get()).data()).toEqual(healthBefore);
+    const login = (password: string) => fetch('http://'+process.env.FIREBASE_AUTH_EMULATOR_HOST+'/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key', {method:'POST',headers:{'content-type':'application/json',authorization:'Bearer owner'},body:JSON.stringify({targetProjectId:'demo-deadlineos-integration',email:'24m2901@users.deadlineos.app',password,returnSecureToken:true})});
+    expect((await login(demoCredentials.find(c=>c.rollNumber==='24M2901')!.password)).ok).toBe(false);
+    expect((await login(reset.credentials.find((c:{rollNumber:string})=>c.rollNumber==='24M2901').password)).ok).toBe(true);
+    demoCredentials = reset.credentials;
+  }, 30_000);
 
   it("clears fixtures and derived delivery records without touching unrelated users or grants",async()=>{
     const student=await firebase.adminAuth.getUserByEmail('24m2901@users.deadlineos.app');
@@ -292,7 +324,7 @@ suite("privileged workflows against real emulators", () => {
     expect((await firebase.db.doc('users/'+ids.otherAdmin).get()).get('scopes.subjectPocOfferings.DEMO-FIN-A')).toBe(true);
     expect((await firebase.db.doc('academicEvents/real_event_to_keep').get()).exists).toBe(true);
     expect((await firebase.db.doc('pocAssignments/attendance_batch').get()).get('uid')).toBe(ids.otherAdmin);
-    for(const path of ['pushJobs/derived_demo_job','pushDeliveries/derived_demo_delivery','reminderDeliveries/demo_session_delivery','tasks/demo_wing_form'])expect((await firebase.db.doc(path).get()).exists).toBe(false);
+    for(const path of ['pushJobs/derived_demo_job','pushDeliveries/derived_demo_delivery','reminderDeliveries/demo_session_delivery','tasks/demo_wing_form','taskStats/demo_wing_form'])expect((await firebase.db.doc(path).get()).exists).toBe(false);
   },60_000);
 
   it("refuses occupied sample IDs, protected account collisions and overlapping setup",async()=>{
@@ -303,6 +335,7 @@ suite("privileged workflows against real emulators", () => {
     const protectedUser=await firebase.adminAuth.getUserByEmail('24m2906@users.deadlineos.app');
     await firebase.db.doc('users/'+protectedUser.uid).update({isTestAccount:false});
     await expect(call(demo.prepareDemoData,'admin',{})).rejects.toThrow('non-test identity');
+    await expect(call(demo.resetDemoPasswords,'admin',{})).rejects.toThrow('non-demo account');
     expect((await firebase.db.doc('users/'+protectedUser.uid).get()).get('isTestAccount')).toBe(false);
     await firebase.db.doc('users/'+protectedUser.uid).update({isTestAccount:true});
     await firebase.db.doc('users/'+protectedUser.uid).delete();

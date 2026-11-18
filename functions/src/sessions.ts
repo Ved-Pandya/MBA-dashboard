@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
+import { demoMetadata } from "./demo-metadata.js";
 import { buildCatchUpReminderSchedule, canManageSessions, sessionCorrectionSchema, sessionIntimationFieldsSchema, sessionIntimationSchema, sessionResponseSchema, type UserProfile } from "@mba/domain";
 import { db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, writeAudit } from "./helpers.js";
@@ -95,7 +96,7 @@ export const publishSessionIntimation = onCall({ ...callableOptions, timeoutSeco
       writer.set(db.doc(`users/${student.id}/notifications/session_published_${sessionId}`), { type: "session_published", title: String(session.get("title")), body: "Please confirm whether you will attend before the response deadline.", sessionId, createdAt: FieldValue.serverTimestamp(), readAt: null }, { merge: true });
     }
     writer.update(ref, { status: "published", publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-    writer.set(db.doc(`sessionStats/${sessionId}`), { eligibleCount: students.length, noResponseCount: students.length, attendingCount: 0, notAttendingCount: 0, updatedAt: FieldValue.serverTimestamp() });
+    writer.set(db.doc(`sessionStats/${sessionId}`), { ...demoMetadata(session.data()), eligibleCount: students.length, noResponseCount: students.length, attendingCount: 0, notAttendingCount: 0, updatedAt: FieldValue.serverTimestamp() });
     await writer.close();
     await createSessionReminderJobs(sessionId, String(session.get("title")), (session.get("responseDeadline") as Timestamp).toDate(), Number(session.get("scheduleVersion") ?? 1));
     await writeAudit({ actorUid: actor.uid, action: "session.published", resourceType: "sessionIntimation", resourceId: sessionId, after: { recipients: students.length } });

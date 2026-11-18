@@ -22,6 +22,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 ## Verification
 
+Focus sprints now begin at 25 minutes. Each departure from a running browser tab holds the countdown and adds one minute, once per departure; returning resumes it. Idle, paused and completed sprints are exempt. The rule and accumulated penalties are visible, and leaving Today resets this optional local timer. The dark blue focus surface, existing controls and reduced-motion behavior remain authoritative.
+
 Report surfaces keep stable loading regions, explicit snapshot refresh, and 50-row UI pages. Local filters reuse the loaded dataset; server pagination remains explicit before full compliance export. System admin exposes report shortcuts and a Prepare 15-minute demo action with real setup phases, protected demo sign-ins and a 14-minute walkthrough. These additions inherit the dark Campus Quest system.
 
 One combined desktop/mobile inspection round, one corrective batch and one confirmation round. Preserve role workflows and verify navigation, editor disclosure, forms, response controls and accessibility with emulator/browser tests. Screenshots are synthetic browser captures, not generated illustrations.

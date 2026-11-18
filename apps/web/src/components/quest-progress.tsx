@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useReducer, useState, type CSSProperties } from "react";
 import { AppIcon } from "./app-icon";
 import { questProgress } from "@/lib/quest";
+import { FOCUS_SECONDS, focusReducer, initialFocusState } from "@/lib/focus-sprint";
 
 export function QuestProgress({ completed, pending, loading, onStart, onReview }: {
   completed: number; pending: number; loading: boolean; onStart: () => void; onReview: () => void;
@@ -14,28 +15,28 @@ export function QuestProgress({ completed, pending, loading, onStart, onReview }
   </section>;
 }
 
-const SPRINT_SECONDS = 15 * 60;
-
 export function FocusSprint() {
-  const [remaining, setRemaining] = useState(SPRINT_SECONDS);
-  const [endsAt, setEndsAt] = useState<number | null>(null);
+  const [{ remaining, endsAt, away, penalties }, dispatch] = useReducer(focusReducer, initialFocusState);
   useEffect(() => {
     if (endsAt === null) return;
-    const tick = () => {
-      const seconds = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
-      setRemaining(seconds);
-      if (!seconds) setEndsAt(null);
-    };
+    const tick = () => dispatch({ type: "tick", now: Date.now() });
     tick();
     const interval = window.setInterval(tick, 1000);
-    document.addEventListener("visibilitychange", tick);
-    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", tick); };
+    return () => window.clearInterval(interval);
   }, [endsAt]);
-  function toggle() {
-    if (endsAt !== null) { setRemaining(Math.max(0, Math.ceil((endsAt - Date.now()) / 1000))); setEndsAt(null); }
-    else { const seconds = remaining || SPRINT_SECONDS; setRemaining(seconds); setEndsAt(Date.now() + seconds * 1000); }
-  }
-  return <section className={`focus-sprint ${endsAt !== null ? "is-running" : ""}`} aria-label="Focus sprint"><div className="focus-title"><AppIcon name="bolt" /><h2>Focus sprint</h2><span>15 min</span></div><p>One task. A little headspace.</p><div className="focus-controls"><span className="focus-time" role="timer" aria-label="Time remaining">{String(Math.floor(remaining / 60)).padStart(2, "0")}<span>:</span>{String(remaining % 60).padStart(2, "0")}</span><button className="focus-toggle" onClick={toggle} aria-label={endsAt !== null ? "Pause focus sprint" : remaining === 0 ? "Start another focus sprint" : "Start focus sprint"}><AppIcon name={endsAt !== null ? "pause" : "play"} /></button><button className="focus-reset" aria-label="Reset focus sprint" onClick={() => { setEndsAt(null); setRemaining(SPRINT_SECONDS); }}><AppIcon name="reset" /></button></div><p className="focus-status" role="status">{remaining === 0 ? "Sprint complete. Take a breather. You earned it." : endsAt !== null ? "You’ve got this. Keep going." : remaining < SPRINT_SECONDS ? "Paused. Ready when you are." : "Start a timer while you work. Stay on this page."}</p></section>;
+  useEffect(() => {
+    const visibility = () => dispatch({ type: document.hidden ? "hidden" : "visible", now: Date.now() });
+    document.addEventListener("visibilitychange", visibility);
+    return () => document.removeEventListener("visibilitychange", visibility);
+  }, []);
+  const running = endsAt !== null || away;
+  return <section className={`focus-sprint ${running ? "is-running" : ""}`} aria-label="Focus sprint">
+    <div className="focus-title"><AppIcon name="bolt" /><h2>Focus sprint</h2><span>25 min</span></div>
+    <p>One task. A little headspace.</p>
+    <div className="focus-controls"><span className="focus-time" role="timer" aria-label="Time remaining">{String(Math.floor(remaining / 60)).padStart(2, "0")}<span>:</span>{String(remaining % 60).padStart(2, "0")}</span><button className="focus-toggle" onClick={() => dispatch({ type: "toggle", now: Date.now() })} aria-label={running ? "Pause focus sprint" : remaining === 0 ? "Start another focus sprint" : "Start focus sprint"}><AppIcon name={running ? "pause" : "play"} /></button><button className="focus-reset" aria-label="Reset focus sprint" onClick={() => dispatch({ type: "reset", now: Date.now() })}><AppIcon name="reset" /></button></div>
+    <p className="focus-rule">Switching tabs adds 1 minute. Time away does not count. Pause first to take a break.</p>
+    <p className="focus-status" role="status">{remaining === 0 ? "Sprint complete. Take a breather. You earned it." : away ? "Sprint held while you are away." : endsAt !== null ? "You’ve got this. Keep going." : remaining !== FOCUS_SECONDS ? "Paused. Ready when you are." : "Start a timer while you work. Leaving Today resets it."}{penalties > 0 && <span className="focus-penalty">{penalties} {penalties === 1 ? "tab switch" : "tab switches"} · +{penalties} {penalties === 1 ? "minute" : "minutes"} added</span>}</p>
+  </section>;
 }
 
 export function QuestCelebration({ message, earned, onDismiss }: { message: string; earned: boolean; onDismiss: () => void }) {

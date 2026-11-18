@@ -3,7 +3,8 @@ import { z } from "zod";
 import { DEMO_ACCOUNTS, DEMO_SEED_ID, rollNumberToAuthEmail, type DemoSummary } from "@mba/domain";
 import { adminAuth, db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, requireAdmin, writeAudit, type Actor } from "./helpers.js";
-import { ensureDemoAccounts } from "./test-accounts.js";
+import { ensureDemoAccounts, resetDemoAccountPasswords } from "./test-accounts.js";
+import { DEMO_STATS_SOURCES } from "./demo-metadata.js";
 import { buildDemoFixtures, DEMO_OFFERING_IDS, type DemoIdentity } from "./demo-fixtures.js";
 
 const inputSchema = z.object({ origin: z.string().url().optional(), resetPasswords: z.boolean().optional().default(false) });
@@ -27,7 +28,7 @@ async function demoIdentities(): Promise<DemoIdentity[]> {
 }
 
 /** Prevent two administrator tabs from clearing and seeding over each other. */
-async function withDemoLease<T>(actor: Actor, work: () => Promise<T>) {
+async function withDemoLease<T>(actor: Actor, work: () => Promise<T>, updateDemoHealth = true) {
   const ref = db.doc("operations/demo_seed");
   const lease = `${actor.uid}_${Date.now()}_${Math.random()}`;
   await db.runTransaction(async (tx) => {
@@ -36,7 +37,7 @@ async function withDemoLease<T>(actor: Actor, work: () => Promise<T>) {
     tx.set(ref, { type: "demo_seed", status: "processing", actorUid: actor.uid, lease, leaseUntil: Timestamp.fromMillis(Date.now() + 240_000), updatedAt: FieldValue.serverTimestamp() });
   });
   try { const result = await work(); await ref.set({ status: "complete", leaseUntil: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }); return result; }
-  catch (error) { await ref.set({ status: "failed", leaseUntil: FieldValue.delete(), recovery: "Run Prepare 15-minute demo again to rebuild the tagged fixtures.", updatedAt: FieldValue.serverTimestamp() }, { merge: true }); await db.doc("systemHealth/demoData").set({ status: "failed", updatedAt: FieldValue.serverTimestamp() }, { merge: true }); throw error; }
+  catch (error) { await ref.set({ status: "failed", leaseUntil: FieldValue.delete(), recovery: "Retry the requested demo operation.", updatedAt: FieldValue.serverTimestamp() }, { merge: true }); if (updateDemoHealth) await db.doc("systemHealth/demoData").set({ status: "failed", updatedAt: FieldValue.serverTimestamp() }, { merge: true }); throw error; }
 }
 
 async function deleteDemoSeedRecords() {
@@ -44,6 +45,7 @@ async function deleteDemoSeedRecords() {
   const writes: Promise<unknown>[] = [], failures: unknown[] = [];
   const queue = (write: Promise<unknown>) => writes.push(write.catch((error) => { failures.push(error); }));
   const removed = new Set<string>();
+  const legacyStats: FirebaseFirestore.DocumentReference[] = [];
   const remove = (ref: FirebaseFirestore.DocumentReference) => { if (!removed.has(ref.path)) { removed.add(ref.path); queue(writer.delete(ref)); deleted++; } };
   const collections = [...DEMO_COLLECTIONS, "users"];
   for (let index = 0; index < collections.length; index += 8) {
@@ -52,9 +54,21 @@ async function deleteDemoSeedRecords() {
       for (const doc of docs.docs) {
         // Only report-only synthetic profiles are disposable. Sign-in profiles remain.
         if (collection === "users" && doc.get("isDemoRoster") !== true) continue;
+        if (doc.get("isTestData") === true) {
+          const statsCollection = Object.keys(DEMO_STATS_SOURCES).find((key) => DEMO_STATS_SOURCES[key] === collection);
+          if (statsCollection) legacyStats.push(db.doc(`${statsCollection}/${doc.id}`));
+        }
         remove(doc.ref);
       }
     }
+  }
+  // Older reconcilers dropped provenance. Only a tagged parent proves ownership;
+  // a demo-looking ID alone never permits deleting another record.
+  for (let index = 0; index < legacyStats.length; index += 150) {
+    const stats = await db.getAll(...legacyStats.slice(index, index + 150));
+    stats.forEach((stat) => {
+      if (stat.exists && stat.get("isTestData") !== false && (stat.get("demoSeedId") === undefined || stat.get("demoSeedId") === DEMO_SEED_ID)) remove(stat.ref);
+    });
   }
   for (const spec of DEMO_ACCOUNTS) {
     let account;
@@ -90,8 +104,13 @@ async function seed(actor: Actor, origin: string, identities: DemoIdentity[]) {
   // Fixed fixture IDs must never replace an unrelated document, even by accident.
   for (let i = 0; i < plan.records.length; i += 150) {
     const existing = await db.getAll(...plan.records.slice(i, i + 150).map((r) => db.doc(r.path)));
-    const collision = existing.find((doc) => doc.exists && doc.get("demoSeedId") !== DEMO_SEED_ID);
-    if (collision) throw new HttpsError("already-exists", `Sample ID ${collision.ref.path} is occupied by non-demo data. No sample records were replaced.`);
+    for (const doc of existing) {
+      if (!doc.exists || doc.get("demoSeedId") === DEMO_SEED_ID) continue;
+      const sourceCollection = DEMO_STATS_SOURCES[doc.ref.parent.id];
+      const source = sourceCollection && doc.get("demoSeedId") === undefined && doc.get("isTestData") !== false ? await db.doc(`${sourceCollection}/${doc.id}`).get() : null;
+      if (source?.get("demoSeedId") === DEMO_SEED_ID && source.get("isTestData") === true) continue;
+      throw new HttpsError("already-exists", `Sample ID ${doc.ref.path} is occupied by non-demo data. No sample records were replaced.`);
+    }
   }
   await db.doc("systemHealth/demoData").set({ status: "preparing", phase: "clearing", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   await deleteDemoSeedRecords();
@@ -141,10 +160,20 @@ export const prepareDemoData = onCall({ ...callableOptions, timeoutSeconds: 240 
     const input = inputSchema.parse(request.data ?? {}), origin = demoOrigin(input.origin);
     return await withDemoLease(actor, async (): Promise<DemoSummary> => {
       await db.doc("systemHealth/demoData").set({ status: "preparing", phase: "accounts", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      const { credentials, accounts } = await ensureDemoAccounts(actor, input.resetPasswords);
+      const prepared = await ensureDemoAccounts(actor);
+      const { accounts } = prepared;
       const plan = await seed(actor, origin, accounts);
+      const credentials = input.resetPasswords ? (await resetDemoAccountPasswords(actor)).credentials : prepared.credentials;
       return { seedId: DEMO_SEED_ID, generatedAt: plan.generatedAt, reminderAt: plan.reminderAt, counts: plan.counts, accounts: DEMO_ACCOUNTS.map(({ role, rollNumber }) => ({ role, rollNumber })), credentials };
     });
+  } catch (error) { asHttpsError(error); }
+});
+
+/** Reset credentials without clearing, rebuilding or validating sample fixtures. */
+export const resetDemoPasswords = onCall(callableOptions, async (request) => {
+  try {
+    const actor = await requireActor(request); requireAdmin(actor);
+    return await withDemoLease(actor, () => resetDemoAccountPasswords(actor), false);
   } catch (error) { asHttpsError(error); }
 });
 

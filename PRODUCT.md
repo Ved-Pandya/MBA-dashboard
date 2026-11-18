@@ -22,7 +22,7 @@ Frequent mobile use between classes, with involved publishing/reporting on large
 
 Preserve Firebase authentication, additive role permissions, server-only mutations, wing forms, academic calendar, competition confirmations, internship responses, placement sessions, polls, POC setup, CR Board, reports, private placement status, timetable import, notifications and PWA installation. Academic events are informational; wing forms have completion and timed reminders. Push delivery requires deployed HTTPS and supported devices.
 
-Campus Quest derives 25 XP from each currently saved deadline completion and advances a level every five. Reopening lowers derived progress; toggling cannot accumulate extra XP. The optional 15-minute focus sprint is local to mounted Today and does not award XP. Confirmation follows successful server mutations; failures retain recovery feedback. These features support actual obligations and do not replace submission/response workflows.
+Campus Quest derives 25 XP from each currently saved deadline completion and advances a level every five. Reopening lowers derived progress; toggling cannot accumulate extra XP. The optional 25-minute focus sprint is local to mounted Today and does not award XP. Hiding the tab during a running sprint freezes its countdown and adds one minute once per departure; returning resumes it. Paused and completed sprints do not incur penalties. Confirmation follows successful server mutations; failures retain recovery feedback. These features support actual obligations and do not replace submission/response workflows.
 
 ## Brand Commitments
 

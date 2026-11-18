@@ -22,7 +22,9 @@ The owner confirmed production Firestore is in Mumbai (`asia-south1`); `apps/web
 
 Use **System admin → Presentation workspace → Prepare 15-minute demo**. Preparation creates six protected role sign-ins, coherent sample records across the app, 110 report-only students and a 114-recipient audit report. The inline plan totals 14 minutes, and its printable guide is linked from the same section.
 
-Preparation progress reflects the actual account, cleanup and write phases. Independent catalogue cleanup reads run in groups of eight; account preflight and creation run concurrently; validated account identities are reused. Refresh preserves existing passwords. Explicit password reset replaces them. The lease, collision checks, protected-account checks and tagged cleanup are retained. Use separate browser profiles to demonstrate different identities.
+Preparation progress reflects the actual account, cleanup and write phases. Independent catalogue cleanup reads run in groups of eight; account preflight and creation run concurrently; validated account identities are reused. Refresh preserves existing passwords. **Reset demo passwords** only rotates the six protected accounts through `resetDemoPasswords`; sample records, deadlines and responses stay unchanged. The legacy preparation flag rotates passwords after successful fixture preparation. The lease, collision checks, protected-account checks and tagged cleanup are retained. Use separate browser profiles to demonstrate different identities.
+
+Statistics reconciliation and publication preserve demo provenance from their source records. Preparation and cleanup can also recover older untagged counters when their parent is positively identified as a tagged demo source. A matching ID prefix alone is insufficient; unrelated records, explicitly non-demo counters and counters marked with another seed remain protected.
 
 ## Verification evidence
 

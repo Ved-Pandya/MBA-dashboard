@@ -157,7 +157,7 @@ button:active:not(:disabled),a.primary-button:active { transform:translateY(1px)
 .focus-title { display:flex; align-items:center; gap:8px; }
 .focus-title > svg { width:19px; height:19px; }
 .focus-title h2 { margin:0; font-size:17px; font-weight:650; }
-.focus-title > span { margin-left:auto; padding:2px 6px; border:1px solid #758caf; border-radius:4px; font-size:10px; }
+.focus-title > span { margin-left:auto; padding:2px 6px; border:1px solid #758caf; border-radius:4px; font-size:14px; }
 .focus-sprint > p { margin:7px 0 13px; color:var(--focus-muted); font-size:11px; }
 .focus-controls { display:flex; align-items:center; gap:8px; }
 .focus-time { margin-right:auto; font-size:40px; font-weight:600; line-height:1.2; letter-spacing:-.035em; font-variant-numeric:tabular-nums; }
@@ -170,6 +170,8 @@ button:active:not(:disabled),a.primary-button:active { transform:translateY(1px)
 .focus-toggle svg,.focus-reset svg { width:17px; height:17px; }
 .focus-sprint .focus-status { padding-top:11px; margin:11px 0 0; border-top:1px solid #506584; font-size:10px; line-height:1.5; }
 .focus-sprint.is-running { background:#293a53; }
+.focus-sprint .focus-rule, .focus-sprint .focus-status { font-size:14px; line-height:1.5; }
+.focus-penalty { display:block; margin-top:6px; color:var(--accent); font-weight:600; }
 .reply-desk,.academic-desk { border:0; margin:0; }
 .reply-desk .section-heading,.academic-desk .section-heading { padding-top:0; }
 .reply-row { padding:15px 0; }
@@ -348,7 +350,7 @@ th,.directory-list { border-color:var(--line); }
   .completion-note { font-size:11px; }
   .daybook-aside { display:flex; gap:28px; }
   .focus-sprint { order:2; }
-  .focus-sprint .focus-status { font-size:11px; }
+  .focus-sprint .focus-status { font-size:14px; }
   .focus-sprint > p { font-size:12px; }
   .focus-controls { max-width:320px; }
   .reply-row h3 { font-size:18px; }

@@ -3,6 +3,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { notificationCopy, type ReminderStage } from "@mba/domain";
 import { adminFunctions, db, FieldValue, Timestamp } from "./firebase.js";
+import { demoMetadata } from "./demo-metadata.js";
 
 const REGION = "asia-south1";
 
@@ -191,6 +192,7 @@ export const reconcileTaskStats = onSchedule(
       const counts = { pending: 0, completed: 0, exempt: 0 };
       assignments.docs.forEach((doc) => { counts[doc.get("status") as keyof typeof counts] += 1; });
       writer.set(db.doc(`taskStats/${task.id}`), {
+        ...demoMetadata(task.data()),
         eligibleCount: assignments.size,
         pendingCount: counts.pending,
         completedCount: counts.completed,

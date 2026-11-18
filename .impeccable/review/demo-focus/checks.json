@@ -1,0 +1,28 @@
+[
+  {
+    "name": "desktop",
+    "styles": {
+      "width": 294,
+      "ruleFont": "14px",
+      "ruleColor": "rgb(176, 196, 228)",
+      "background": "rgb(41, 58, 83)",
+      "statusFont": "14px",
+      "overflow": false,
+      "penalty": "1 tab switch · +1 minute added"
+    },
+    "errors": []
+  },
+  {
+    "name": "mobile",
+    "styles": {
+      "width": 358,
+      "ruleFont": "14px",
+      "ruleColor": "rgb(176, 196, 228)",
+      "background": "rgb(41, 58, 83)",
+      "statusFont": "14px",
+      "overflow": false,
+      "penalty": "1 tab switch · +1 minute added"
+    },
+    "errors": []
+  }
+]

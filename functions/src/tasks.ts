@@ -2,6 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { buildReminderSchedule, taskDraftSchema, type TaskTarget, type TaskType } from "@mba/domain";
 import { db, FieldValue, Timestamp } from "./firebase.js";
+import { demoMetadata } from "./demo-metadata.js";
 import { asHttpsError, callableOptions, requireActor, requireString, requireTaskManager, writeAudit, type Actor } from "./helpers.js";
 
 interface StoredTask {
@@ -247,7 +248,7 @@ export const publishTask = onCall({ ...callableOptions, timeoutSeconds: 120 }, a
         tx.set(db.doc(`users/${uid}/notifications/publish_${taskId}_${uid}`), { type: "task_published", title: "New deadline assigned", body: `${task.title} has been added to your dashboard.`, taskId, readAt: null, createdAt: FieldValue.serverTimestamp() });
       }
       for (const job of buildReminderSchedule(task.dueAt.toDate())) tx.set(db.doc(`reminderJobs/${taskId}_v${scheduleVersion}_${job.stage}`), { taskId, scheduleVersion, stage: job.stage, fireAt: Timestamp.fromDate(job.fireAt), status: "scheduled", attempts: 0, createdAt: FieldValue.serverTimestamp() });
-      tx.set(db.doc(`taskStats/${taskId}`), { eligibleCount: recipients.size, pendingCount, completedCount, exemptCount, updatedAt: FieldValue.serverTimestamp(), reconciledAt: FieldValue.serverTimestamp() });
+      tx.set(db.doc(`taskStats/${taskId}`), { ...demoMetadata(task), eligibleCount: recipients.size, pendingCount, completedCount, exemptCount, updatedAt: FieldValue.serverTimestamp(), reconciledAt: FieldValue.serverTimestamp() });
       tx.update(ref, { status: "published", audienceSyncStatus: "ready", audienceVersion, scheduleVersion, publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       tx.set(db.doc(`operations/publish_${taskId}`), { type: "publish", actorUid: actor.uid, taskId, status: "complete", processed: recipients.size, updatedAt: FieldValue.serverTimestamp() });
       tx.create(db.collection("auditEvents").doc(), { actorUid: actor.uid, action: "task.published", resourceType: "task", resourceId: taskId, after: { recipients: recipients.size }, createdAt: FieldValue.serverTimestamp() });

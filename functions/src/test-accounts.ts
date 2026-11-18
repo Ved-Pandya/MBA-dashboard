@@ -110,3 +110,27 @@ export const createTestAccounts = onCall(callableOptions, async (request) => {
   try { const actor = await requireActor(request); requireAdmin(actor); return await ensureDemoAccounts(actor, true); }
   catch (error) { asHttpsError(error); }
 });
+
+export async function resetDemoAccountPasswords(actor: Actor) {
+  // Validate all six identities before changing even one password.
+  const accounts = await Promise.all(DEMO_ACCOUNTS.map(async (spec) => {
+    let user;
+    try { user = await adminAuth.getUserByEmail(rollNumberToAuthEmail(spec.rollNumber)); }
+    catch (error) {
+      if ((error as { code?: string }).code === "auth/user-not-found") throw new HttpsError("failed-precondition", "Prepare the sample workspace before resetting its passwords.");
+      throw error;
+    }
+    const profile = await db.doc(`users/${user.uid}`).get();
+    if (profile.get("isTestAccount") !== true || profile.get("authEmail") !== rollNumberToAuthEmail(spec.rollNumber)) {
+      throw new HttpsError("already-exists", `${spec.rollNumber} belongs to a non-demo account. No demo passwords were changed.`);
+    }
+    return { uid: user.uid, spec };
+  }));
+  const credentials = await Promise.all(accounts.map(async ({ uid, spec }) => {
+    const password = generatePassword();
+    await adminAuth.updateUser(uid, { password });
+    return { role: spec.role, rollNumber: spec.rollNumber, password };
+  }));
+  await writeAudit({ actorUid: actor.uid, action: "test_accounts.passwords_reset", resourceType: "testAccounts", resourceId: "default", after: { rollNumbers: accounts.map(({ spec }) => spec.rollNumber) } });
+  return { credentials };
+}
