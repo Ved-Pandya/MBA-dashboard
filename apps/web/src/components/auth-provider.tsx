@@ -3,10 +3,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
 import { rollNumberToAuthEmail } from "@mba/domain";
-import { doc, onSnapshot } from "firebase/firestore";
 import type { Profile } from "@/lib/models";
-import { callFunction, readableError, authenticatedHeaders } from "@/lib/callable";
-import { firebaseConfigured, getFirebase } from "@/lib/firebase";
+import { loadSession, readableError, authenticatedHeaders } from "@/lib/callable";
+import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase-auth";
 
 interface AuthContextValue {
   user: User | null;
@@ -27,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!firebaseConfigured) return;
-    const { auth, db } = getFirebase();
+    const { auth } = getFirebaseAuth();
     let unsubscribeProfile: (() => void) | undefined;
     let generation = 0;
     const unsubscribeAuth = onAuthStateChanged(auth, async (nextUser) => {
@@ -42,21 +41,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(true);
       try {
-        await callFunction("activateMyAccount", {});
+        const session = await loadSession();
         if (current !== generation) return;
+        // The API already verified revocation, roster membership and activation.
+        // Start the dashboard now; its reads need not wait for another profile trip.
+        setProfile(session.profile);
+        setLoading(false);
+        const [{ getFirebase }, { doc, onSnapshot }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
+        if (current !== generation) return;
+        const { db } = getFirebase();
         unsubscribeProfile = onSnapshot(
           doc(db, "users", nextUser.uid),
           (snap) => {
-            setProfile(snap.exists() ? (snap.data() as Profile) : null);
-            setLoading(false);
+            if (current !== generation) return;
+            if (snap.metadata.fromCache) return;
+            const updated = snap.exists() ? snap.data() as Profile : null;
+            if (!updated || updated.status !== "active" || updated.authEmail.toLowerCase() !== nextUser.email?.toLowerCase()) {
+              setProfile(null);
+              setError("Your account is no longer active. Contact your administrator.");
+              return;
+            }
+            setProfile(updated);
           },
           (profileError) => {
-            setError(readableError(profileError));
-            setLoading(false);
+            if (current !== generation) return;
+            setProfile(null);
+            setError(profileError.code === "permission-denied" ? "Your account access has changed. Sign in again or contact your administrator." : readableError(profileError));
           },
         );
       } catch (activationError) {
         if (current !== generation) return;
+        setProfile(null);
         setError(readableError(activationError));
         setLoading(false);
       }
@@ -64,11 +79,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { generation++; unsubscribeAuth(); unsubscribeProfile?.(); };
   }, []);
 
+  const active = profile?.status === "active";
   useEffect(() => {
-    if (!user) return;
+    if (!user || !active) return;
     let stopped = false;
+    let lastAttempt = 0;
+    const readyAt = Date.now() + 10_000;
     const pulse = async () => {
-      if (stopped || document.visibilityState === "hidden") return;
+      if (stopped || document.visibilityState === "hidden" || Date.now() < readyAt || Date.now() - lastAttempt < 5 * 60_000) return;
+      lastAttempt = Date.now();
       try {
         await fetch("/api/maintenance/pulse", {
           method: "POST",
@@ -79,22 +98,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Maintenance is best-effort on Spark; ordinary app actions remain available.
       }
     };
-    void pulse();
+    // Scheduled maintenance remains independent; spare initial page reads this work.
+    const initial = window.setTimeout(() => void pulse(), 10_000);
     const interval = window.setInterval(() => void pulse(), 5 * 60_000);
     const onVisibilityChange = () => { if (document.visibilityState === "visible") void pulse(); };
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       stopped = true;
+      window.clearTimeout(initial);
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [user]);
+  }, [user, active]);
 
   const signIn = useCallback(async (rollNumber: string, password: string) => {
     setError(null);
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(getFirebase().auth, rollNumberToAuthEmail(rollNumber), password);
+      await signInWithEmailAndPassword(getFirebaseAuth().auth, rollNumberToAuthEmail(rollNumber), password);
     } catch (signInError) {
       setError(readableError(signInError));
       setLoading(false);
@@ -108,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Signing out still invalidates the local Push API endpoint even if server cleanup is unavailable.
     }
-    await signOut(getFirebase().auth);
+    await signOut(getFirebaseAuth().auth);
   }, []);
 
   const value = useMemo(() => ({ user, profile, loading, error, signIn, signOutUser }), [user, profile, loading, error, signIn, signOutUser]);

@@ -153,6 +153,39 @@ suite("privileged workflows against real emulators", () => {
     }
   });
 
+  it("loads a verified session without exposing extra fields and preserves account access checks", async () => {
+    const { loadSparkSession } = await import("./session.js");
+    await expect(loadSparkSession("")).rejects.toThrow("Sign in is required");
+    const sessionUid = `${uid}_session`;
+    const data = { ...profile("26M2891", "wing"), status: "invited", internalNote: "Do not return administrative fields" };
+    await firebase.adminAuth.createUser({ uid: sessionUid, email: data.authEmail, password });
+    const ref = firebase.db.doc(`users/${sessionUid}`);
+    await ref.set(data);
+    const response = await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key`, {
+      method: "POST", headers: { "content-type": "application/json", authorization: "Bearer owner" }, body: JSON.stringify({ targetProjectId: "demo-deadlineos-integration", email: data.authEmail, password, returnSecureToken: true }),
+    });
+    const { idToken } = await response.json() as { idToken: string };
+    expect(idToken).toBeTruthy();
+    const verify = vi.spyOn(firebase.adminAuth, "verifyIdToken");
+    try {
+      const session = await loadSparkSession(idToken);
+      expect(verify).toHaveBeenCalledWith(idToken, true);
+      expect(session.profile).toMatchObject({ status: "active", rollNumber: "26M2891", roles: data.roles });
+      expect(session.profile).not.toHaveProperty("internalNote");
+      expect((await ref.get()).get("status")).toBe("active");
+      await ref.update({ status: "suspended" });
+      await expect(loadSparkSession(idToken)).rejects.toThrow("suspended");
+      await ref.update({ status: "active", authEmail: "another@users.deadlineos.app" });
+      await expect(loadSparkSession(idToken)).rejects.toThrow("does not match");
+      await ref.delete();
+      await expect(loadSparkSession(idToken)).rejects.toThrow("not on the imported roster");
+      verify.mockRejectedValueOnce(new Error("Token has been revoked"));
+      await expect(loadSparkSession(idToken)).rejects.toThrow("revoked");
+      await firebase.db.doc(`apiRateLimits/${sessionUid}`).set({ minute: Math.floor(Date.now() / 60_000), count: 60 });
+      await expect(loadSparkSession(idToken)).rejects.toThrow("Too many requests");
+    } finally { verify.mockRestore(); }
+  }, 30_000);
+
   it("rejects unauthenticated calls and throttles repeated calls across the adapter", async () => {
     const { invokeSparkCallable } = await import("./spark-adapter.js");
     await expect(invokeSparkCallable("activateMyAccount", {}, "")).rejects.toThrow("Sign in is required");

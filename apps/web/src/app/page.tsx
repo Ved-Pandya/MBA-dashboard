@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { firebaseConfigured } from "@/lib/firebase";
+import { useEffect, useState, type FormEvent } from "react";
+import dynamic from "next/dynamic";
+import { firebaseConfigured } from "@/lib/firebase-auth";
 import { useAuth } from "@/components/auth-provider";
-import { Dashboard } from "@/components/dashboard";
 
 import { AppIcon, Brand } from "@/components/app-icon";
+
+function StartupScreen() {
+  return <main className="loading-page"><Brand /><div className="loader" /><p>Loading your command center…</p></main>;
+}
+const Dashboard = dynamic(() => import("@/components/dashboard").then((module) => module.Dashboard), { loading: StartupScreen });
 
 function Login() {
   const { signIn, loading, error } = useAuth();
@@ -26,6 +31,12 @@ function Login() {
 
 export default function Home() {
   const { user, profile, loading, error, signOutUser } = useAuth();
+  const uid = user?.uid;
+  useEffect(() => {
+    if (!uid) return;
+    // Fetch workspace code while the secure session check is in flight.
+    void Promise.all([import("@/components/dashboard"), import("@/lib/firebase"), import("firebase/firestore")]).catch(() => {});
+  }, [uid]);
   if (!firebaseConfigured) {
     return (
       <main className="setup-page">
@@ -37,7 +48,7 @@ export default function Home() {
       </main>
     );
   }
-  if (loading) return <main className="loading-page"><Brand /><div className="loader" /><p>Loading your command center…</p></main>;
+  if (loading) return <StartupScreen />;
   if (user && error) return <main className="loading-page"><Brand /><p className="form-error" role="alert">{error}</p><div className="form-actions"><button className="secondary-button" onClick={() => window.location.reload()}>Try again</button><button className="secondary-button" onClick={() => void signOutUser()}>Sign out</button></div></main>;
   if (!user || !profile) return <Login />;
   return <Dashboard />;

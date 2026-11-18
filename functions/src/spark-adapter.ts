@@ -6,7 +6,9 @@ import { clearTestData, seedTestData, prepareDemoData } from "./test-data.js";
 import { initializeAppConfig, saveSubjectOffering } from "./catalog.js";
 import { getComplianceExport, markNotificationsRead, reopenMyCompletion, setMyCompletion, setTaskExemption } from "./completion.js";
 import { getCurrentTaskCompliance } from "./compliance.js";
-import { adminAuth, adminAppCheck, db, FieldValue, Timestamp } from "./firebase.js";
+import { db, FieldValue, Timestamp } from "./firebase.js";
+import { enforceSparkRateLimit, verifySparkIdToken, verifySparkAppCheck } from "./spark-auth.js";
+export { verifySparkIdToken, verifySparkAppCheck } from "./spark-auth.js";
 import { HttpsError } from "firebase-functions/v2/https";
 import { commitRosterImport, updateRoleAssignments, validateRosterImport } from "./roster.js";
 import { getPlacementRoster, setPlacementStatus } from "./placements.js";
@@ -98,18 +100,6 @@ const callableHandlers: Record<string, CallableFunction<unknown, unknown>> = {
   migrateCompetitionConfirmations,
 };
 
-export async function verifySparkIdToken(idToken: string) {
-  if (!idToken) throw new HttpsError("unauthenticated", "Sign in is required");
-  return adminAuth.verifyIdToken(idToken, true);
-}
-
-export async function verifySparkAppCheck(token?: string) {
-  if (process.env.ENFORCE_APP_CHECK !== "true" || process.env.FIREBASE_AUTH_EMULATOR_HOST) return;
-  if (!token) throw new HttpsError("unauthenticated", "App verification is required. Reload the app and try again.");
-  try { await adminAppCheck.verifyToken(token); }
-  catch { throw new HttpsError("unauthenticated", "App verification expired. Reload the app and try again."); }
-}
-
 export async function verifySparkMaintenanceUser(idToken: string, appCheckToken?: string) {
   const token = await verifySparkIdToken(idToken);
   await verifySparkAppCheck(appCheckToken);
@@ -128,15 +118,8 @@ export async function invokeSparkCallable(name: string, data: unknown, idToken: 
   const [token] = await Promise.all([verifySparkIdToken(idToken), verifySparkAppCheck(appCheckToken)]);
   onTiming?.("auth", performance.now() - authStarted);
   // Shared across server instances. Limit repeated expensive calls without trusting client state.
-  const minute = Math.floor(Date.now() / 60_000);
-  const rateRef = db.doc(`apiRateLimits/${token.uid}`);
   const rateStarted = performance.now();
-  await db.runTransaction(async (tx) => {
-    const state = await tx.get(rateRef);
-    const count = state.get("minute") === minute ? Number(state.get("count") ?? 0) : 0;
-    if (count >= 60) throw new HttpsError("resource-exhausted", "Too many requests. Wait a minute and try again.");
-    tx.set(rateRef, { minute, count: count + 1 });
-  });
+  await enforceSparkRateLimit(token.uid);
   onTiming?.("rate-limit", performance.now() - rateStarted);
   const handlerStarted = performance.now();
   const result = await handler.run({

@@ -6,6 +6,10 @@
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
+    "./session": {
+      "types": "./session.d.ts",
+      "import": "./lib/session.js"
+    },
     "./spark-adapter": {
       "types": "./spark-adapter.d.ts",
       "import": "./lib/spark-adapter.js"

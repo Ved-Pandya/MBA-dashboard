@@ -35,7 +35,6 @@ const studentNav: NavItem[] = [
 export function Dashboard() {
   const { profile, signOutUser } = useAuth();
   const { online, openSetup } = usePwa();
-  const [view, setViewState] = useState<View>("today");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const isWingPoc = Boolean(Object.keys(profile?.scopes.wingPocWings ?? {}).length);
@@ -52,6 +51,10 @@ export function Dashboard() {
     { id: "admin" as const, label: "System admin", icon: "settings" as const, description: "Roster, subjects and system health", show: Boolean(profile?.roles.systemAdmin) },
   ].filter((item) => item.show), [profile, isWingPoc, isSubjectPoc, governor]);
   const allowedViews = useMemo(() => new Set<View>([...studentNav.map((item) => item.id), "more", ...management.map((item) => item.id)]), [management]);
+  const [view, setViewState] = useState<View>(() => {
+    const requested = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("view") as View | null : null;
+    return requested && allowedViews.has(requested) ? requested : "today";
+  });
   useEffect(() => {
     const applyUrl = () => {
       const params = new URLSearchParams(window.location.search);

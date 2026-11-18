@@ -22,6 +22,8 @@ const labels = {
 export function StudentView({ onNavigate }: { onNavigate: (view: "forms" | "academics" | "opportunities" | "sessions" | "polls" | "compliance") => void }) {
   const now = useClock();
   const { user, profile } = useAuth();
+  const uid = user?.uid;
+  const sectionId = profile?.sectionId;
   const [assignments, setAssignments] = useState<AssignmentRecord[]>([]);
   const [sessions, setSessions] = useState<SessionIntimationRecord[]>([]);
   const [sessionResponses, setSessionResponses] = useState<SessionResponseRecord[]>([]);
@@ -49,26 +51,26 @@ export function StudentView({ onNavigate }: { onNavigate: (view: "forms" | "acad
   }, [focusNext, filter, search]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!uid) return;
     return onSnapshot(
-      query(collection(getFirebase().db, "taskAssignments"), where("uid", "==", user.uid)),
+      query(collection(getFirebase().db, "taskAssignments"), where("uid", "==", uid)),
       (snap) => { setAssignments(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as AssignmentRecord)); setAssignmentsLoading(false); },
       (snapshotError) => { setError(readableError(snapshotError)); setAssignmentsLoading(false); },
     );
-  }, [user]);
+  }, [uid]);
 
   useEffect(() => {
-    if (!user || !profile) return; const db = getFirebase().db;
+    if (!uid || !sectionId) return; const db = getFirebase().db;
     const unsubs = [
       onSnapshot(query(collection(db, "sessionIntimations"), where("status", "==", "published")), (snap) => setSessions(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as SessionIntimationRecord))),
-      onSnapshot(query(collection(db, "sessionResponses"), where("uid", "==", user.uid)), (snap) => setSessionResponses(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as SessionResponseRecord))),
+      onSnapshot(query(collection(db, "sessionResponses"), where("uid", "==", uid)), (snap) => setSessionResponses(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as SessionResponseRecord))),
       onSnapshot(query(collection(db, "generalPolls"), where("status", "==", "published")), (snap) => setPolls(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as GeneralPollRecord))),
-      onSnapshot(query(collection(db, "pollResponses"), where("uid", "==", user.uid)), (snap) => setPollResponses(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as PollResponseRecord))),
+      onSnapshot(query(collection(db, "pollResponses"), where("uid", "==", uid)), (snap) => setPollResponses(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as PollResponseRecord))),
       onSnapshot(query(collection(db, "competitions"), where("status", "==", "published")), (snap) => setActiveCompetitions(snap.docs.map((doc) => ({ id: doc.id, registrationDeadline: doc.get("registrationDeadline") }))), (err) => setError(readableError(err))),
-      onSnapshot(query(collection(db, "opportunityResponses"), where("uid", "==", user.uid)), (snap) => setCompetitionResponses(snap.docs.map((doc) => doc.data() as { opportunityId: string; status: string; externalRegistration?: { status: string }; internalForm?: { status: string } }))),
-      onSnapshot(query(collection(db, "academicEvents"), where("sectionId", "==", profile.sectionId)), (snap) => setAcademicEvents(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as AcademicEventRecord))),
+      onSnapshot(query(collection(db, "opportunityResponses"), where("uid", "==", uid)), (snap) => setCompetitionResponses(snap.docs.map((doc) => doc.data() as { opportunityId: string; status: string; externalRegistration?: { status: string }; internalForm?: { status: string } }))),
+      onSnapshot(query(collection(db, "academicEvents"), where("sectionId", "==", sectionId)), (snap) => setAcademicEvents(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as AcademicEventRecord))),
     ]; return () => unsubs.forEach((unsubscribe) => unsubscribe());
-  }, [user, profile]);
+  }, [uid, sectionId]);
 
   const sorted = useMemo(() => assignments
     .filter((item) => filter === "all" || (filter === "active" ? isOpenAssignment(item) : item.status === "completed"))

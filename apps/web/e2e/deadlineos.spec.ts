@@ -82,6 +82,37 @@ test("sign-in makes password visibility and account recovery clear", async ({ pa
   await page.screenshot({ path: resolve(`../../docs/screenshots/login-${info.project.name}.png`), fullPage: true });
 });
 
+test("startup renders before the live profile connection and restores the signed-in session", async ({ page }) => {
+  expect((await page.request.post("/api/session")).status()).toBe(401);
+  let legacyActivationCalls = 0, maintenanceCalls = 0;
+  page.on("request", (request) => {
+    if (request.url().includes("/api/call/activateMyAccount")) legacyActivationCalls++;
+    if (request.url().includes("/api/maintenance/pulse")) maintenanceCalls++;
+  });
+  let release!: () => void;
+  const connectionGate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route(/google\.firestore\.v1\.Firestore\/Listen/, async (route) => {
+    await connectionGate;
+    await route.continue();
+  });
+  try {
+    // Every client Firestore listener is held back. The verified API profile
+    // must be enough to display the dashboard on login AND a persisted refresh.
+    await login(page, "student");
+    expect(legacyActivationCalls).toBe(0);
+    expect(maintenanceCalls).toBe(0);
+    await page.reload();
+    await expect(page.locator(".app-shell")).toBeVisible();
+    expect(maintenanceCalls).toBe(0);
+  } finally { release(); }
+  await expect(page.getByRole("heading", { name: "Demo open form", exact: true })).toBeVisible();
+  try {
+    await db.doc(`users/${account("student")}`).update({ status: "suspended" });
+    await expect(page.locator(".app-shell")).toHaveCount(0);
+    await expect(page.locator(".loading-page").getByRole("alert")).toBeVisible();
+  } finally { await db.doc(`users/${account("student")}`).update({ status: "active" }); }
+});
+
 test("navigation keeps the browser Back button useful", async ({ page }, info) => {
   await login(page, "student");
   const nav = info.project.name === "mobile" ? page.locator(".mobile-nav") : page.locator(".sidebar");

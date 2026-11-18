@@ -1,0 +1,146 @@
+[
+  {
+    "sample": 1,
+    "status": 200,
+    "loginReadyMs": 1200,
+    "headers": {
+      "cache": "HIT",
+      "region": "bom1::9fjd8-1795013122326-7724e84ec6ae"
+    },
+    "errors": [],
+    "failed": [],
+    "perf": {
+      "navigation": [
+        {
+          "ttfb": 154.89999997615814,
+          "dcl": 311.59999999403954,
+          "load": 903.8999999761581,
+          "transfer": 3002
+        }
+      ],
+      "resources": [
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/3xmm43aj6-0rr.js",
+          "ms": 400.7000000178814,
+          "start": 186.2999999821186,
+          "transfer": 8020
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/2u-c7gb-2ayj3.js",
+          "ms": 362.5,
+          "start": 186.39999997615814,
+          "transfer": 50412
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/29_ltnvqy9-u2.js",
+          "ms": 399.7000000178814,
+          "start": 186.39999997615814,
+          "transfer": 72648
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/turbopack-0aggr7yruxs3a.js",
+          "ms": 356.09999999403954,
+          "start": 186.5,
+          "transfer": 4843
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/1u_681mfvbvcn.js",
+          "ms": 355.40000000596046,
+          "start": 186.59999999403954,
+          "transfer": 10326
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/3rdqlg2jhn4gq.js",
+          "ms": 402.09999999403954,
+          "start": 186.59999999403954,
+          "transfer": 17396
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/3nkjlx3-e_76i.js",
+          "ms": 301.09999999403954,
+          "start": 186.69999998807907,
+          "transfer": 196376
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/158myu8e_yme3.js",
+          "ms": 402.59999999403954,
+          "start": 186.69999998807907,
+          "transfer": 14668
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/1qicr4lzkqqit.js",
+          "ms": 303.80000001192093,
+          "start": 186.7999999821186,
+          "transfer": 12791
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/fonts/ibm-plex-sans-latin-variable.woff2",
+          "ms": 608.8000000119209,
+          "start": 288.7999999821186,
+          "transfer": 46012
+        }
+      ],
+      "paint": [
+        {
+          "name": "first-paint",
+          "ms": 328
+        },
+        {
+          "name": "first-contentful-paint",
+          "ms": 328
+        }
+      ]
+    }
+  },
+  {
+    "sample": 2,
+    "status": 200,
+    "loginReadyMs": 342,
+    "headers": {
+      "cache": "HIT",
+      "region": "bom1::546mp-1795013125535-f6b5a5811fc7"
+    },
+    "errors": [],
+    "failed": [],
+    "perf": {
+      "navigation": [
+        {
+          "ttfb": 30.899999976158142,
+          "dcl": 73.09999999403954,
+          "load": 260.59999999403954,
+          "transfer": 3002
+        }
+      ],
+      "resources": [
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/29_ltnvqy9-u2.js",
+          "ms": 42,
+          "start": 44.79999998211861,
+          "transfer": 72648
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/2u-c7gb-2ayj3.js",
+          "ms": 51.599999994039536,
+          "start": 44.79999998211861,
+          "transfer": 50412
+        },
+        {
+          "name": "https://mba-dashboard-web-delta.vercel.app/_next/static/chunks/3nkjlx3-e_76i.js",
+          "ms": 70.7000000178814,
+          "start": 44.89999997615814,
+          "transfer": 196376
+        }
+      ],
+      "paint": [
+        {
+          "name": "first-paint",
+          "ms": 104
+        },
+        {
+          "name": "first-contentful-paint",
+          "ms": 104
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,146 @@
+{
+  "environment": "Local production Next.js builds, Chromium 1440x900, Firebase Auth/Firestore emulators, no artificial network delay. First sample includes a cold API module; later samples use the warm server. Not production hosting latency.",
+  "beforeCommit": "3cbc9e9992fe68abf8d3eeb10a81c486b3fb8e2d",
+  "before": [
+    {
+      "sample": 1,
+      "loginScreenMs": 186,
+      "anonymousScriptBytes": 371290,
+      "anonymousScriptCount": 9,
+      "shellMs": 1884,
+      "firstDataMs": 1912,
+      "refreshDataMs": 901,
+      "maintenanceBeforeShell": 1,
+      "timings": [
+        {
+          "path": "/api/call/activateMyAccount",
+          "status": 200,
+          "serverTiming": "startup;dur=180.3, auth;dur=13.8, rate-limit;dur=134.7, handler;dur=31.0, total;dur=361.1"
+        },
+        {
+          "path": "/api/call/activateMyAccount",
+          "status": 200,
+          "serverTiming": "startup;dur=0.1, auth;dur=8.2, rate-limit;dur=71.0, handler;dur=17.4, total;dur=97.0"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "sample": 2,
+      "loginScreenMs": 222,
+      "anonymousScriptBytes": 371290,
+      "anonymousScriptCount": 9,
+      "shellMs": 289,
+      "firstDataMs": 602,
+      "refreshDataMs": 286,
+      "maintenanceBeforeShell": 1,
+      "timings": [
+        {
+          "path": "/api/call/activateMyAccount",
+          "status": 200,
+          "serverTiming": "startup;dur=0.1, auth;dur=7.2, rate-limit;dur=35.9, handler;dur=8.3, total;dur=51.7"
+        },
+        {
+          "path": "/api/call/activateMyAccount",
+          "status": 200,
+          "serverTiming": "startup;dur=0.1, auth;dur=4.8, rate-limit;dur=21.7, handler;dur=13.5, total;dur=40.3"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "sample": 3,
+      "loginScreenMs": 238,
+      "anonymousScriptBytes": 371290,
+      "anonymousScriptCount": 9,
+      "shellMs": 244,
+      "firstDataMs": 291,
+      "refreshDataMs": 435,
+      "maintenanceBeforeShell": 1,
+      "timings": [
+        {
+          "path": "/api/call/activateMyAccount",
+          "status": 200,
+          "serverTiming": "startup;dur=0.0, auth;dur=3.8, rate-limit;dur=21.0, handler;dur=11.8, total;dur=36.9"
+        },
+        {
+          "path": "/api/call/activateMyAccount",
+          "status": 200,
+          "serverTiming": "startup;dur=0.0, auth;dur=7.9, rate-limit;dur=34.5, handler;dur=11.8, total;dur=54.4"
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "after": [
+    {
+      "sample": 1,
+      "loginScreenMs": 161,
+      "anonymousScriptBytes": 198268,
+      "anonymousScriptCount": 9,
+      "shellMs": 854,
+      "firstDataMs": 858,
+      "refreshDataMs": 256,
+      "maintenanceBeforeShell": 0,
+      "timings": [
+        {
+          "path": "/api/session",
+          "status": 200,
+          "serverTiming": "startup;dur=165.8, auth;dur=7.8, rate-limit;dur=118.6, profile;dur=12.1, total;dur=304.4"
+        },
+        {
+          "path": "/api/session",
+          "status": 200,
+          "serverTiming": "startup;dur=0.1, auth;dur=3.1, rate-limit;dur=26.3, profile;dur=11.0, total;dur=40.5"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "sample": 2,
+      "loginScreenMs": 172,
+      "anonymousScriptBytes": 198268,
+      "anonymousScriptCount": 9,
+      "shellMs": 247,
+      "firstDataMs": 280,
+      "refreshDataMs": 280,
+      "maintenanceBeforeShell": 0,
+      "timings": [
+        {
+          "path": "/api/session",
+          "status": 200,
+          "serverTiming": "startup;dur=0.1, auth;dur=2.6, rate-limit;dur=15.2, profile;dur=6.0, total;dur=23.8"
+        },
+        {
+          "path": "/api/session",
+          "status": 200,
+          "serverTiming": "startup;dur=0.1, auth;dur=2.5, rate-limit;dur=30.0, profile;dur=8.8, total;dur=41.4"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "sample": 3,
+      "loginScreenMs": 173,
+      "anonymousScriptBytes": 198268,
+      "anonymousScriptCount": 9,
+      "shellMs": 341,
+      "firstDataMs": 346,
+      "refreshDataMs": 274,
+      "maintenanceBeforeShell": 0,
+      "timings": [
+        {
+          "path": "/api/session",
+          "status": 200,
+          "serverTiming": "startup;dur=0.1, auth;dur=4.1, rate-limit;dur=18.3, profile;dur=9.3, total;dur=31.7"
+        },
+        {
+          "path": "/api/session",
+          "status": 200,
+          "serverTiming": "startup;dur=0.0, auth;dur=2.3, rate-limit;dur=30.3, profile;dur=17.4, total;dur=50.1"
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

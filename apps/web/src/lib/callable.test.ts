@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 const auth = vi.hoisted(() => ({ currentUser: { uid: "one", getIdToken: vi.fn(async () => "token") } as { uid: string; getIdToken: () => Promise<string> } | null }));
-vi.mock("./firebase", () => ({ getFirebase: () => ({ auth }) }));
+vi.mock("./firebase-auth", () => ({ getFirebaseAuth: () => ({ auth }) }));
 import { readReport } from "./callable";
 
 beforeEach(() => { vi.restoreAllMocks(); auth.currentUser = { uid: "one", getIdToken: async () => "token" }; });

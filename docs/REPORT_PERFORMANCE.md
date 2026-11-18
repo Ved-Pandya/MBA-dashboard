@@ -12,9 +12,11 @@ The backend skips unused opportunity types, applies selected opportunity IDs to 
 
 ## Diagnose deployment latency
 
+For the anonymous page download and signed-in startup waterfall, see [initial-load changes and measurements](STARTUP_PERFORMANCE.md).
+
 Successful `/api/call/*` responses now expose `Server-Timing` entries for `startup`, `auth`, `rate-limit`, `handler` and `total`, with `Cache-Control: private, no-store`. Inspect these in the browser Network panel to separate cold startup, authentication, rate-limit contention and database work. ID-token revocation, App Check, role/scope checks and the distributed rate limit remain enabled.
 
-No production Firestore region was inferred or changed. If handler/network latency remains high, compare the actual Firebase database location with the deployed Vercel function region; [Firebase recommends locating resources near the database](https://firebase.google.com/docs/firestore/best-practices#database_location). Local emulator timings are not production performance guarantees.
+The owner confirmed production Firestore is in Mumbai (`asia-south1`); `apps/web/vercel.json` now places Vercel API functions in Mumbai (`bom1`), replacing the observed Virginia execution region. The database itself is unchanged. [Firebase recommends locating resources near the database](https://firebase.google.com/docs/firestore/best-practices#database_location). Local emulator timings are not production performance guarantees.
 
 ## Prepare the demo
 

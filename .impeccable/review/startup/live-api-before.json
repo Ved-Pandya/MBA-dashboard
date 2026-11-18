@@ -1,0 +1,16 @@
+[
+  {
+    "sample": 1,
+    "status": 401,
+    "durationMs": 414,
+    "region": "bom1::iad1::2dbgw-1795013363182-c7290e2e7b8a",
+    "serverTiming": null
+  },
+  {
+    "sample": 2,
+    "status": 401,
+    "durationMs": 365,
+    "region": "bom1::iad1::cftfs-1795013363491-a60351e53b1e",
+    "serverTiming": null
+  }
+]
