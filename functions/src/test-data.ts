@@ -1,10 +1,12 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { DEMO_ACCOUNTS, DEMO_SEED_ID, rollNumberToAuthEmail, type DemoSummary } from "@mba/domain";
 import { adminAuth, db, FieldValue, Timestamp } from "./firebase.js";
 import { asHttpsError, callableOptions, requireActor, requireAdmin, writeAudit, type Actor } from "./helpers.js";
 import { ensureDemoAccounts, resetDemoAccountPasswords } from "./test-accounts.js";
 import { DEMO_STATS_SOURCES } from "./demo-metadata.js";
+import { remapDemoSource } from "./demo-record-ids.js";
 import { buildDemoFixtures, DEMO_OFFERING_IDS, type DemoIdentity } from "./demo-fixtures.js";
 
 const inputSchema = z.object({ origin: z.string().url().optional(), resetPasswords: z.boolean().optional().default(false) });
@@ -101,17 +103,36 @@ async function deleteDemoSeedRecords() {
 
 async function seed(actor: Actor, origin: string, identities: DemoIdentity[]) {
   const plan = buildDemoFixtures(identities, actor.uid, origin, Date.now());
-  // Fixed fixture IDs must never replace an unrelated document, even by accident.
-  for (let i = 0; i < plan.records.length; i += 150) {
-    const existing = await db.getAll(...plan.records.slice(i, i + 150).map((r) => db.doc(r.path)));
-    for (const doc of existing) {
-      if (!doc.exists || doc.get("demoSeedId") === DEMO_SEED_ID) continue;
-      const sourceCollection = DEMO_STATS_SOURCES[doc.ref.parent.id];
-      const source = sourceCollection && doc.get("demoSeedId") === undefined && doc.get("isTestData") !== false ? await db.doc(`${sourceCollection}/${doc.id}`).get() : null;
-      if (source?.get("demoSeedId") === DEMO_SEED_ID && source.get("isTestData") === true) continue;
-      throw new HttpsError("already-exists", `Sample ID ${doc.ref.path} is occupied by non-demo data. No sample records were replaced.`);
+  // Counters can outlive a deleted parent (including an interrupted old cleanup).
+  // If ownership cannot be proved, preserve the counter and move the entire
+  // planned source graph to a fresh ID. Unrelated source documents remain blocked.
+  let avoidedStatCollisions = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const aliases = new Map<string, string>();
+    const plannedSources = new Set(plan.records.map((record) => record.path));
+    for (let i = 0; i < plan.records.length; i += 150) {
+      const existing = await db.getAll(...plan.records.slice(i, i + 150).map((r) => db.doc(r.path)));
+      for (const doc of existing) {
+        if (!doc.exists || doc.get("demoSeedId") === DEMO_SEED_ID) continue;
+        const sourceCollection = DEMO_STATS_SOURCES[doc.ref.parent.id];
+        const sourcePath = sourceCollection ? `${sourceCollection}/${doc.id}` : "";
+        const source = sourceCollection ? await db.doc(sourcePath).get() : null;
+        const sameSeedSource = source?.get("demoSeedId") === DEMO_SEED_ID;
+        const ownedSource = sameSeedSource && source.get("isTestData") === true;
+        if (ownedSource && doc.get("demoSeedId") === undefined && doc.get("isTestData") !== false) continue;
+        if (source && (!source.exists || (sameSeedSource && source.get("isTestData") !== false)) && plannedSources.has(sourcePath)) {
+          aliases.set(sourcePath, `${doc.id}_seed_${randomUUID().replaceAll("-", "").slice(0, 16)}`);
+          continue;
+        }
+        throw new HttpsError("already-exists", `Sample ID ${doc.ref.path} is occupied by non-demo data. No sample records were replaced.`);
+      }
     }
+    if (!aliases.size) break;
+    if (attempt === 2) throw new HttpsError("aborted", "Sample record IDs changed during preparation. Retry preparation; existing records were preserved.");
+    for (const [sourcePath, newId] of aliases) plan.records = remapDemoSource(plan.records, sourcePath, newId);
+    avoidedStatCollisions += aliases.size;
   }
+  if (avoidedStatCollisions) plan.counts.avoidedStatCollisions = avoidedStatCollisions;
   await db.doc("systemHealth/demoData").set({ status: "preparing", phase: "clearing", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   await deleteDemoSeedRecords();
   await db.doc("systemHealth/demoData").set({ phase: "writing", updatedAt: FieldValue.serverTimestamp() }, { merge: true });

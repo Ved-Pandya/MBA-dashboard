@@ -327,6 +327,49 @@ suite("privileged workflows against real emulators", () => {
     for(const path of ['pushJobs/derived_demo_job','pushDeliveries/derived_demo_delivery','reminderDeliveries/demo_session_delivery','tasks/demo_wing_form','taskStats/demo_wing_form'])expect((await firebase.db.doc(path).get()).exists).toBe(false);
   },60_000);
 
+  it("prepares complete linked fixtures around orphaned or protected sample counters", async () => {
+    const orphanCounters = [
+      { stats: 'taskStats/demo_wing_form', source: 'tasks/demo_wing_form', refCollection: 'taskAssignments', field: 'taskId', data: { eligibleCount: 777 } },
+      { stats: 'competitionStats/demo_case_open', source: 'competitions/demo_case_open', refCollection: 'opportunityResponses', field: 'opportunityId', data: { responseCount: 222, demoSeedId: 'another_seed', isTestData: true } },
+      { stats: 'internshipStats/demo_internship', source: 'internships/demo_internship', refCollection: 'internshipResponses', field: 'internshipId', data: { responseCount: 333, demoSeedId: null } },
+      { stats: 'sessionStats/demo_placement_session', source: 'sessionIntimations/demo_placement_session', refCollection: 'sessionResponses', field: 'sessionId', data: { eligibleCount: 444, isTestData: false } },
+    ];
+    for (const item of orphanCounters) {
+      expect((await firebase.db.doc(item.source).get()).exists).toBe(false);
+      // A legacy source may retain its seed ID but lack the newer boolean tag.
+      if (item.source.startsWith('competitions/')) await firebase.db.doc(item.source).set({ title: 'Legacy demo competition', demoSeedId: 'mock_v1' });
+      await firebase.db.doc(item.stats).set(item.data);
+    }
+    const result = await call(demo.prepareDemoData, 'admin', {});
+    expect(result.counts.avoidedStatCollisions).toBe(4);
+    expect(result.counts.reportRecipients).toBe(114);
+    for (const item of orphanCounters) {
+      expect((await firebase.db.doc(item.stats).get()).data()).toEqual(item.data);
+      expect((await firebase.db.doc(item.source).get()).exists).toBe(false);
+      const [sourceCollection, originalId] = item.source.split('/');
+      const sources = await firebase.db.collection(sourceCollection!).where('demoSeedId', '==', 'mock_v1').get();
+      const moved = sources.docs.find(doc => doc.id.startsWith(originalId+'_seed_'));
+      expect(moved).toBeTruthy();
+      expect((await firebase.db.doc(item.stats.split('/')[0]+'/'+moved!.id).get()).get('demoSeedId')).toBe('mock_v1');
+      expect((await firebase.db.collection(item.refCollection).where(item.field, '==', moved!.id).get()).size).toBeGreaterThan(0);
+      if (sourceCollection === 'tasks') {
+        expect((await firebase.db.collection('reminderJobs').where('taskId', '==', moved!.id).get()).size).toBeGreaterThan(0);
+        const user = await firebase.adminAuth.getUserByEmail('24m2901@users.deadlineos.app');
+        expect((await firebase.db.doc('users/'+user.uid+'/notifications/demo_welcome').get()).get('taskId')).toBe(moved!.id);
+      }
+      if (sourceCollection === 'internships') {
+        expect((await firebase.db.collection('placementResponseHistory').where('internshipId', '==', moved!.id).get()).size).toBe(1);
+        expect((await firebase.db.doc('internships/demo_internship_analytics').get()).exists).toBe(true);
+      }
+      if (sourceCollection === 'sessionIntimations') expect((await firebase.db.doc('generalPolls/demo_poll_open').get()).get('linkedSessionId')).toBe(moved!.id);
+    }
+    await call(demo.clearTestData, 'admin', {});
+    for (const item of orphanCounters) {
+      expect((await firebase.db.doc(item.stats).get()).data()).toEqual(item.data);
+      await firebase.db.doc(item.stats).delete();
+    }
+  }, 60_000);
+
   it("refuses occupied sample IDs, protected account collisions and overlapping setup",async()=>{
     await firebase.db.doc('tasks/demo_wing_form').set({title:'Unrelated reserved record'});
     await expect(call(demo.prepareDemoData,'admin',{})).rejects.toThrow('occupied by non-demo');

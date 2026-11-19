@@ -367,11 +367,20 @@ test("System admin injects a complete presentation workspace and preserves demo 
   test.setTimeout(120_000);
   await login(page, "admin"); await page.goto("/?view=admin");
   await expect(page.getByRole("heading", { name: "Presentation workspace", exact: true })).toBeVisible();
+  const orphanCounter = db.doc("taskStats/demo_wing_form");
+  const preservedCounter = { eligibleCount: 987, pendingCount: 986, completedCount: 1 };
+  expect((await db.doc("tasks/demo_wing_form").get()).exists).toBe(false);
+  await orphanCounter.set(preservedCounter);
   await page.getByRole("button", { name: "Prepare 15-minute demo", exact: true }).click();
   await expect(page.getByRole("button", { name: "Preparing sample data…", exact: true })).toBeDisabled();
   await expect(page.getByLabel("Sample data summary")).toContainText("114", { timeout: 60_000 });
-  const taskRef = db.doc("tasks/demo_wing_form");
-  const counterRef = db.doc("taskStats/demo_wing_form");
+  expect((await orphanCounter.get()).data()).toEqual(preservedCounter);
+  const preparedTasks = await db.collection("tasks").where("title", "==", "Demo placement preference form").get();
+  const preparedTask = preparedTasks.docs.find(doc => doc.get("demoSeedId") === "mock_v1");
+  expect(preparedTask?.id).not.toBe("demo_wing_form");
+  expect(preparedTask).toBeTruthy();
+  const taskRef = preparedTask!.ref;
+  const counterRef = db.doc(`taskStats/${preparedTask!.id}`);
   const taskBeforeReset = (await taskRef.get()).data();
   await counterRef.update({ demoSeedId: FieldValue.delete(), isTestData: FieldValue.delete() });
   page.once("dialog", (dialog) => dialog.accept());
@@ -422,4 +431,6 @@ test("System admin injects a complete presentation workspace and preserves demo 
   await page.getByRole("button", { name: "Remove sample data", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "sample records removed" })).toBeVisible({ timeout: 60_000 });
   await expect(page.getByLabel("Sample data summary")).toHaveCount(0);
+  expect((await orphanCounter.get()).data()).toEqual(preservedCounter);
+  await orphanCounter.delete(); // Only this synthetic test's unowned fixture.
 });

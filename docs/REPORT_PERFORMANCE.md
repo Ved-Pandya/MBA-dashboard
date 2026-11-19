@@ -26,6 +26,8 @@ Preparation progress reflects the actual account, cleanup and write phases. Inde
 
 Statistics reconciliation and publication preserve demo provenance from their source records. Preparation and cleanup can also recover older untagged counters when their parent is positively identified as a tagged demo source. A matching ID prefix alone is insufficient; unrelated records, explicitly non-demo counters and counters marked with another seed remain protected.
 
+If a counter's parent is missing, or the counter carries a conflicting marker, preparation preserves it and gives the planned source a fresh ID. Assignments, response rows, reminders, notifications and linked records move together in the in-memory fixture plan. Real source-document collisions still stop preparation. The ready summary reports `avoidedStatCollisions` when this fallback is used; no manual deletion or retagging is required.
+
 ## Verification evidence
 
 - Browser tests check one initial opportunity-report request and zero additional reads for local filters, late-response protection, bounded row rendering and full 115-row CSV export.
