@@ -70,6 +70,75 @@ test.beforeAll(async ({}, info) => {
 
 test.afterAll(async () => { await db.terminate(); await deleteApp(app); });
 
+test("academic calendar shows IST dates, filters events and preserves section permissions", async ({ page }, info) => {
+  const localNow = new Date(Date.now() + 330 * 60_000);
+  const today = localNow.toISOString().slice(0, 10);
+  const tomorrow = new Date(Date.parse(today + "T00:00:00Z") + 86_400_000).toISOString().slice(0, 10);
+  const past = new Date(Date.parse(today + "T00:00:00Z") - 86_400_000).toISOString().slice(0, 10);
+  const offeringId = `${prefix}_calendar_subject`;
+  const fixtures = [
+    { key: "assignment", title: "Calendar midnight assignment", eventType: "assignment_deadline", sectionId: "A", status: "published", date: tomorrow },
+    { key: "quiz", title: "Calendar process quiz", eventType: "quiz", sectionId: "A", status: "published", date: tomorrow },
+    { key: "exam", title: "Calendar finance midterm", eventType: "midterm", sectionId: "A", status: "published", date: tomorrow },
+    { key: "past", title: "Calendar previous reading", eventType: "pre_read", sectionId: "A", status: "published", date: past },
+    { key: "private", title: "Calendar section B private item", eventType: "quiz", sectionId: "B", status: "published", date: tomorrow },
+    { key: "cancelled", title: "Calendar cancelled item", eventType: "quiz", sectionId: "A", status: "cancelled", date: tomorrow },
+  ];
+  await db.doc(`subjectOfferings/${offeringId}`).set({ subjectCode: "CAL", subjectName: "Calendar subject", sectionId: "A", termId: "CAL", active: true });
+  for (const item of fixtures) await db.doc(`academicEvents/${prefix}_calendar_${item.key}`).set({ ...item, offeringId, occursAt: Timestamp.fromDate(new Date(`${item.date}T00:10:00+05:30`)), details: "Synthetic calendar event" });
+  try {
+    await login(page, "student"); await page.goto("/?view=academics");
+    const calendar = page.getByRole("region", { name: "Academic calendar", exact: true });
+    await expect(calendar).toBeVisible();
+    await expect(calendar).toHaveAttribute("aria-busy", "false");
+    await calendar.locator(`[data-date="${tomorrow}"]`).click();
+    const agenda = page.getByRole("region", { name: "Selected day events", exact: true });
+    await expect(agenda.getByRole("heading", { name: "Calendar midnight assignment", exact: true })).toBeVisible();
+    await expect(agenda).toContainText("12:10 am IST");
+    await expect(agenda.getByRole("heading", { name: "Calendar process quiz", exact: true })).toBeVisible();
+    await expect(agenda.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0);
+    await expect(calendar).not.toContainText("Calendar section B private item");
+    await expect(calendar).not.toContainText("Calendar cancelled item");
+    const selected = calendar.locator(`[data-date="${tomorrow}"]`);
+    await selected.press("ArrowRight");
+    await expect(calendar.locator('[aria-pressed="true"]')).toBeFocused();
+    await calendar.locator('[aria-pressed="true"]').press("ArrowLeft");
+    await expect(selected).toHaveAttribute("aria-pressed", "true");
+    await calendar.getByLabel("Event type").selectOption("midterm");
+    await expect(agenda.getByRole("heading", { name: "Calendar finance midterm", exact: true })).toBeVisible();
+    await expect(agenda.getByRole("heading", { name: "Calendar midnight assignment", exact: true })).toHaveCount(0);
+    await calendar.getByLabel("Event type").selectOption("all");
+    const currentMonth = await calendar.locator("#calendar-month").innerText();
+    await calendar.getByRole("button", { name: "Next month", exact: true }).click();
+    await expect(calendar.locator("#calendar-month")).not.toHaveText(currentMonth);
+    await calendar.getByRole("button", { name: "Today", exact: true }).click();
+    await expect(calendar.locator(`[data-date="${today}"]`)).toHaveAttribute("aria-pressed", "true");
+    await calendar.locator(`[data-date="${past}"]`).click();
+    await expect(agenda.getByRole("heading", { name: "Calendar previous reading", exact: true })).toBeVisible();
+    await calendar.getByRole("button", { name: "Today", exact: true }).click();
+    await calendar.locator(`[data-date="${tomorrow}"]`).click();
+    await page.evaluate(() => { window.scrollTo(0, 0); (document.activeElement as HTMLElement)?.blur(); });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    mkdirSync(resolve("../../.test-runtime/academic-calendar"), { recursive: true });
+    await page.screenshot({ path: resolve(`../../.test-runtime/academic-calendar/${info.project.name}.png`), fullPage: true });
+    await page.getByRole("group", { name: "Academic view", exact: true }).getByRole("button", { name: "List", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Midterms and endterms", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Calendar midnight assignment", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Calendar previous reading", exact: true })).toHaveCount(0);
+    await db.doc(`users/${account("student")}`).update({ [`scopes.subjectPocOfferings.${offeringId}`]: true });
+    await page.getByRole("group", { name: "Academic view", exact: true }).getByRole("button", { name: "Calendar", exact: true }).click();
+    await calendar.locator(`[data-date="${tomorrow}"]`).click();
+    const assignment = agenda.locator(".academic-row").filter({ hasText: "Calendar midnight assignment" });
+    await assignment.getByRole("button", { name: "Edit", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Edit academic item", exact: true })).toBeVisible();
+    await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Calendar midnight assignment");
+  } finally {
+    await db.doc(`users/${account("student")}`).update({ [`scopes.subjectPocOfferings.${offeringId}`]: FieldValue.delete() });
+    await Promise.all(fixtures.map(item => db.doc(`academicEvents/${prefix}_calendar_${item.key}`).delete()));
+    await db.doc(`subjectOfferings/${offeringId}`).delete();
+  }
+});
+
 test("sign-in makes password visibility and account recovery clear", async ({ page }, info) => {
   await page.goto("/");
   await page.getByLabel("Password", { exact: true }).fill("Synthetic-password");
