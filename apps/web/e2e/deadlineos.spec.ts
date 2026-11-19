@@ -416,6 +416,11 @@ test("System admin injects a complete presentation workspace and preserves demo 
     const formPage = await opened;
     await expect(formPage.getByRole("heading", { name: "Demo placement preference form", exact: true })).toBeVisible();
     await formPage.getByLabel("Fictional name").fill("Example Student");
+    await formPage.getByLabel("Demo roll number").fill("24M2901");
+    await formPage.getByLabel("Preferred function").selectOption("Consulting");
+    await formPage.getByLabel("Preferred work location").selectOption("Mumbai");
+    await formPage.getByLabel("Previous work experience").selectOption("Fresher");
+    await formPage.getByLabel("Relevant skills").fill("Fictional market research experience");
     await formPage.getByRole("checkbox").check();
     await formPage.getByRole("button", { name: "Simulate submission", exact: true }).click();
     await expect(formPage.getByRole("status")).toContainText("No information was sent or saved");

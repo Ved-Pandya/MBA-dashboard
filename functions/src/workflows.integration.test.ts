@@ -237,6 +237,18 @@ suite("privileged workflows against real emulators", () => {
     const result = await call(demo.prepareDemoData, "admin", { origin:'http://127.0.0.1:3100' });
     demoCredentials=result.credentials; expect(demoCredentials).toHaveLength(6);
     expect(result.counts.reportRecipients).toBe(114); expect(result.counts.wingForms).toBe(9);
+    const workshop = await firebase.db.doc('generalPolls/demo_poll_answered').get();
+    expect(workshop.get('options').map((option: { label: string }) => option.label)).toContain('Financial modelling');
+    const lunch = await firebase.db.doc('generalPolls/demo_poll_closed').get();
+    expect(lunch.get('options').map((option: { label: string }) => option.label)).toContain('Vegetarian thali');
+    for (const pollId of ['demo_poll_open', 'demo_poll_answered', 'demo_poll_closed']) {
+      const poll = await firebase.db.doc('generalPolls/'+pollId).get();
+      const optionIds = poll.get('options').map((option: { id: string }) => option.id);
+      const responses = await firebase.db.collection('pollResponses').where('pollId','==',pollId).get();
+      for (const response of responses.docs) if (response.get('optionId')) expect(optionIds).toContain(response.get('optionId'));
+      const stats = await firebase.db.doc('pollStats/'+pollId).get();
+      expect(Object.keys(stats.get('optionCounts')).every(id => optionIds.includes(id))).toBe(true);
+    }
     const wingUser=await firebase.adminAuth.getUserByEmail('24m2904@users.deadlineos.app');
     expect((await firebase.db.doc('users/'+wingUser.uid).get()).get('scopes.wingPocWings.A')).toBe(true);
     const first=await call(compliance.getCurrentTaskCompliance,'cr',{itemKey:'deadline:demo_directory_audit',rowsOnly:true});

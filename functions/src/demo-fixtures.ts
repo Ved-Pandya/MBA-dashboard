@@ -12,7 +12,7 @@ export function buildDemoFixtures(users: DemoIdentity[], ownerUid: string, origi
   const stamp = Timestamp.fromMillis(now), at = (hours: number) => Timestamp.fromMillis(now + hours * 3_600_000);
   const poc = users.find((u) => u.key === "poc")!, cr = users.find((u) => u.key === "cr")!, wing = users.find((u) => u.key === "wing")!;
   const put = (path: string, data: Record<string, unknown>) => records.push({ path, data: { ...data, isTestData: true, demoSeedId: DEMO_SEED_ID, createdAt: stamp, updatedAt: stamp } });
-  const form = (title: string) => `${origin}/demo/sample-form.html?title=${encodeURIComponent(title)}`;
+  const form = (kind: string, title: string, status = "published") => `${origin}/demo/sample-form.html?${new URLSearchParams({ kind, title, status })}`;
   const snapshot = (u: DemoIdentity) => ({ displayName: u.displayName, rollNumber: u.rollNumber, sectionId: u.sectionId, wingId: u.wingId });
   const counts: Record<string, number> = { signInAccounts: users.length, reportOnlyStudents: DEMO_REPORT_STUDENTS, subjects: 6, timetableSlots: 6, academicEvents: 9, wingForms: 8, competitions: 4, internships: 4, sessions: 3, polls: 4, crTasks: 3 };
   const reminder = (id: string, title: string, hours: number, extra: Record<string, unknown> = {}) => {
@@ -42,7 +42,7 @@ export function buildDemoFixtures(users: DemoIdentity[], ownerUid: string, origi
     ["demo_previous_class", "DEMO-OPS-A", "assignment_deadline", "Demo previous operations brief", -24, "A historical date for the past-events view."],
     ["demo_cancelled_exam", "DEMO-STR-A", "midterm", "Demo cancelled strategy quiz", 96, "Cancelled demonstration item."],
   ];
-  events.forEach(([id, offeringId, eventType, title, hours, details]) => put(`academicEvents/${id}`, { offeringId, sectionId: offeringId.endsWith("B") ? "B" : "A", termId: "DEMO-TERM", eventType, title, details, occursAt: at(hours), endsAt: at(hours + 2), resourceUrl: form(title), venue: "Demo classroom 101", syllabus: "Illustrative course units only", status: id === "demo_cancelled_exam" ? "cancelled" : "published", version: 1, ownerUid: poc.uid }));
+  events.forEach(([id, offeringId, eventType, title, hours, details]) => put(`academicEvents/${id}`, { offeringId, sectionId: offeringId.endsWith("B") ? "B" : "A", termId: "DEMO-TERM", eventType, title, details, occursAt: at(hours), endsAt: at(hours + 2), resourceUrl: form(id, title, id === "demo_cancelled_exam" ? "cancelled" : "published"), venue: "Demo classroom 101", syllabus: "Illustrative course units only", status: id === "demo_cancelled_exam" ? "cancelled" : "published", version: 1, ownerUid: poc.uid }));
 
   const observers: DemoIdentity[] = Array.from({ length: DEMO_REPORT_STUDENTS }, (_, i) => ({ uid: `demo_report_student_${String(i + 1).padStart(3, "0")}`, key: "student", role: "Report-only sample", rollNumber: `DEMO${String(i + 1).padStart(3, "0")}`, displayName: `Sample report student ${String(i + 1).padStart(3, "0")}`, sectionId: "A", wingId: "A" }));
   observers.forEach((u) => put(`users/${u.uid}`, { ...snapshot(u), authEmail: `report-${u.uid}@example.invalid`, status: "invited", roles: { student: true, cr: false, systemAdmin: false }, scopes: { crSections: {}, wingPocWings: {}, subjectPocOfferings: {}, batchPocRoles: {} }, isDemoRoster: true, isTestAccount: true }));
@@ -59,14 +59,14 @@ export function buildDemoFixtures(users: DemoIdentity[], ownerUid: string, origi
   ];
   counts.wingForms = taskSpecs.length;
   taskSpecs.forEach(([id, title, hours, status, targetWing]) => {
-    put(`tasks/${id}`, { title, description: id === "demo_reminder_check" ? "Keep this item pending. Its two-hour reminder becomes due about two minutes after sample injection; actual arrival depends on maintenance and device setup." : "Fictional sample form. Use the linked practice page, then record completion in DeadlineOS.", taskType: "administrative_form", status, target: { kind: "wing", wingId: targetWing, scopeKey: `wing:${targetWing}` }, dueAt: at(hours), dueTimezone: "Asia/Kolkata", resourceUrl: form(title), ownerUid: targetWing === "A" ? wing.uid : ownerUid, version: 1, audienceVersion: status === "draft" ? 0 : 1, scheduleVersion: 1, audienceSyncStatus: status === "draft" ? "not_started" : "ready", publishedAt: status === "draft" ? null : stamp });
+    put(`tasks/${id}`, { title, description: id === "demo_reminder_check" ? "Keep this item pending. Its two-hour reminder becomes due about two minutes after sample injection; actual arrival depends on maintenance and device setup." : "Fictional sample form. Use the linked practice page, then record completion in DeadlineOS.", taskType: "administrative_form", status, target: { kind: "wing", wingId: targetWing, scopeKey: `wing:${targetWing}` }, dueAt: at(hours), dueTimezone: "Asia/Kolkata", resourceUrl: form(id, title, status), ownerUid: targetWing === "A" ? wing.uid : ownerUid, version: 1, audienceVersion: status === "draft" ? 0 : 1, scheduleVersion: 1, audienceSyncStatus: status === "draft" ? "not_started" : "ready", publishedAt: status === "draft" ? null : stamp });
     if (status === "draft") return;
     const recipients = [...users.filter((u) => u.wingId === targetWing), ...(id === "demo_directory_audit" ? observers : [])];
     const totals = { pending: 0, completed: 0, exempt: 0 };
     recipients.forEach((u, i) => {
       const state = id === "demo_completed_form" && u.key === "student" ? "completed" : id === "demo_directory_audit" ? (i % 5 === 0 ? "completed" : i % 11 === 0 ? "exempt" : "pending") : id === "demo_wing_form" && u.key === "poc" ? "completed" : id === "demo_wing_form" && u.key === "cr" || id === "demo_section_b_form" && u.key === "studentB" ? "exempt" : "pending";
       totals[state]++;
-      put(`taskAssignments/${id}_${u.uid}`, { taskId: id, uid: u.uid, taskType: "administrative_form", scopeKey: `wing:${targetWing}`, sectionId: u.sectionId, wingId: targetWing, subjectOfferingId: null, status: state, ...(state === "completed" ? { completedAt: at(-1), completedBy: u.uid, completionMethod: "self", completedLate: hours < -1 } : {}), ...(state === "exempt" ? { exemptionReason: "Demo accessibility exemption" } : {}), taskSnapshot: { title, dueAt: at(hours), resourceUrl: form(title), taskStatus: status }, studentSnapshot: snapshot(u), taskVersion: 1, audienceVersion: 1 });
+      put(`taskAssignments/${id}_${u.uid}`, { taskId: id, uid: u.uid, taskType: "administrative_form", scopeKey: `wing:${targetWing}`, sectionId: u.sectionId, wingId: targetWing, subjectOfferingId: null, status: state, ...(state === "completed" ? { completedAt: at(-1), completedBy: u.uid, completionMethod: "self", completedLate: hours < -1 } : {}), ...(state === "exempt" ? { exemptionReason: "Demo accessibility exemption" } : {}), taskSnapshot: { title, dueAt: at(hours), resourceUrl: form(id, title, status), taskStatus: status }, studentSnapshot: snapshot(u), taskVersion: 1, audienceVersion: 1 });
     });
     put(`taskStats/${id}`, { eligibleCount: recipients.length, pendingCount: totals.pending, completedCount: totals.completed, exemptCount: totals.exempt, reconciledAt: stamp });
     if (status === "published") reminder(id, title, hours);
@@ -79,7 +79,7 @@ export function buildDemoFixtures(users: DemoIdentity[], ownerUid: string, origi
     ["demo_case_draft", "Demo Market Entry Challenge draft", "draft", 96],
   ];
   competitions.forEach(([id, title, status, hours]) => {
-    put(`competitions/${id}`, { title, organizer: "Demo Consulting Club", description: "Fictional opportunity for demonstrating individual external and internal form confirmations.", externalRegistrationUrl: form(`${title} external registration`), internalFormUrl: form(`${title} internal confirmation`), registrationDeadline: at(hours), minTeamSize: 1, maxTeamSize: 1, status, ownerUid: ownerUid, version: 1, scheduleVersion: 1, publishedAt: status === "draft" ? null : stamp });
+    put(`competitions/${id}`, { title, organizer: "Demo Consulting Club", description: "Fictional opportunity for demonstrating individual external and internal form confirmations.", externalRegistrationUrl: form(`${id}_external`, `${title} external registration`, status), internalFormUrl: form(`${id}_internal`, `${title} internal confirmation`, status), registrationDeadline: at(hours), minTeamSize: 1, maxTeamSize: 1, status, ownerUid: ownerUid, version: 1, scheduleVersion: 1, publishedAt: status === "draft" ? null : stamp });
     if (status === "draft") return;
     const stats = { no_response: 0, team_draft: 0, registered: 0, not_participating: 0 };
     users.forEach((u, i) => {
@@ -95,7 +95,7 @@ export function buildDemoFixtures(users: DemoIdentity[], ownerUid: string, origi
 
   const internships: Array<[string, string, string, number]> = [["demo_internship", "DemoCorp", "published", 27], ["demo_internship_analytics", "Sample Analytics", "published", 53], ["demo_internship_draft", "Practice Labs", "draft", 80], ["demo_internship_cancelled", "Fictional Ventures", "cancelled", 15]];
   internships.forEach(([id, company, status, hours]) => {
-    put(`internships/${id}`, { title: `${company} Strategy Intern`, company, role: id.includes("analytics") ? "Business analyst intern" : "Strategy intern", description: "Fictional registration used for the presentation. The practice form never sends data.", registrationUrl: form(`${company} internship`), registrationDeadline: at(hours), status, ownerUid, version: 1, scheduleVersion: 1, publishedAt: status === "draft" ? null : stamp });
+    put(`internships/${id}`, { title: `${company} ${id.includes("analytics") ? "Business Analyst Intern" : "Strategy Intern"}`, company, role: id.includes("analytics") ? "Business analyst intern" : "Strategy intern", description: "Fictional registration used for the presentation. The practice form never sends data.", registrationUrl: form(id, `${company} internship`, status), registrationDeadline: at(hours), status, ownerUid, version: 1, scheduleVersion: 1, publishedAt: status === "draft" ? null : stamp });
     if (status !== "published") return;
     const states = { no_response: 0, registered: 0, not_participating: 0 };
     users.forEach((u) => {
@@ -117,7 +117,12 @@ export function buildDemoFixtures(users: DemoIdentity[], ownerUid: string, origi
     put(`sessionStats/${id}`,{eligibleCount:users.length,...totals});if(status==='published')reminder(id,title,deadline,{kind:'session_response',sessionId:id});
   });
   ([['demo_poll_open','Demo which clinic slot works best','published',5],['demo_poll_answered','Demo choose a workshop topic','published',28],['demo_poll_closed','Demo previous campus lunch poll','closed',-4],['demo_poll_draft','Demo alumni questions draft','draft',52]] as const).forEach(([id,question,status,hours])=>{
-    const options=[{id:'after_class',label:'After class'},{id:'evening',label:'Evening'},{id:'weekend',label:'Weekend'}];
+    const options = {
+      demo_poll_open: [{id:'after_class',label:'After class'},{id:'evening',label:'Evening'},{id:'weekend',label:'Weekend'}],
+      demo_poll_answered: [{id:'case_practice',label:'Case interview practice'},{id:'financial_modelling',label:'Financial modelling'},{id:'data_storytelling',label:'Data storytelling'}],
+      demo_poll_closed: [{id:'vegetarian',label:'Vegetarian thali'},{id:'non_vegetarian',label:'Chicken rice bowl'},{id:'light_lunch',label:'Salad and sandwich'}],
+      demo_poll_draft: [{id:'career_transition',label:'Changing career tracks'},{id:'recruitment',label:'Preparing for recruitment'},{id:'first_year',label:'The first year after an MBA'}],
+    }[id];
     put(`generalPolls/${id}`,{question,details:'Fictional choices for the demo. You can change an open response.',options,closesAt:at(hours),linkedSessionId:id==='demo_poll_open'?'demo_placement_session':null,status,ownerUid:poc.uid,version:1,publishedAt:status==='draft'?null:stamp});if(status==='draft')return;
     const optionCounts:Record<string,number>={};let responseCount=0;
     users.forEach((u,i)=>{const answered=id!=='demo_poll_open'||u.key==='poc'||u.key==='cr';const optionId=answered?options[i%3]!.id:null;if(optionId){responseCount++;optionCounts[optionId]=(optionCounts[optionId]??0)+1;}put(`pollResponses/${id}_${u.uid}`,{pollId:id,uid:u.uid,status:answered?'responded':'no_response',optionId,studentSnapshot:snapshot(u),...(answered?{respondedAt:stamp}:{})});});
